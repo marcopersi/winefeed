@@ -1,0 +1,6 @@
+autoBuildModules=true
+compilerJavascriptStyle=DETAILED
+deploymentPath=/gwt
+eclipse.preferences.version=1
+hostedDeployMode=true
+outputLocation=bin.gwt
