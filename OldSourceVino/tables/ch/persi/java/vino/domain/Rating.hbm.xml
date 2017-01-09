@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 24.12.2010 11:17:06 by Hibernate Tools 3.4.0.Beta1 -->
+<hibernate-mapping>
+    <class name="ch.persi.java.vino.domain.Rating" table="RATING">
+        <id name="id" type="long">
+            <column name="ID" />
+            <generator class="sequence">
+                <param name="sequence">rating_id_seq</param>
+            </generator>
+        </id>
+        <many-to-one name="agency" class="ch.persi.java.vino.domain.RatingAgency" fetch="join">
+            <column name="AGENCY_ID" />
+        </many-to-one>
+        <property name="score" type="java.math.BigDecimal">
+            <column name="SCORE" />
+        </property>
+    </class>
+</hibernate-mapping>
