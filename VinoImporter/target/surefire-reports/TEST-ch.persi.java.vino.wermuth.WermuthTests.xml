@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuite tests="17" failures="0" name="ch.persi.java.vino.wermuth.WermuthTests" time="0.877" errors="0" skipped="0">
+  <properties>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="sun.boot.library.path" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib"/>
+    <property name="java.vm.version" value="25.60-b23"/>
+    <property name="user.country.format" value="CH"/>
+    <property name="gopherProxySet" value="false"/>
+    <property name="java.vm.vendor" value="Oracle Corporation"/>
+    <property name="maven.multiModuleProjectDirectory" value="/Users/marcopersi/Google Drive/development/projects/vino/VinoImporter"/>
+    <property name="java.vendor.url" value="http://java.oracle.com/"/>
+    <property name="path.separator" value=":"/>
+    <property name="guice.disable.misplaced.annotation.check" value="true"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
+    <property name="file.encoding.pkg" value="sun.io"/>
+    <property name="user.country" value="DE"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="sun.os.patch.level" value="unknown"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="user.dir" value="/Users/marcopersi/Google Drive/development/projects/vino/VinoImporter"/>
+    <property name="java.runtime.version" value="1.8.0_60-b27"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.CGraphicsEnvironment"/>
+    <property name="java.endorsed.dirs" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/endorsed"/>
+    <property name="os.arch" value="x86_64"/>
+    <property name="java.io.tmpdir" value="/var/folders/n6/q6z65mms0dlb507lm7pp1vdw0000gn/T/"/>
+    <property name="line.separator" value="
+"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="os.name" value="Mac OS X"/>
+    <property name="classworlds.conf" value="/Users/marcopersi/Documents/development/vinoWorkspace/.metadata/.plugins/org.eclipse.m2e.launching/launches/m2conf3375729570937549555.tmp"/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.library.path" value="/Users/marcopersi/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:."/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="java.class.version" value="52.0"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="os.version" value="10.11.5"/>
+    <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="user.home" value="/Users/marcopersi"/>
+    <property name="user.timezone" value="Europe/Zurich"/>
+    <property name="java.awt.printerjob" value="sun.lwawt.macosx.CPrinterJob"/>
+    <property name="java.specification.version" value="1.8"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="user.name" value="marcopersi"/>
+    <property name="java.class.path" value="/Users/marcopersi/Documents/tools/Eclipse.app/Contents/Eclipse/plugins/org.eclipse.m2e.maven.runtime_1.6.2.20150902-0001/jars/plexus-classworlds-2.5.2.jar"/>
+    <property name="java.vm.specification.version" value="1.8"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.home" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre"/>
+    <property name="sun.java.command" value="org.codehaus.plexus.classworlds.launcher.Launcher -B install"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="user.language" value="de"/>
+    <property name="awt.toolkit" value="sun.lwawt.macosx.LWCToolkit"/>
+    <property name="java.vm.info" value="mixed mode"/>
+    <property name="java.version" value="1.8.0_60"/>
+    <property name="java.ext.dirs" value="/Users/marcopersi/Library/Java/Extensions:/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/ext:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java"/>
+    <property name="sun.boot.class.path" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/resources.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/rt.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/sunrsasign.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/jsse.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/jce.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/charsets.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/lib/jfr.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/classes"/>
+    <property name="java.vendor" value="Oracle Corporation"/>
+    <property name="maven.home" value="/Users/marcopersi/Google Drive/development/projects/vino/VinoImporter/EMBEDDED"/>
+    <property name="file.separator" value="/"/>
+    <property name="java.vendor.url.bug" value="http://bugreport.sun.com/bugreport/"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
+    <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="ftp.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="sun.cpu.isalist" value=""/>
+  </properties>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testSuccessfullRecordLines" time="0.019"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetNumberOfBottles" time="0.005"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testExtractRealizedPrice" time="0.008"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetNoOfBottles" time="0.002"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetVintage" time="0.002"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetUnit" time="0.004"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetLotNumber" time="0.001"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetPriceMinimum" time="0.001"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetPriceMaximum" time="0.001"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testFailingRecordLines" time="0"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testSizes" time="0.003"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testVintages" time="0.001"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testOrigins" time="0.002"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetAuctionDate" time="0.781"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testIsRecordLine" time="0.001"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetProducer" time="0.001"/>
+  <testcase classname="ch.persi.java.vino.wermuth.WermuthTests" name="testGetOrigin" time="0"/>
+</testsuite>
