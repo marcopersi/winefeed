@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/dtd/web-app_2_3.dtd">
+
+<web-app>
+  
+  	<!-- Servlets -->
+	<servlet>
+    	<servlet-name>vinoServlet</servlet-name>
+    	<servlet-class>ch.persi.vino.gui2.server.VinoDataServiceImpl</servlet-class>
+  	</servlet>
+  
+  	<servlet-mapping>
+    	<servlet-name>vinoServlet</servlet-name>
+    	<url-pattern>/vinogui2/vinoDaoService</url-pattern>
+  	</servlet-mapping>
+  
+  	<!-- Default page to serve -->
+  	<welcome-file-list>
+    	<welcome-file>VinoGUI2.html</welcome-file>
+  	</welcome-file-list>
+  	
+  	<servlet>
+  		<servlet-name>jUnitHostImpl</servlet-name>
+  		<servlet-class>com.google.gwt.junit.server.JUnitHostImpl</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>jUnitHostImpl</servlet-name>
+  		<url-pattern>/vinogui2/junithost/*</url-pattern>
+	</servlet-mapping>
+</web-app>

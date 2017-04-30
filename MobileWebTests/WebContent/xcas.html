@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My Page</title>
+    <meta >
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="ISO-8859-1">
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.css" />
+    <link rel="stylesheet" href="css/my-custom-theme.css.min.css" />
+    <script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+  </head>
+  <body>
+ 
+    <div data-role="page" data-theme="a" data-content-theme="a">
+      <div data-role="header" >
+        <h1>XENTIS T1 - XCAS Component</h1>
+      </div><!-- /header -->
+ 
+      <div data-role="content">
+        <p>XENTIS current system state</p>
+        <ul data-role="listview" data-inset="true" data-filter="false">
+		  <li><img src="css/images/ok16.png" alt="availability" class="ui-li-icon">Availability</li>
+		  <li><img src="css/images/No2_32.png" alt="trx" class="ui-li-icon">Running Trx</li>
+		</ul>
+		<textarea name="textarea" id="textarea-a">
+			2013-05-21 11:42:27.474 WARN org.apache.activemq.broker.TransportConnection.Transport () : Transport Connection to: tcp://172.20.1.92:63367 failed: java.net.SocketException: Connection reset
+			2013-05-21 11:42:54.847 INFO com.xnife.context.service.impl.jms.JmsContextServerExtensionServiceImpl (executeExecutionPlan) : Create ClientQueue for Context with ID=f80b2b90-e63f-4ca
+		</textarea>	
+	</div><!-- /content -->
+ 
+      <div data-role="footer">
+        <h4>XCAS - XC Application Suite</h4>
+      </div><!-- /header -->
+ 
+    </div><!-- /page -->
+ 
+  </body>
+</html>
