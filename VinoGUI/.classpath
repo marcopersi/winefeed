@@ -19,8 +19,8 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/Users/marcopersi/Google Drive/development/tools/smartgwt-5.0p/smartgwt-skins.jar"/>
-	<classpathentry kind="lib" path="/Users/marcopersi/Google Drive/development/tools/smartgwt-5.0p/smartgwt.jar"/>
-	<classpathentry kind="lib" path="/Users/marcopersi/Google Drive/development/tools/gwt-visualization-1.1.2/gwt-visualization.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-visualization.jar"/>
+	<classpathentry kind="lib" path="lib/smartgwt-skins.jar"/>
+	<classpathentry kind="lib" path="lib/smartgwt.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
