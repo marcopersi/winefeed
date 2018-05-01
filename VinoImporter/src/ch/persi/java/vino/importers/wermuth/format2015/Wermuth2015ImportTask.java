@@ -1,7 +1,7 @@
 package ch.persi.java.vino.importers.wermuth.format2015;
 
 import static java.lang.Integer.parseInt;
-import static org.apache.commons.lang3.math.NumberUtils.isNumber;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -197,7 +197,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 		int aLowerPrice = parseInt(matcher.group(1));
 		int anUpperPrice = parseInt(matcher.group(2));
 		
-		int aRealizedPrice = isNumber(matcher.group(3)) ? parseInt(matcher.group(3)) : 0;
+		int aRealizedPrice = isCreatable(matcher.group(3)) ? parseInt(matcher.group(3)) : 0;
 		
 		return new LotPriceInfo(aLowerPrice, anUpperPrice, aRealizedPrice);
 	}

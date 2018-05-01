@@ -2,7 +2,7 @@ package ch.persi.java.vino.importers.wermuth.prices;
 
 import static java.lang.Integer.parseInt;
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.math.NumberUtils.isNumber;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.io.File;
 import java.util.Collections;
@@ -211,10 +211,10 @@ public class WermuthPricePageParser implements PricePageParser {
 		String[] split = anImprovedLine.split(" ");
 
 		if (split != null && split.length >= 2) {
-			aLowerLimit = isNumber(split[0]) ? parseInt(split[0]) : 0;
-			anUpperLimit = isNumber(split[1]) ? parseInt(split[1]) : 0;
+			aLowerLimit = isCreatable(split[0]) ? parseInt(split[0]) : 0;
+			anUpperLimit = isCreatable(split[1]) ? parseInt(split[1]) : 0;
 			String aPossiblePrice = split[split.length - 1];
-			aRealizedPrice = isNumber(aPossiblePrice) ? parseInt(aPossiblePrice) : null;
+			aRealizedPrice = isCreatable(aPossiblePrice) ? parseInt(aPossiblePrice) : null;
 		}
 
 		if (log.isInfoEnabled()) {

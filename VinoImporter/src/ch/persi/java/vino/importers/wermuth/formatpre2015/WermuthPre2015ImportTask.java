@@ -276,7 +276,7 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 			String aParkerRating = aParkerMatcher.group(1);
 			log.debug("Extracted parker point figure:{}", aParkerRating);
 
-			if (NumberUtils.isNumber(aParkerRating)) {
+			if (NumberUtils.isCreatable(aParkerRating)) {
 				return new BigDecimal(aParkerRating, new MathContext(0, RoundingMode.HALF_UP));
 			}
 		}

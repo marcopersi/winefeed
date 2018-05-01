@@ -1,7 +1,7 @@
 package ch.persi.java.vino.importers.weinboerse;
 
 import static ch.persi.java.vino.domain.VinoConstants.OHK;
-import static org.apache.commons.lang3.math.NumberUtils.isNumber;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 import static java.lang.Integer.parseInt;
 
 import java.util.regex.Matcher;
@@ -35,7 +35,7 @@ public class WeinboerseLineExtractor implements LineExtrator {
 		{
 			// FIXME: replace hard coded 8 with const or enum or anything better
 			String aNumberAsString = getMatcher().group(8).trim();
-			if (isNumber(aNumberAsString)) {
+			if (isCreatable(aNumberAsString)) {
 				return parseInt(aNumberAsString);
 			}
 			log.error("Got '{}' what obviously is no number, therefore there is no vintage !!",aNumberAsString);
@@ -56,7 +56,7 @@ public class WeinboerseLineExtractor implements LineExtrator {
 		{
 			// FIXME: replace hard coded 4 with const or enum or anything better
 			String aPossibleNumber = getMatcher().group(4);
-			if (isNumber(aPossibleNumber.trim()))
+			if (isCreatable(aPossibleNumber.trim()))
 			{
 				return parseInt(aPossibleNumber);
 			}
@@ -100,7 +100,7 @@ public class WeinboerseLineExtractor implements LineExtrator {
 		String aNumberValue = getMatcher().group(9).trim();
 		log.debug("Found realized price: '{}'", aNumberValue);
 
-		if (getMatcher().matches() && isNumber(aNumberValue)) // coud be the char - too , if not sold at auction !
+		if (getMatcher().matches() && isCreatable(aNumberValue)) // coud be the char - too , if not sold at auction !
 		{
 			return parseInt(aNumberValue);
 		}

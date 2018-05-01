@@ -1,7 +1,7 @@
 package ch.persi.java.vino.importers.wermuth.formatpre2015;
 
 import static ch.persi.java.vino.domain.VinoConstants.EMPTY;
-import static org.apache.commons.lang3.math.NumberUtils.isNumber;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +37,7 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 	public Integer getVintage() {
 		if (getMatcher().matches()) {
 			String aVintage = getMatcher().group(4).trim();
-			if (isNumber(aVintage)) {
+			if (isCreatable(aVintage)) {
 				return Integer.parseInt(aVintage);
 			}
 		}
@@ -60,7 +60,7 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 				aPossibleNumberOfBottlesString = aPossibleNumberOfBottlesString.replaceAll("\\D", "");
 			}
 			
-			if (isNumber(aPossibleNumberOfBottlesString)) {
+			if (isCreatable(aPossibleNumberOfBottlesString)) {
 				String furtherAmountDescription = getMatcher().group(3);
 				if (furtherAmountDescription.contains(DUTZEND)) {
 					int anAmount = Integer.valueOf(aPossibleNumberOfBottlesString);
@@ -86,7 +86,7 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 	public String getLotNumber() {
 		if (getMatcher().matches()) {
 			String aPossibleLotNumber = getMatcher().group(1);
-			if (isNumber(aPossibleLotNumber)) {
+			if (isCreatable(aPossibleLotNumber)) {
 				log.debug("Extracted lot no:{}", matcher.group(1));
 				return aPossibleLotNumber;
 			}
