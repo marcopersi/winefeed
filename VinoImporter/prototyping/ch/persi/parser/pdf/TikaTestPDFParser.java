@@ -13,7 +13,11 @@ import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.BodyContentHandler;
 import org.xml.sax.ContentHandler;
 
-
+/**
+ * Parsing a PDF using the Tika library
+ * @author marcopersi
+ *
+ */
 public class TikaTestPDFParser {
 
 	/**
@@ -27,7 +31,7 @@ public class TikaTestPDFParser {
 	
 	private static final void test1()
 	{
-		try(BufferedInputStream is = new BufferedInputStream(new FileInputStream(new File("test/resources/379_05032016_Resultate.pdf")))) {
+		try(BufferedInputStream is = new BufferedInputStream(new FileInputStream(new File("prototyping/resources/WZ-255_14112015_Resultate.pdf")))) {
             Parser parser = new AutoDetectParser();
             ContentHandler handler = new BodyContentHandler(System.out);
             Metadata metadata = new Metadata();
