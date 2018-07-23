@@ -1,17 +1,13 @@
 package ch.persi.java.vino.util;
 
-import java.util.List;
 import static org.apache.commons.lang3.ArrayUtils.isEmpty;
 
-public abstract class AbstractParser implements InputParser {
-
-	@Override
-	public abstract List<String> parse(String theFileName);
+public class ParserSupport {
 
 	/**
-	 * PDF parsing seems to be quite a challenge for PDF parsers. 
-	 * One has to expect that Strings are returned containing a huge amount of unreasonable spaces.
-	 * If these Strings should be processed then, this could lead into problems, therefore this method
+	 * PDF parsing seems to be a challenge for PDF parsing libraries. 
+	 * One has to expect that Strings are returned containing unreasonable spaces.
+	 * If these Strings should be processed, this could lead into problems, therefore this method
 	 * compacts the strings in a way, that leading & trailing space characters become removed
 	 * 
 	 * @param theStrings

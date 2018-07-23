@@ -3,6 +3,7 @@ package ch.persi.java.vino.importers.weinboerse;
 import static ch.persi.java.vino.domain.VinoConstants.OHK;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -48,7 +49,7 @@ public class WeinboerseImportTask extends AbstractImportTask {
 	}
 
 	@Override
-	public void saveWineOfferings(final List<String> theLines) {
+	public void saveWineOfferings(final List<String> theLines) throws IOException {
 
 		// TODO: move that behind the DAO as a provider of the DAO
 		// Implementation
@@ -116,9 +117,9 @@ public class WeinboerseImportTask extends AbstractImportTask {
 				anOffering.setIsOHK(isOHK);
 				anOffering.setNoOfBottles(lineExtractor.getNoOfBottles());
 				aWineOffering.setOffering(anOffering);
-				anExcelSheet.addRow(aWineOffering);
+				anOutputWriter.write(aWineOffering.toXLSString());
 			} else {
-				anExcelSheet.addSkippedRow(aRecordLine);
+				aSkippedRowsWriter.write(aRecordLine);
 			}
 			// reseting OHK
 			isOHK = false;

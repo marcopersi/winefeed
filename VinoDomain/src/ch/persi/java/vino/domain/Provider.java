@@ -5,7 +5,7 @@ public enum Provider {
 
   STEINFELS("Steinfels"),
 
-  WERMUTH("Wermuth SA."),
+  WERMUTH("WermuthSA"),
 
   WEINBOERSE("Weinboerse"),
 

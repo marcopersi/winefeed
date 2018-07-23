@@ -9,10 +9,22 @@ import java.util.List;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 
-public class PDFBoxUtil extends AbstractParser {
+public class PDFBoxUtil implements InputParser {
 
 	private static final int MINIMUM_CHARACTERS_PER_LINE = 10;
 
+	private ParserSupport parserSupport = null;
+	
+	public void setParserSupport(ParserSupport theParserSupport)
+	{
+		parserSupport = theParserSupport;
+	}
+
+	public ParserSupport getParserSupport()
+	{
+		return parserSupport;
+	}
+	
 	@Override
 	public List<String> parse(String theFileName) {
 
@@ -22,7 +34,7 @@ public class PDFBoxUtil extends AbstractParser {
 			PDFTextStripper textStripper = new PDFTextStripper();
 			textStripper.setAddMoreFormatting(true);
 			String text = textStripper.getText(pddDocument);
-			String[] someStrings = compact(text.split("\n"));
+			String[] someStrings = parserSupport.compact(text.split("\n"));
 			if (someStrings != null && someStrings.length > 0) {
 				for (String aLine : someStrings) {
 					if (aLine.length() > MINIMUM_CHARACTERS_PER_LINE) {

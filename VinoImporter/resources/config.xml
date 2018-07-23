@@ -3,8 +3,6 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-
-
 	<bean id="wermuthImportJob" class="ch.persi.java.vino.importers.wermuth.WermuthImporter" >
 		<property name="tasks">
 			<set>
@@ -28,9 +26,11 @@
 			</set>
 		</property>
 	</bean>
+	
+	<bean id="steinfelsParser" class="ch.persi.java.vino.util.SteinfelsParser" />	
 
 	<bean id="steinfelsImportTask" class="ch.persi.java.vino.importers.steinfels.SteinfelsImportTask">
-			<property name="inputParser" ref="iTextParser" />
+			<property name="inputParser" ref="steinfelsParser" />
 	</bean>
 
 	<bean id="weinboerseImportJob" class="ch.persi.java.vino.importers.weinboerse.WeinboerseImporter" >
@@ -47,21 +47,19 @@
 
 	<bean id="weinboerseImportTask" class="ch.persi.java.vino.importers.weinboerse.WeinboerseImportTask" />
 
-<!-- 	<bean id="tikaParser" class="ch.persi.java.vino.util.TikaUtil" /> -->
-<!-- 	<bean id="pdfBoxParser" class="ch.persi.java.vino.util.PDFBoxUtil" /> -->
-	<bean id="iTextParser" class="ch.persi.java.vino.util.iTextUtil" />
+	<bean id="wermuthParser" class="ch.persi.java.vino.util.WermuthParser" />
 
-	<bean id="priceParser" class="ch.persi.java.vino.importers.wermuth.prices.WermuthPricePageParser">
-    <property name="inputParser" ref="iTextParser" />
-	</bean>
+<!-- 	<bean id="priceParser" class="ch.persi.java.vino.importers.wermuth.prices.WermuthPricePageParser"> -->
+<!--     	<property name="inputParser" ref="iTextParser" /> -->
+<!-- 	</bean> -->
 
 <!-- 	<bean id="wermuthImportTask" class="ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015ImportTask"> -->
-<!-- 		<property name="inputParser" ref="iTextParser" /> -->
+<!-- 		<property name="inputParser" ref="wermuthParser" /> -->
 <!-- 		<property name="priceParser" ref="priceParser" /> -->
 <!-- 	</bean> -->
 
 	<bean id="wermuthImportTask" class="ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask">
-		<property name="inputParser" ref="iTextParser" />
+		<property name="inputParser" ref="wermuthParser" />
 	</bean>
 
 

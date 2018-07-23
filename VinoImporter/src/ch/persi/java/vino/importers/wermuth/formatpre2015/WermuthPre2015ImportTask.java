@@ -4,6 +4,7 @@ import static ch.persi.java.vino.domain.VinoConstants.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -83,7 +84,7 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 		}
 	};
 	
-	private void handleOfferings(final Wine theWine, final Map<String, LineExtrator> someOfferingLines, final StringBuilder theNote) {
+	private void handleOfferings(final Wine theWine, final Map<String, LineExtrator> someOfferingLines, final StringBuilder theNote) throws IOException {
 
 		for (Entry<String, LineExtrator> anEntry : someOfferingLines.entrySet()) {
 			Offering anOffering = new Offering();
@@ -129,14 +130,16 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 			int aVintage = aLineExtractor.getVintage();
 			log.debug("Extracted vintage:{}", aVintage);
 			theWine.setVintage(Integer.valueOf(aVintage));
-			anExcelSheet.addRow(new WineOffering(theWine, aWineUnit, anOffering));
+			
+			WineOffering aWineOffering = new WineOffering(theWine, aWineUnit, anOffering);
+			anOutputWriter.write(aWineOffering.toXLSString());
 		}
 		someOfferingLines.clear();
 		theNote.delete(0, theNote.length());
 	}
 
 	@Override
-	public final void saveWineOfferings(final List<String> theLines) {
+	public final void saveWineOfferings(final List<String> theLines) throws IOException {
 		List<String> aChunk = new ArrayList<>();
 		log.info("Run through lines now, hopefully finding any origin (startline) at all !");
 		for (int i = 0; i < theLines.size(); i++) {
@@ -180,7 +183,7 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 		}
 	}
 
-	private void handleOffering(final List<String> theLines) {
+	private void handleOffering(final List<String> theLines) throws IOException {
 
 		Map<String, LineExtrator> someOfferingLines = new HashMap<>();
 		StringBuilder aNoteBuilder = new StringBuilder();

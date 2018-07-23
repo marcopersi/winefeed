@@ -1,5 +1,6 @@
 package ch.persi.java.vino.importers;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -24,5 +25,5 @@ public interface ImportTask extends Task{
 		return new BigDecimal("7.5", new MathContext(0, RoundingMode.HALF_UP));
 	}
 	
-	public void saveWineOfferings(List<String> theLines);
+	public void saveWineOfferings(List<String> theLines) throws IOException;
 }
