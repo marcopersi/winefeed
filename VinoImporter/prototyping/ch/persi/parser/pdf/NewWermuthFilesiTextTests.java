@@ -13,7 +13,7 @@ import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
 public class NewWermuthFilesiTextTests {
 
 	public static void main(String[] args) throws IOException {
-		PdfReader aPDFReader = new PdfReader("prototyping/resources/WZ-256_12032016_Resultate.pdf");
+		PdfReader aPDFReader = new PdfReader("prototyping/resources/WZ-258_10092016_Resultate.pdf");
 		
 		try {
 			

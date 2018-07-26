@@ -1,3 +1,4 @@
+package ch.persi.java.vino.importers.wermuth.preparer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -6,20 +7,20 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Preparer {
+public class WermuthMarch2016Preparer {
 
 	public static void main(String[] args) throws FileNotFoundException {
 		
 		//running through characters, drop carriage return /new line if the next line is not the next value in the sequence
-		File file = new File("import/Wermuth/WZ-256_12032016");
+		File file = new File("import/Wermuth/WZ-256_Resultate_13032016");
 		List<String> someLines = new ArrayList<>();
-		
 		Pattern compile = Pattern.compile("^([0-9]{1,4}).*");
 		int lastLotNumber = 1;
 		
 		try(Scanner input = new Scanner(file))
 		{
 			while (input.hasNextLine()) {
+				
 				String nextLine = input.nextLine();
 				Matcher matcher = compile.matcher(nextLine);
 				
@@ -39,8 +40,6 @@ public class Preparer {
 		};
 		
 		for (String string : someLines) {
-			System.out.println("original: "+string);
-/*			
 			System.out.println(string.replaceAll("“|“|«|»|’|”|„", "")
 					.replaceAll("\\s{2}", " ")
 					.replaceAll("CHF", " ")
@@ -100,7 +99,7 @@ public class Preparer {
 					.replace("Grand cru, ", " ")
 					.replace(" classé ", " ")
 					.replaceAll("\\s{2}", " ")
-					);*/
+					);
 		}
 	}
 	
