@@ -1,6 +1,6 @@
 1;Château Mouton Rothschild;null;1986;3;7.5;false;1800;2400;2000
-2;Château Du Beaucaillou;null;1998;12;7.5;true;960;1200;1200
-3;Château Du Beaucaillou;null;2000;12;7.5;true;1640;2040;1800
+2;Château Ducru Beaucaillou;null;1998;12;7.5;true;960;1200;1200
+3;Château Ducru Beaucaillou;null;2000;12;7.5;true;1640;2040;1800
 4;Château Gruaud Larose;null;2000;12;7.5;true;960;1200;1080
 5;Château Gruaud Larose;null;2003;12;7.5;true;580;720;780
 6;Château Latour;null;1999;3;7.5;false;1050;1200;1050
@@ -74,7 +74,7 @@
 77;Château Léoville Las Cases;null;2001;12;7.5;true;1200;1560;1310
 78;Château Léoville Las Cases;null;2007;6;7.5;true;540;720;520
 79;Château Montrose;null;2003;6;7.5;true;960;1200;1000
-80;Château Branaire Du;null;2005;12;7.5;true;660;840;640
+80;Château Branaire Ducru;null;2005;12;7.5;true;660;840;640
 81;Château Smith Haut Lafitte blanc;null;2006;6;7.5;true;420;540;380
 82;Château Pontet Canet;null;2007;6;7.5;true;360;480;280
 83;Château Pontet Canet;null;2008;12;7.5;true;840;1080;780
@@ -346,12 +346,12 @@
 353;Château Léoville Poyferré;null;2007;12;7.5;true;600;840;500
 354;Château Léoville Poyferré;null;2007;12;7.5;true;600;840;500
 355;Château Léoville Poyferré;null;2007;12;7.5;true;600;840;500
-356;Château Branaire Du;null;2006;12;7.5;true;540;720;460
-357;Château Branaire Du;null;2007;12;7.5;true;420;600;350
-358;Château Branaire Du;null;2007;12;7.5;true;420;600;350
-359;Château Branaire Du;null;2008;12;7.5;true;450;660;350
-360;Château Branaire Du;null;2009;12;7.5;true;780;960;800
-361;Château Branaire Du;null;2009;12;7.5;true;780;960;760
+356;Château Branaire Ducru;null;2006;12;7.5;true;540;720;460
+357;Château Branaire Ducru;null;2007;12;7.5;true;420;600;350
+358;Château Branaire Ducru;null;2007;12;7.5;true;420;600;350
+359;Château Branaire Ducru;null;2008;12;7.5;true;450;660;350
+360;Château Branaire Ducru;null;2009;12;7.5;true;780;960;800
+361;Château Branaire Ducru;null;2009;12;7.5;true;780;960;760
 362;Château Haut Brion;null;2006;12;7.5;true;3600;4800;3400
 363;Château Haut Brion;null;2006;12;7.5;true;3600;4800;3400
 364;Château La Dominique;null;2008;10;7.5;true;350;500;280

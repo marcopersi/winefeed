@@ -48,7 +48,7 @@
 48;Château Léoville Barton;null;1999;12;3.75;true;300;420;410
 49;Château Léoville Barton;null;1999;12;3.75;true;300;420;400
 50;Château Léoville Barton;null;2000;12;7.5;true;960;1200;1050
-51;Château Du Beaucaillou;null;1998;6;7.5;true;960;1200;490
+51;Château Ducru Beaucaillou;null;1998;6;7.5;true;960;1200;490
 52;Château Gruaud Larose;null;1995;6;7.5;true;360;480;380
 53;Château Gruaud Larose;null;2003;12;7.5;true;660;840;550
 54;Château Gruaud Larose;null;2005;6;7.5;true;360;480;420
@@ -318,7 +318,7 @@
 324;Château Talbot;null;2000;12;7.5;true;660;840;800
 325;Château Gruaud Larose;null;2000;12;7.5;true;840;1200;1000
 326;Château Lagrange;null;2003;12;7.5;true;360;540;440
-327;Château Du Beaucaillou;null;1995;6;7.5;true;600;840;650
+327;Château Ducru Beaucaillou;null;1995;6;7.5;true;600;840;650
 328;Château Léoville Barton;null;2002;1;30;true;200;300;280
 329;Château Léoville Barton;null;2008;3;15;false;300;450;350
 330;La Dame de Montrose;null;2003;12;7.5;true;480;720;450
@@ -493,10 +493,10 @@
 507;Château Mouton Rothschild;null;1996;1;7.5;false;270;350;300
 508;Château Mouton Rothschild;null;1998;1;7.5;false;270;350;290
 509;Château Mouton Rothschild;null;1998;1;15;false;600;900;600
-510;Château Branaire Du;null;2000;12;7.5;true;840;1200;800
+510;Château Branaire Ducru;null;2000;12;7.5;true;840;1200;800
 511;Château Léoville Barton;null;1998;12;7.5;true;720;960;720
 512;Château Léoville Las Cases;null;2000;3;7.5;false;600;900;620
-513;Château Du Beaucaillou;null;1998;12;7.5;true;960;1200;1000
+513;Château Ducru Beaucaillou;null;1998;12;7.5;true;960;1200;1000
 514;Château Calon Ségur;null;2001;12;7.5;true;720;960;600
 515;Château Cos d’Estournel;null;2001;12;7.5;true;960;1200;1100
 516;Château Cos d’Estournel;null;2002;12;7.5;true;960;1200;1005
@@ -506,11 +506,10 @@
 520;Château Figeac;null;2000;12;7.5;true;1200;1560;1450
 521;Château Pavie;null;1999;12;7.5;true;1800;2400;1800
 522;Château Pétrus;null;1998;1;7.5;false;2000;3000;2000
-523;Araujo Eisele / OpusOne;null;1996;2;7.5;false;300;500;340
 524;Pahlmeyer Red Blend;null;1997;2;7.5;false;300;500;340
 525;Shiraz Astralis;Clarendon Hills;1999;6;7.5;true;660;840;750
 526;Run Rig;Torbreck;1998;6;7.5;true;840;1200;1010
-527;La Jota 15th Anniversary;Cabernet Sauvignon;1996;1;60;false;700;1000;1000
+527;La Jota 15th Anniversary;null;1996;1;60;false;700;1000;1000
 528;Puligny Montrachet Clavoillon;Domaine Leflaive;2009;1;15;false;200;300;200
 529;Chevalier Montrachet;null;2006;1;7.5;false;300;400;280
 530;Clos de la Roche;Domaine Ponsot;1998;3;15;false;900;1500;800
@@ -545,8 +544,8 @@
 559;Château Mouton Rothschild;null;1990;1;7.5;false;250;350;260
 560;Château Mouton Rothschild;null;1990;1;7.5;false;200;300;200
 561;Château Latour;null;1996;1;7.5;true;600;800;520
-562;Château Branaire Du;null;1994;12;7.5;true;360;480;300
-563;Château Du Beaucaillou;null;1996;12;7.5;true;1680;1920;1700
+562;Château Branaire Ducru;null;1994;12;7.5;true;360;480;300
+563;Château Ducru Beaucaillou;null;1996;12;7.5;true;1680;1920;1700
 564;Château Calon Ségur;null;1996;12;7.5;true;840;1080;860
 565;Château Montrose;null;1996;12;7.5;true;1200;1440;1400
 566;Château Cos d’Estournel;null;1986;2;7.5;false;200;300;260
@@ -572,8 +571,8 @@
 586;Château d’Yquem;null;1982;12;7.5;true;2640;3300;2400
 587;Château Margaux;null;1996;12;7.5;true;4200;5400;4900
 588;Château Margaux;null;1999;6;7.5;true;3000;3600;2000
-589;Château Du Beaucaillou;null;1995;6;7.5;true;720;900;750
-590;Château Du Beaucaillou;null;1995;6;7.5;true;720;900;750
+589;Château Ducru Beaucaillou;null;1995;6;7.5;true;720;900;750
+590;Château Ducru Beaucaillou;null;1995;6;7.5;true;720;900;750
 591;Château Tertre Rôteboeuf;null;1996;12;7.5;true;1200;1560;1000
 592;Château Pétrus;null;1975;1;7.5;false;1000;1500;800
 593;Sassicaia;Tenuta San Guido;1990;3;7.5;false;750;900;800
@@ -583,17 +582,17 @@
 597;Nuits St. Georges;Domaine Henri Jayer;1992;1;7.5;false;700;1000;600
 598;Nuits-St.-Georges Les Vaucrains;Domaine Henri Gouges;2006;3;7.5;false;210;300;160
 599;Nuits-St.-Georges Les Vaucrains;Domaine Henri Gouges;2006;6;7.5;true;420;600;360
-600;Musigny  Vieilles Vignes ;Comte Vogüe;2011;2;7.5;false;700;1000;800
-601;Musigny  Vieilles Vignes ;Comte Vogüe;2011;3;7.5;true;1050;1500;1100
-602;Musigny  Vieilles Vignes ;Comte Vogüe;2012;2;7.5;false;900;1200;1000
-603;Musigny  Vieilles Vignes ;Comte Vogüe;2012;3;7.5;true;1350;1800;1500
+600;Musigny Vieilles Vignes ;Comte Vogüe;2011;2;7.5;false;700;1000;800
+601;Musigny Vieilles Vignes ;Comte Vogüe;2011;3;7.5;true;1050;1500;1100
+602;Musigny Vieilles Vignes ;Comte Vogüe;2012;2;7.5;false;900;1200;1000
+603;Musigny Vieilles Vignes ;Comte Vogüe;2012;3;7.5;true;1350;1800;1500
 604;Romanée St. Vivant;Domaine Romanée Conti;2005;1;7.5;false;1000;1800;900
 605;Romanée St. Vivant;Domaine Romanée Conti;2005;1;7.5;false;1000;1800;880
 606;Romanée St. Vivant;Domaine Romanée Conti;1989;1;15;false;2200;2700;1800
 607;Gevrey Chambertin Lavaux St. Jacques Dominique Laurent;null;1993;6;7.5;false;600;800;0
 608;Savigny les Beaunes Aux Serpentières;Dominique Laurent;1993;10;7.5;false;600;900;0
-609;Château Branaire Du;null;1985;4;7.5;false;200;300;180
-610;Château Branaire Du;null;1990;6;7.5;false;420;600;0
+609;Château Branaire Ducru;null;1985;4;7.5;false;200;300;180
+610;Château Branaire Ducru;null;1990;6;7.5;false;420;600;0
 611;Château Langoa Barton;null;1990;10;7.5;false;600;800;500
 612;Domaine de Chevalier rouge;null;1986;5;7.5;false;275;350;0
 613;Domaine de Chevalier rouge;null;1988;6;7.5;false;450;540;360
@@ -615,8 +614,8 @@
 629;Château Clos l’Eglise;Castillon-Côtes de Bordeaux;2006;12;7.5;true;150;210;120
 630;Blason d’Issan;null;2006;12;7.5;true;180;300;200
 631;Château Rieussec;null;2006;12;7.5;true;360;420;260
-632;Harlan Estate;Cabernet Sauvignon;1996;1;7.5;false;550;700;480
-633;Harlan Estate;Cabernet Sauvignon;1996;1;7.5;false;550;700;480
+632;Harlan Estate;Harlan Estate;1996;1;7.5;false;550;700;480
+633;Harlan Estate;Harlan Estate;1996;1;7.5;false;550;700;480
 634;Clos Apalta;Casa Lapostolle;2003;6;7.5;true;300;480;240
 635;Château Laville Haut Brion;null;1999;12;7.5;true;1080;1320;940
 636;Malaga Solera;Hermanos Scholz;1885;1;7.5;false;250;400;220

@@ -78,7 +78,7 @@
 80;Château Latour;null;1990;1;7.5;false;450;700;500
 81;Château Lafite Rothschild;null;2000;6;7.5;true;6000;7200;6600
 82;Château Talbot;null;2000;12;7.5;true;720;960;850
-83;Château Branaire Du;null;2000;6;7.5;true;420;600;380
+83;Château Branaire Ducru;null;2000;6;7.5;true;420;600;380
 84;Château Léoville Barton;null;2000;12;7.5;true;1080;1320;1200
 85;Château Léoville Las Cases;null;2000;12;7.5;true;2700;3600;2600
 86;Château Fieuzal rouge;null;2000;6;7.5;false;210;300;200
@@ -478,7 +478,7 @@
 486;Cepparello;Isole e Olena;2009;3;15;true;270;360;320
 487;Flaccianello;Fontodi;2011;1;60;true;550;700;520
 488;Camalaione;Le Cinciole;2009;1;60;true;250;400;220
-489;A Quo;Montepeloso;2012;1;180;true;400;600;380						
+489;A Quo;Montepeloso;2012;1;180;true;400;600;380
 490;Eneo;Montepeloso;2007;1;30;true;150;250;150
 491;Eneo;Montepeloso;2011;1;90;true;350;500;420
 492;Il Pino di Biserno;Tenuta di Biserno;2007;1;30;true;180;250;240
@@ -675,7 +675,7 @@
 693;Château Pontet Canet;null;2003;12;7.5;false;840;1080;900
 694;Château Phel an Ségur;null;2006;8;7.5;false;240;320;200
 695;Château Lilian Ladouys;null;2009;12;7.5;false;240;360;180
-696;Château Branaire Du;null;2003;12;7.5;false;600;780;500
+696;Château Branaire Ducru;null;2003;12;7.5;false;600;780;500
 697;Château Gruaud Larose;null;2006;6;7.5;false;240;300;240
 698;Château de Chantegrive;null;2000;9;7.5;false;180;270;180
 699;Château Smith Haut Lafitte rouge;null;2006;11;7.5;false;660;880;600
@@ -787,7 +787,7 @@
 806;Château Léoville Poyferré;null;2007;12;7.5;true;600;840;580
 807;Château Gruaud Larose;null;2001;288;3.75;true;720;960;600
 808;Château Gruaud Larose;null;2001;288;3.75;true;720;960;600
-809;Château Branaire Du;null;2007;12;7.5;true;360;480;300
+809;Château Branaire Ducru;null;2007;12;7.5;true;360;480;300
 810;Château La Mission Haut Brion;null;2006;12;7.5;true;2160;2700;2100
 811;Château La Mission Haut Brion;null;2006;12;7.5;true;2160;2700;2100
 812;Château La Mission Haut Brion;null;2006;12;7.5;true;2160;2700;2000
