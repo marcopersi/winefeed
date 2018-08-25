@@ -78,15 +78,19 @@ public class WineOffering {
 		aBuilder.append(";");
 		aBuilder.append(getWine().getName());
 		aBuilder.append(";");
-		aBuilder.append(getWine().getRegion());
+		aBuilder.append(getWine().getProducer());
 		aBuilder.append(";");
 		aBuilder.append(getWine().getVintage());
-		aBuilder.append(";");
-		aBuilder.append(getOffering().getOfferingDate()); // FIXME: format this date appropriately
 		aBuilder.append(";");
 		aBuilder.append(getOffering().getNoOfBottles());
 		aBuilder.append(";");
 		aBuilder.append(getWineUnit().getDeciliters().toPlainString());
+		aBuilder.append(";");
+		aBuilder.append(getOffering().isOHK());
+		aBuilder.append(";");
+		aBuilder.append(getOffering().getPriceMin());
+		aBuilder.append(";");
+		aBuilder.append(getOffering().getPriceMax());
 		aBuilder.append(";");
 		aBuilder.append(getOffering().getRealizedPrice());
 		aBuilder.append("\n");

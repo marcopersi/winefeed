@@ -1,6 +1,6 @@
 package ch.persi.java.vino.importers.steinfels;
 
-import static org.apache.commons.lang3.math.NumberUtils.isNumber;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,7 +31,7 @@ public class OldRecordLineExtractor implements LineExtrator {
 		if (getMatcher().matches())
 		{
 			String aNumberAsString = matcher.group(8).trim();
-			if (isNumber(aNumberAsString)) {
+			if (isCreatable(aNumberAsString)) {
 				return Integer.parseInt(aNumberAsString);
 			}
 			log.error("Got '{}' what obviously is no number, therefore there is no vintage !!", aNumberAsString);
@@ -51,7 +51,7 @@ public class OldRecordLineExtractor implements LineExtrator {
 		if (getMatcher().matches())
 		{
 			String aPossibleNumber = matcher.group(4);
-			if (isNumber(aPossibleNumber.trim()))
+			if (isCreatable(aPossibleNumber.trim()))
 			{
 				return Integer.parseInt(aPossibleNumber);
 			}
@@ -115,7 +115,7 @@ public class OldRecordLineExtractor implements LineExtrator {
 	public Integer getRealizedPrice() {
 		// FIXME: redundant
 		String aPossibleRealizedPrice = getMatcher().group(8).trim();
-		if (getMatcher().matches() && isNumber(aPossibleRealizedPrice))
+		if (getMatcher().matches() && isCreatable(aPossibleRealizedPrice))
 		{
 			return Integer.parseInt(aPossibleRealizedPrice);
 		}

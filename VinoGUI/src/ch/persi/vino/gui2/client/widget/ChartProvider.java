@@ -1,8 +1,8 @@
 package ch.persi.vino.gui2.client.widget;
 
+import java.time.LocalDate;
 import java.util.Date;
 
-import org.joda.time.LocalDateTime;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JavaScriptException;
@@ -26,12 +26,12 @@ public class ChartProvider {
 		DataTable data = getDataTable();
 		
 		try {
-			data.setValue(0, 0, toDate(1,2,2011));
-			data.setValue(1, 0,	toDate(2,1,2011));
-			data.setValue(2, 0,	toDate(3,11,2010));
-			data.setValue(3, 0,	toDate(4,7,2010));
-			data.setValue(4, 0,	toDate(5,5,2010));
-			data.setValue(5, 0,	toDate(6,3,2010));
+			data.setValue(0, 0, toDate(1,2,2011).toString());
+			data.setValue(1, 0,	toDate(2,1,2011).toString());
+			data.setValue(2, 0,	toDate(3,11,2010).toString());
+			data.setValue(3, 0,	toDate(4,7,2010).toString());
+			data.setValue(4, 0,	toDate(5,5,2010).toString());
+			data.setValue(5, 0,	toDate(6,3,2010).toString());
 		} catch (JavaScriptException ex) {
 			GWT.log("Error creating data table - Date bug on mac?", ex);
 		}
@@ -70,15 +70,15 @@ public class ChartProvider {
 		});
 	}
 
-	private static final Date toDate(int day, int month, int year)
+	private static final LocalDate toDate(int day, int month, int year)
 	{
-		return new LocalDateTime(year, month, day, 23, 59).toDate();
+		return LocalDate.of(year, month, day);
 	}
 	
 	private final static DataTable getDataTable()
 	{
 		DataTable data = DataTable.create();
-		data.addColumn(ColumnType.DATE, "Date");
+		data.addColumn(ColumnType.STRING, "Date");
 		data.addColumn(ColumnType.NUMBER, "Masseto Price Wermuth");
 		data.addColumn(ColumnType.STRING, "title1");
 		data.addColumn(ColumnType.STRING, "text1");

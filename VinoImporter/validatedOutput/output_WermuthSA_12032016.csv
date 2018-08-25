@@ -1,0 +1,877 @@
+1;Grands Échezeaux;Domaine Monegard-Mugneret;2005;6;7.5;true;1200;1800;980
+2;Château Brane-Cantenac;null;2011;12;7.5;true;360;480;380
+3;Château Kirwan;null;2005;12;7.5;true;480;720;400
+4;Château Pichon Baron;null;2010;12;7.5;true;1560;2100;1400
+5;Château Pontet Canet;null;1996;12;7.5;true;720;960;900
+6;Château Pontet Canet;null;2000;12;7.5;true;960;1200;900
+7;Château Pontet Canet;null;2008;12;7.5;true;720;960;720
+8;Château Pontet Canet;null;2009;12;7.5;true;1800;2400;1900
+9;Château Pontet Canet;null;2010;12;7.5;true;1800;2400;2000
+10;Château Pontet Canet;null;2011;12;7.5;true;780;900;680
+11;Château Lafite Rothschild;null;2003;4;7.5;true;2000;3000;2200
+12;Château Lafite Rothschild;null;2006;12;7.5;true;6000;9000;5400
+13;Château Lafite Rothschild;null;2008;12;7.5;true;6000;9000;5900
+14;Château Latour;null;2004;12;7.5;true;3960;4800;3600
+15;Château Latour;null;2005;12;7.5;true;8400;10800;7500
+16;Château Léoville Barton;null;2000;12;7.5;true;1080;1320;1100
+17;Château Léoville Barton;null;2003;12;7.5;true;900;1080;900
+18;Château Léoville Barton;null;2004;12;7.5;true;600;780;510
+19;Château Léoville Las Cases;null;2002;12;7.5;true;1800;2400;1500
+20;Château Ducru Beaucaillou;null;2000;12;7.5;true;1680;2160;1720
+21;Château Ducru Beaucaillou;null;2008;12;7.5;true;1080;1320;960
+22;Château Haut-Brion;null;1996;4;7.5;true;1000;1400;1000
+23;Château Haut-Brion;null;2008;4;7.5;false;1000;1400;1000
+24;Château Haut-Brion;null;2008;6;7.5;true;1500;2100;1500
+25;Château Pavie Macquin;null;2010;12;7.5;true;840;1080;850
+26;Château Pavie;null;2010;12;7.5;true;3240;3960;3200
+27;Château Tertre Rôteboeuf;Vignoble Mitjaville;2011;12;7.5;true;1800;3000;0
+28;Château Troplong Mondot;null;2008;12;7.5;true;780;960;0
+29;Château Ausone;null;2005;6;7.5;true;7200;9000;0
+30;Château Beauséjour;Duffau-Lagarosse;2005;12;7.5;true;960;1200;0
+31;Château Lafleur;null;2010;6;7.5;true;4800;6600;4800
+32;Château Petrus;null;2008;6;7.5;true;10200;12600;9400
+33;Château Petrus;null;2012;6;7.5;true;9000;12000;9050
+34;Dominus;Dominus Estate;1997;8;7.5;true;1200;1600;1400
+35;Dominus;Dominus Estate;2008;6;7.5;true;960;1200;1000
+36;Ridge Montebello;Paul Draper;1994;6;7.5;true;600;840;600
+37;Ridge Montebello;Paul Draper;1995;6;7.5;true;600;840;680
+38;Ridge Montebello;Paul Draper;1998;3;15;true;600;900;650
+39;Ridge Montebello;Paul Draper;2000;3;15;true;600;900;580
+40;Viader Cabernet Sauvignon;Delia Viader;2002;6;7.5;true;360;600;380
+41;Cabernet Sauvignon Bryant Family;Bryant Family;1997;3;7.5;false;2400;3300;2300
+42;Cabernet Sauvignon Estate;Dalla Valle;1998;12;7.5;true;1080;1320;0
+43;Cabernet Sauvignon Estate;Dalla Valle;1999;6;7.5;true;600;840;500
+44;Cabernet Sauvignon Maya;Dalla Valle;1998;6;7.5;true;1500;2400;1600
+45;Cabernet Sauvignon Wedding Vineyard;null;1997;3;7.5;false;1200;1500;0
+46;Clos des Truffiers;Château de la Négly;2000;4;7.5;true;300;480;320
+47;Château Lascombes;null;2005;12;7.5;true;720;960;750
+48;Château Batailley;null;1999;24;3.75;true;360;480;320
+49;Château Lynch Bages;null;1998;24;3.75;true;900;1200;840
+50;Château Pichon Baron;null;1989;3;15;true;1200;1500;1200
+51;Château Pichon Baron;null;1998;6;15;true;960;1200;960
+52;Château Latour;null;1999;3;15;true;2400;3000;0
+53;Château Cos dEstournel;null;2001;6;15;true;1080;1320;1100
+54;Château Smith Haut Lafitte blanc;null;2005;12;7.5;true;780;1080;950
+55;Château Smith Haut Lafitte blanc;null;2008;12;7.5;true;720;960;780
+56;Clos lEglise;null;1998;6;7.5;true;600;900;520
+57;Château lEglise Clinet;Vignoble D. Durantou;1999;6;7.5;true;480;600;600
+58;Château lEglise Clinet;Vignoble D. Durantou;2003;6;15;true;1080;1320;0
+59;Château Doisy Vèdrines;null;1997;12;3.75;true;180;300;200
+60;Château Rieussec;null;1990;12;3.75;true;360;480;360
+61;Château Rieussec;null;1990;12;3.75;true;360;480;340
+62;Château Rieussec;null;1998;12;7.5;true;480;600;0
+63;Château Rieussec;null;2005;12;7.5;true;720;960;600
+64;Château Rieussec;null;2006;12;7.5;true;420;600;0
+65;Château Climens;null;1998;12;7.5;true;600;840;0
+66;Trinoro;null;1998;1;30;true;500;800;400
+67;Trinoro;null;2000;12;7.5;true;1320;1800;1100
+68;Clos d'Agon;Celler Mas Gil;1999;3;15;true;150;220;0
+69;Clos d'Agon;Celler Mas Gil;1999;3;15;true;150;220;0
+70;Clos d'Agon;Celler Mas Gil;1999;1;60;true;450;650;0
+71;Clos d'Agon;Celler Mas Gil;2000;3;15;true;180;250;0
+72;Clos d'Agon;Celler Mas Gil;2000;3;15;true;180;250;0
+73;Clos d'Agon;Celler Mas Gil;2000;1;30;true;120;180;0
+74;Clos d'Agon;Celler Mas Gil;2004;3;15;true;180;250;150
+75;Clos d'Agon;Celler Mas Gil;2004;3;15;true;180;250;150
+76;Clos d'Agon;Celler Mas Gil;2004;3;15;true;180;250;150
+77;Clos d'Agon;Celler Mas Gil;2004;1;60;true;450;650;350
+78;Clos d'Agon;Celler Mas Gil;2006;1;30;true;120;180;0
+79;Clos d'Agon;Celler Mas Gil;2006;1;30;true;120;180;0
+80;Clos d'Agon;Celler Mas Gil;2006;1;60;true;450;650;0
+81;Clos d'Agon;Celler Mas Gil;2006;1;60;true;450;650;0
+82;Pingus;Peter Sisseck;2000;6;7.5;true;2700;3600;0
+83;Nuits-St.-Georges La Perrière;null;2005;12;7.5;true;840;1200;0
+84;Nuits-St.-Georges La Perrière;null;2006;12;7.5;true;720;1080;0
+85;Bourgogne Blanc;null;2012;6;7.5;true;1200;1800;950
+86;Chambolle Musigny;Comte de Vogüe;2011;6;7.5;true;480;600;380
+87;Chambolle Musigny;Comte de Vogüe;2012;6;7.5;true;540;720;400
+88;Chambolle Musigny;null;2011;6;7.5;true;840;1080;650
+89 Gewurztraminer Séléction de Grains Nobles;Hugel et Fils;1989;6;7.5;true;600;900;420
+90 Gewurztraminer Séléction de Grains Nobles;Hugel et Fils;1989;6;7.5;true;600;900;420
+91;Château Suduiraut;null;1996;12;7.5;true;360;480;300
+92;Château Suduiraut;null;1996;12;7.5;true;360;480;300
+93;Château Suduiraut;null;1997;12;7.5;true;720;960;500
+94;Château Suduiraut;null;1998;12;7.5;true;480;600;360
+95;Château Suduiraut;null;1998;12;7.5;true;480;600;340
+96;Château Suduiraut;null;2004;144;3.75;true;300;420;240
+97;Château Suduiraut;null;2004;144;3.75;true;300;420;240
+98;Château Coutet;null;1996;12;7.5;true;300;420;180
+99;Château Coutet;null;1996;12;7.5;true;300;420;180
+100;Château Coutet;null;1996;12;7.5;true;300;420;180
+101;Château Coutet;null;1998;12;7.5;true;360;480;280
+102;Château Coutet;null;1998;12;7.5;true;360;480;280
+103;Château dYquem;null;1999;144;3.75;true;1320;1800;1000
+104;Château dYquem;null;1999;144;3.75;true;1320;1800;1000
+105;Château dYquem;null;2007;6;3.75;false;1200;1800;950
+106;Château dYquem;null;2007;6;3.75;false;1200;1800;950
+107;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2006;1;3.75;true;170;250;120
+108;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2006;1;3.75;true;170;250;120
+109;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2006;1;3.75;true;170;250;150
+110;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2007;1;3.75;true;200;300;160
+111;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2007;1;3.75;true;200;300;160
+112;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2007;1;3.75;true;200;300;180
+113;Château Rayne Vigneau;null;1997;12;7.5;true;300;420;280
+114;Château Suduiraut;null;1997;12;7.5;true;420;600;0
+115;Château Rieussec;null;1982;12;7.5;true;600;840;0
+116;Château Rieussec;null;1982;12;7.5;true;600;840;0
+117;Château Rieussec;null;1991;12;7.5;true;480;720;0
+118;Château Rieussec;null;1996;12;7.5;true;360;480;300
+119;Château Rieussec;null;1997;12;7.5;true;420;600;420
+120;Château Rieussec;null;1998;12;7.5;true;300;420;320
+121;Château Rieussec;null;1999;12;7.5;true;330;450;320
+122;Corton-Charlemagne;Bouchard Père&Fils;2001;6;7.5;true;420;600;0
+123;Corton-Charlemagne;Bouchard Père&Fils;2002;6;7.5;true;480;660;0
+124;Vosne-Romanée Aux Reignots;Bouchard Père&Fils;2002;6;7.5;true;960;1320;0
+125;Chambertin Clos de Bèze;Bouchard Père&Fils;2002;6;7.5;true;900;1200;0
+126;Échezeaux;Bouchard Père & Fils;2001;6;7.5;true;360;540;300
+127;Gevrey-Chambertin Clos St. Jacques;Domaine Sylvie Esmonin;2002;6;7.5;false;720;960;740
+128;Chambolle Musigny La Combe dOrveau;Domaine Perrot Minot;2001;3;7.5;false;240;360;0
+129;Chambolle Musigny La Combe dOrveau;Domaine Perrot Minot;2002;3;7.5;false;270;390;300
+130;Mazoyères-Chambertin;Domaine Perrot Minot;2001;3;7.5;false;330;420;0
+131;Mazoyères-Chambertin;Domaine Perrot Minot;2002;3;7.5;false;450;600;330
+132;Gevrey-Chambertin Lavaux St.-Jacques;Domaine Bernard Dugat-Py;2003;2;7.5;false;300;440;300
+133;Gevrey-Chambertin Les Evocelles;Domaine Bernard Dugat-Py;2004;2;7.5;false;200;300;160
+134;Charmes-Chambertin;Domaine Bernard Dugat-Py;2003;3;7.5;false;600;900;480
+135;Pommard La Levrière;Domaine Bernard Dugat-Py;2003;3;7.5;false;210;300;180
+136;Gevrey-Chambertin Lavaux St.-Jacques;Domaine Armand Rousseau;2002;1;7.5;false;270;350;0
+137;Charmes-Chambertin;Domaine Armand Rousseau;2003;3;7.5;false;600;750;580
+138;Mazy-Chambertin;Domaine Armand Rousseau;2001;3;7.5;false;660;900;600
+140;Corton;Leroy SA;1999;2;7.5;false;1400;2000;0
+141;Corton;Leroy SA;2001;3;7.5;false;1500;2100;0
+142;Clos de Vougeot Vieilles Vignes;Château de la Tour;2002;6;7.5;false;720;960;780
+143;Meursault Les Perrières;null;2011;1;7.5;false;900;1500;860
+144;Bonnes Mares;Comte de Vogüe;2005;1;7.5;false;450;600;380
+145;Musigny Vieilles Vignes;Comte de Vogüe;2005;1;7.5;false;800;1200;650
+146;Gevrey-Chambertin Clos St. Jacques;Domaine Armand Rousseau;2009;1;7.5;false;350;500;300
+147;Gevrey-Chambertin Clos St. Jacques;Domaine Armand Rousseau;2012;1;7.5;false;350;500;300
+148;Gevrey-Chambertin Clos St. Jacques;Domaine Armand Rousseau;2013;1;7.5;false;400;550;250
+149;Chambertin Clos de Bèze;Domaine Armand Rousseau;2011;1;7.5;false;650;900;500
+150;Chambertin;Domaine Armand Rousseau;2002;1;7.5;false;900;1200;900
+151;Chambertin;Domaine Armand Rousseau;2003;1;7.5;false;750;900;700
+152;Chambertin;Domaine Armand Rousseau;2004;1;7.5;false;500;800;500
+153;Chambertin;Domaine Armand Rousseau;2013;1;7.5;false;850;1100;700
+154;Chambertin;Domaine Armand Rousseau;2013;1;7.5;false;850;1100;700
+155;La Tâche;Domaine Romanée Conti;2009;1;15;false;5500;7000;5500
+156;Brunello riserva Case Basse;Gianfranco Soldera;2001;1;7.5;false;250;400;250
+157;Brunello riserva Case Basse;Gianfranco Soldera;2004;1;7.5;false;250;400;250
+158;Brunello riserva Case Basse;Gianfranco Soldera;2006;1;7.5;false;250;400;240
+159;Riesling G-Max;null;2007;3;7.5;false;700;1000;680
+160;Riesling GG Abtserde;Weingut Keller;2008;3;7.5;false;700;1000;700
+161;Riesling GG Morstein;Weingut Keller;2009;3;7.5;false;700;1000;680
+162;Grüner Veltliner Smaragd Honivogl; Hirtzberger;2005;3;15;true;300;450;380
+163;Grüner Veltliner Smaragd Honivogl; Hirtzberger;2005;3;15;true;300;450;380
+164;Grüner Veltliner Smaragd Honivogl; Hirtzberger;2006;3;15;true;360;480;440
+165;Grüner Veltliner Smaragd Honivogl; Hirtzberger;2006;3;15;true;360;480;430
+166;Riesling Smaragd Singerriedel; Hirtzberger;2005;3;15;true;390;480;460
+167;Riesling Smaragd Singerriedel; Hirtzberger;2005;3;15;true;390;480;450
+168;Riesling Smaragd Singerriedel; Hirtzberger;2005;1;30;true;250;400;300
+169;Riesling Smaragd Singerriedel; Hirtzberger;2006;3;15;true;450;600;480
+170;Riesling Smaragd Singerriedel; Hirtzberger;2006;3;15;true;450;600;480
+171;Riesling Reserve M;F.X. Pichler;2001;3;15;false;360;480;320
+172;Riesling Unendlich;F.X. Pichler;2005;6;7.5;true;900;1200;820
+173;Riesling Unendlich;F.X. Pichler;2006;3;7.5;false;450;600;420
+174;Sauvignon blanc Reserve;Manfred Tement;2001;3;15;false;360;480;320
+175;Sauvignon blanc Privat;Alois Gross;2001;8;7.5;false;320;440;260
+176;Chambertin;Côte de Nuits Domaine Armand Rousseau;2001;1;7.5;false;700;1000;650
+177;Chambertin;Côte de Nuits Domaine Armand Rousseau;2001;1;7.5;false;700;1000;650
+178;Chambertin;Côte de Nuits Domaine Armand Rousseau;2002;1;7.5;false;900;1200;910
+179;Chambertin;Côte de Nuits Domaine Armand Rousseau;2002;1;7.5;false;900;1200;910
+180;Hermitage blanc;Jean-Louis Chave;1999;3;7.5;false;360;540;370
+181;Hermitage blanc;Jean-Louis Chave;2000;8;7.5;false;600;900;500
+182;Hermitage blanc;Jean-Louis Chave;2001;2;7.5;false;480;720;0
+183;Hermitage blanc;Jean-Louis Chave;2002;7;7.5;false;630;840;550
+184;Hermitage blanc;Jean-Louis Chave;2003;3;7.5;false;450;600;470
+185;Châteauneuf-du-Pape Reserve;null;1997;3;7.5;false;450;600;500
+186;Châteauneuf-du-Pape Reserve;null;1998;3;7.5;false;660;900;700
+187;Châteauneuf-du-Pape Reserve;null;1999;3;7.5;false;600;900;680
+188;Châteauneuf-du-Pape Reserve;null;2000;3;7.5;false;660;900;680
+189;Châteauneuf-du-Pape Reserve;null;2001;3;7.5;false;540;750;750
+190;Châteauneuf-du-Pape Reserve;null;2002;5;7.5;false;650;800;850
+191;Châteauneuf-du-Pape Reserve;null;2003;8;7.5;false;2160;2640;2000
+192;Châteauneuf-du-Pape Reserve;null;2004;1;7.5;false;180;270;250
+193;Châteauneuf-du-Pape Reserve;null;2004;6;7.5;false;1080;1800;1200
+194;Châteauneuf-du-Pape Reserve;null;2004;6;7.5;false;1080;1800;1200
+196;Sassicaia;Tenuta San Guido;1993;2;7.5;false;250;400;200
+197;Sassicaia;Tenuta San Guido;1996;2;15;false;500;700;400
+198;Cabernet Sauvignon John Riddoch;null;1993;5;7.5;false;200;300;0
+199;Cabernet Sauvignon John Riddoch;null;1994;8;7.5;false;320;480;250
+200;Shiraz Grange;Penfolds;1991;1;7.5;false;250;400;200
+201;Cabernet Sauvignon Bin 707;Penfolds;1997;5;7.5;false;750;1000;0
+202;Cabernet Sauvignon Bin 707;Penfolds;1999;7;7.5;false;1050;1400;0
+203;Shiraz RWT;Penfolds;2010;6;7.5;true;600;840;0
+204;Shiraz RWT;Penfolds;2010;6;7.5;true;600;840;0
+205;Shiraz RWT;Penfolds;2010;6;7.5;true;600;840;0
+206;Shiraz RWT;Penfolds;2010;6;7.5;true;600;840;0
+207;Solaia;Piero Antinori;1997;1;7.5;false;160;220;150
+208;Solaia;Piero Antinori;1997;1;7.5;false;160;220;150
+209;Sassicaia;Tenuta San Guido;1995;1;7.5;false;140;180;140
+210;Sassicaia;Tenuta San Guido;1997;1;7.5;false;170;220;170
+211;Sassicaia;Tenuta San Guido;1998;1;7.5;false;120;180;160
+212;Sassicaia;Tenuta San Guido;1998;3;7.5;false;360;540;500
+213;Sassicaia;Tenuta San Guido;1999;1;7.5;false;120;180;140
+214;Sassicaia;Tenuta San Guido;1999;3;7.5;false;360;540;420
+215;Sassicaia;Tenuta San Guido;2001;1;7.5;false;120;180;140
+216;Sassicaia;Tenuta San Guido;2001;3;7.5;false;360;540;380
+217;Masseto;Tenuta dell Ornellaia;2006;1;7.5;false;500;700;480
+218;Masseto;Tenuta dell Ornellaia;2006;1;7.5;false;500;700;480
+219;Messorio;Azienda Le Macchiole;2001;2;7.5;false;320;450;300
+220;Paleo;Azienda Le Macchiole;2001;4;7.5;false;300;450;300
+221;Scrio;Azienda Le Macchiole;2001;2;7.5;false;180;300;120
+222;Eneo;Montepeloso;2007;12;7.5;true;300;420;300
+223;Cabernet Sauvignon Gabbro;Montepeloso;2008;1;30;true;300;500;250
+224;Il Pino di Biserno;Tenuta di Biserno;2012;12;7.5;true;360;480;310
+225;Il Pino di Biserno;Tenuta di Biserno;2012;12;7.5;true;360;480;310
+226;Biserno;Tenuta di Biserno;2009;3;15;true;420;600;520
+227;Redigaffi;Tua Rita;2012;1;90;true;1800;2500;1500
+228;Solaia;Piero Antinori;2010;6;7.5;true;1080;1560;1000
+229;Cont Ugo;Tenuta Guado al Tasso;2011;3;15;true;300;450;250
+230;Messorio;Azienda Le Macchiole;2010;1;30;true;180;250;550
+231;Gaja Camarcanda;Angelo Gaja;2010;6;7.5;true;480;720;480
+232;Matarocchio;Tenuta Guado al Tasso;2011;6;7.5;true;1440;1800;1000
+233;Château La Tour Carnet;null;2005;6;7.5;true;150;210;120
+234;Château La Tour Carnet;null;2005;12;7.5;true;300;420;200
+235;Château La Tour Carnet;null;2009;6;15;true;360;480;300
+236;Château Palmer;null;2008;6;7.5;true;780;1050;820
+237;Château Palmer;null;2008;12;7.5;true;1560;2100;1750
+238;Château Palmer;null;2008;12;7.5;true;1560;2100;1400
+239;Château Palmer;null;2008;12;7.5;true;1560;2100;1400
+240;Château Palmer;null;2009;6;7.5;true;1500;2100;1300
+241;Château Lynch Bages;null;2009;1;30;false;600;900;640
+242;Château Lynch Bages;null;2009;1;30;false;600;900;640
+243;Château Gruaud Larose;null;2010;12;7.5;true;600;780;540
+244;Château Gruaud Larose;null;2010;12;7.5;true;600;780;540
+245;Château Malartic-Lagravière rouge;null;2008;12;7.5;true;360;480;330
+246;Château Malartic-Lagravière rouge;null;2008;12;7.5;true;360;480;330
+247;Château Malartic-Lagravière rouge;null;2008;12;7.5;true;360;480;330
+248;Château Malartic-Lagravière rouge;null;2008;12;7.5;true;360;480;330
+249;Château Malartic-Lagravière rouge;null;2008;12;7.5;true;360;480;360
+250;Château Malartic-Lagravière rouge;null;2008;12;7.5;true;360;480;330
+251;Domaine de Chevalier rouge;null;2009;12;7.5;true;660;840;650
+252;Domaine de Chevalier rouge;null;2009;6;15;true;720;900;720
+253;Château Haut Brion;null;2004;3;15;true;1500;2100;1400
+254;Château Haut Brion;null;2006;12;7.5;true;3960;4800;0
+255;Château Haut Brion;null;2006;12;7.5;true;3960;4800;0
+256;Château Haut Brion;null;2006;12;7.5;true;3960;4800;0
+257;Château Haut Brion;null;2006;12;7.5;true;3960;4800;0
+258;Château Haut Brion;null;2006;12;7.5;true;3960;4800;0
+259;Château La Tour Figeac;null;2009;6;7.5;true;210;300;250
+260;Château La Tour Figeac;null;2009;12;7.5;true;420;600;420
+261;Château La Tour Figeac;null;2009;12;7.5;true;420;600;420
+262;Château La Tour Figeac;null;2009;12;7.5;true;420;600;420
+263;Château Valandraud;null;2004;12;7.5;true;1200;1560;880
+264;Château Angélus;null;2006;3;7.5;false;540;660;540
+265;Château Angélus;null;2006;6;7.5;false;1080;1320;1100
+266;Château Angélus;null;2006;12;7.5;true;2160;2640;2400
+267;Château de Chambrun Le Bourg;Lalande de;2009;6;15;true;600;900;480
+268;Château lEglise Clinet;Vignoble D. Durantou;2006;12;7.5;true;1560;2100;1500
+269;Clos des Papes Châteauneuf du Pape;Vincent Avril;2011;12;7.5;true;600;780;600
+270;Clos des Papes Châteauneuf du Pape;Vincent Avril;2011;6;15;true;660;840;660
+271;Clos des Papes Châteauneuf du Pape;Vincent Avril;2012;12;7.5;true;720;960;720
+272;Clos des Papes Châteauneuf du Pape;Vincent Avril;2012;6;15;true;720;960;720
+273;Clos des Papes Châteauneuf du Pape;Vincent Avril;2012;6;15;true;720;960;720
+274;Clos des Papes Châteauneuf du Pape;Vincent Avril;2000;6;7.5;false;330;420;360
+275;Clos des Papes Châteauneuf du Pape;Vincent Avril;2000;6;7.5;false;330;420;360
+276;Clos des Papes Châteauneuf du Pape;Vincent Avril;2000;6;7.5;false;330;420;340
+277;Clos des Papes Châteauneuf du Pape;Vincent Avril;2000;6;7.5;false;330;420;320
+278;Clos des Papes Châteauneuf du Pape;Vincent Avril;2000;6;7.5;false;330;420;320
+279;Châteauneuf du Pape Auguste Favier;Domaine Saint Prefert;2005;9;7.5;false;315;405;250
+280;Châteauneuf du Pape Auguste Favier;Domaine Saint Prefert;2005;6;7.5;false;210;270;240
+281;Cuvée de la Reine des Bois Châteauneuf du Pape;Domaine la Mordorée;1999;5;7.5;false;350;500;300
+282;Châteauneuf-du-Pape Cuvée Rèservée;Domaine gau;2005;6;7.5;false;240;360;280
+283;Châteauneuf-du-Pape Cuvée Rèservée;Domaine gau;2005;6;7.5;false;240;360;240
+284;Chambolle Musigny Les Cras;Domaine Georges Roumier;2002;1;7.5;false;200;300;170
+285;Chambertin Clos de Bèze;Domaine Armand Rousseau;2004;1;7.5;false;500;700;400
+286;Richebourg;Domaine Romanée Conti;2010;1;7.5;false;1000;1500;750
+287;La Tâche;Domaine Romanée Conti;2010;1;7.5;false;1800;2200;1800
+288;Clos de Vougeot;Domaine Leroy;2001;1;7.5;false;700;1000;700
+289;Clos Vougeot;Louis Jadot;2005;6;7.5;true;960;1200;0
+290;Clos Vougeot;Louis Jadot;2005;6;7.5;true;960;1200;0
+291;Clos de Vougeot;Domaine Méo-Camuzet;1999;6;7.5;false;1200;1800;1200
+292;Beaune Vigne de lEnfant Jesus;Bouchard Père&Fils;1999;6;7.5;true;420;660;460
+293;Gevrey-Chambertin Vieilles Vignes;Domaine Bernard Dugat-Py;2003;2;7.5;false;120;180;140
+294;Gevrey-Chambertin Coeur de Roy Vieilles Vignes;Domaine Bernard Dugat-Py;2004;2;7.5;false;120;160;120
+296;Clos du Jaugueyron;Michel Theron;2005;12;7.5;true;600;840;440
+297;Château Mouton Rothschild;null;1998;6;7.5;true;1800;2400;2000
+298;Château Lafite Rothschild;null;1993;24;3.75;true;3600;4800;0
+299;La Gomerie;G. & D. Bécot;2001;12;7.5;true;600;840;440
+300;La Gomerie;G. & D. Bécot;2001;12;7.5;true;600;840;440
+301;Château dYquem;null;1990;6;3.75;false;900;1200;900
+302;Château dYquem;null;1990;6;3.75;false;900;1200;800
+303;Château dYquem;null;1990;12;3.75;true;1800;2400;1500
+304;Kracher Collection 2000;Alois Kracher;2000;10;3.75;true;800;1200;600
+305;Messorio;Azienda Le Macchiole;2002;6;7.5;true;480;660;380
+306;Messorio;Azienda Le Macchiole;2002;6;7.5;true;480;660;380
+307;Messorio;Azienda Le Macchiole;2002;12;7.5;true;960;1320;750
+308;Merlot Estate;Whitehall Lane Winery;1998;12;7.5;true;240;480;180
+309;Cabernet Sauvignon Bryant Family;Bryant Family;1997;1;7.5;false;750;1000;750
+310;Cabernet Sauvignon Bryant Family;Bryant Family;1997;1;7.5;false;750;1000;750
+311;Cabernet Sauvignon Bryant Family;Bryant Family;1997;1;7.5;false;750;1000;750
+312;Cabernet Sauvignon Wedding Vineyard;null;1997;3;7.5;false;1050;1500;850
+313;Cabernet Sauvignon Wedding Vineyard;null;1997;3;7.5;false;1050;1500;850
+314;Shiraz Georgias Paddock;null;2001;12;7.5;true;480;720;380
+315;Shiraz Georgias Paddock;null;2001;12;7.5;true;480;720;380
+316;Armagnac 1950;null;1950;1;7.5;true;400;700;350
+320;Las Flors de la Peira;La Peira en Damaisela;2005;12;7.5;true;420;720;340
+321;Las Flors de la Peira;La Peira en Damaisela;2006;12;7.5;true;420;720;0
+322;Les Trois Maries;Calvet-Thunevin;2005;6;7.5;true;480;600;380
+323;Parcela El Nogal;Pago de los Capellanes;2004;4;7.5;false;200;320;180
+324;LErmita;null;1995;4;7.5;true;600;800;520
+325;Shiraz Grange;Penfolds;1998;1;7.5;false;270;350;240
+326;Château La Mission Haut Brion;null;2009;1;7.5;false;550;700;560
+327;Château La Mission Haut Brion;null;2010;1;7.5;false;400;500;340
+328;Château Haut Brion;null;1985;1;7.5;false;330;450;270
+329;Château dYquem;null;1937;1;7.5;false;2500;3500;1800
+330;Ermitage rouge lErmite;Michel Chapoutier;1996;12;7.5;true;2400;3000;0
+331;Ermitage rouge lErmite;Michel Chapoutier;1997;6;7.5;true;600;840;0
+332;Ermitage blanc lOrée;Michel Chapoutier;1995;6;7.5;true;600;840;600
+333;Ermitage blanc lOrée;Michel Chapoutier;1996;6;7.5;true;660;960;640
+334;Ermitage blanc lOrée;Michel Chapoutier;1996;6;7.5;true;660;960;640
+335;Ermitage blanc lOrée;Michel Chapoutier;1997;6;7.5;true;600;840;660
+336;Ermitage rouge Le Pavillon;Michel Chapoutier;1996;6;7.5;true;660;900;800
+337;Ermitage rouge Monier de la Sizeranne;Michel Chapoutier;1991;6;7.5;true;120;180;0
+338;Châteauneuf du Pape Cuvée Marie Beurrier;Henri Bonneau;1995;12;7.5;true;2100;2700;0
+339;Châteauneuf du Pape Reserve des Celestins;Henri Bonneau;1995;10;7.5;true;2200;3500;1800
+340;Châteauneuf du Pape Clos des Papes;Vincent Avril;2005;12;7.5;true;960;1200;980
+342;Châteauneuf du Pape Clos des Papes;Vincent Avril;2006;24;3.75;true;960;1320;950
+343;Châteauneuf du Pape Clos des Papes;Vincent Avril;2006;12;7.5;true;900;1200;850
+344;Châteauneuf du Pape Clos des Papes;Vincent Avril;2006;12;7.5;true;900;1200;800
+345;Châteauneuf du Pape Clos des Papes;Vincent Avril;2006;4;15;true;600;900;650
+346;Châteauneuf du Pape Clos des Papes;Vincent Avril;2006;1;30;true;400;550;400
+347;Châteauneuf du Pape Clos des Papes;Vincent Avril;2006;1;30;true;400;550;400
+348;Châteauneuf du Pape Clos des Papes;Vincent Avril;2007;12;7.5;true;1320;1800;1300
+349;Châteauneuf du Pape Clos des Papes;Vincent Avril;2007;12;7.5;true;1320;1800;1300
+350;Châteauneuf du Pape Clos des Papes;Vincent Avril;2007;6;15;true;1320;1800;1300
+351;Châteauneuf du Pape Clos des Papes;Vincent Avril;2005;6;15;true;960;1200;960
+351;Châteauneuf du Pape Clos des Papes;Vincent Avril;2007;1;30;true;500;700;580
+352;Châteauneuf du Pape Clos des Papes;Vincent Avril;2007;1;30;true;500;700;550
+353;Château Chasse Spleen;null;1989;12;3.75;true;360;480;0
+354;Château Chasse Spleen;null;1989;1;7.5;true;720;960;700
+355;Château Rauzan Ségla;null;1994;11;7.5;true;330;440;350
+356;Château Pontet Canet;null;1994;12;7.5;true;600;780;520
+357;Château Pontet Canet;null;1994;12;7.5;true;600;780;550
+358;Château Ducru Beaucaillou;null;1996;12;7.5;true;1320;1560;1700
+359;Château Léoville Barton;null;1994;12;7.5;true;540;660;600
+360;Château Branaire Ducru;null;1989;6;7.5;true;330;420;340
+361;Château Meyney;null;1986;144;3.75;true;240;300;0
+362;Château La Dominique;null;1989;12;7.5;true;960;1200;660
+363;Sassicaia;Tenuta San Guido;1985;1;7.5;false;1200;1500;900
+364;Barolo Mascarello;null;1989;2;7.5;false;500;800;0
+365;Barolo Bussia;Alfredo Prunotto;1989;8;7.5;false;350;490;280
+366;Barolo Giachini;Giovanni Corino;1989;6;7.5;false;300;420;260
+367;Barolo Rocche;Giovanni Corino;1990;3;7.5;false;180;300;150
+368;Barolo Marcenasco;Renato Ratti;1990;2;15;true;300;500;260
+369;Barolo Bric del Fiasc;Paolo Scavino;1990;1;7.5;false;120;150;120
+370;Barolo Pajana;Domenico Clerico;1990;8;7.5;false;1200;1600;0
+371;Barbaresco Sori Tildin;Angelo Gaja;1990;3;7.5;false;660;900;640
+372;Rossj-Bass;null;2008;12;7.5;false;540;720;500
+373;Chardonnay Gaja & Rey;null;2008;6;7.5;true;780;960;600
+374;Valpolicella Classico;Giuseppe Quintarelli;2007;6;7.5;true;300;420;280
+375;Rosso del Sebino;Maurizio Zanella;2008;6;7.5;true;240;360;210
+376;A Quo;Montepeloso;2012;1;180;true;400;600;340
+377;Saffredi;Fattoria Le Pupille;2011;6;7.5;false;300;420;300
+378;Saffredi;Fattoria Le Pupille;2011;6;7.5;false;300;420;300
+379;Montevetrano;null;2011;6;7.5;true;210;330;160
+380;Duca Enrico;null;2007;6;7.5;true;300;420;260
+381;Battonage;Wild Boys of Battonnage;2012;6;7.5;true;660;2400;850
+382;Battonage;Wild Boys of Battonnage;2012;6;7.5;true;660;2400;850
+383;Battonage;Wild Boys of Battonnage;2012;6;7.5;true;660;2400;800
+384;Merlot;Weingut Pöckl;2006;3;7.5;true;360;450;440
+385;Merlot;Weingut Pöckl;2006;3;7.5;true;360;450;440
+386;Charmes-Chambertin;Domaine Dujac;2013;1;7.5;false;180;250;0
+387;Clos de la Roche;Domaine Dujac;2013;1;7.5;false;300;400;0
+388;Gevrey-Chambertin Clos St. Jacques;Domaine Armand Rousseau;2013;1;7.5;false;400;550;0
+389;La Peira;La Peira en Damaisela;2009;6;7.5;false;600;900;700
+390;Château;null;1986;1;7.5;false;400;550;350
+391;Château Latour;null;1985;1;7.5;false;350;500;260
+392;Château Latour;null;1989;1;7.5;false;350;500;350
+393;Château Latour;null;1999;1;7.5;false;400;550;340
+394;Château Haut Brion;ssac-Léognan;1986;1;7.5;false;350;450;300
+395;Château Haut Brion;ssac-Léognan;1999;1;7.5;false;270;350;260
+396;Masseto;Tenuta dell Ornellaia;1998;1;7.5;false;500;700;0
+397;Masseto;Tenuta dell Ornellaia;1998;1;7.5;false;500;700;0
+398;Masseto;Tenuta dell Ornellaia;1999;1;7.5;false;500;700;0
+399;Giusto di Notri;Tua Rita;2005;1;15;true;120;180;80
+400;Giusto di Notri;Tua Rita;2005;1;15;true;120;180;80
+401;Giusto di Notri;Tua Rita;2005;1;15;true;120;180;80
+402;Redigaffi;Tua Rita;2008;1;45;true;1800;2500;1600
+403;Tenuta il Poggione;null;2010;6;7.5;true;240;330;280
+404;Tenuta il Poggione;null;2010;6;7.5;true;240;330;280
+405;Campoleone;null;1999;6;7.5;true;360;480;280
+406;Terra di Lavoro;null;2005;3;7.5;true;180;300;0
+407;Sine Qua Non Backward Forward;Sine Qua Non;1998;1;7.5;false;500;700;0
+408;Sine Qua Non Backward Forward;Sine Qua Non;1998;1;7.5;false;500;700;0
+409;Taylors Vintage Port Vargellas Taylors;null;2000;3;7.5;true;360;600;260
+410;Tayloss Fladgate Vintage Port;Taylors;1997;1;15;false;150;250;180
+411;Tayloss Fladgate Vintage Port;Taylors;1997;1;15;false;150;250;180
+412;Noval Vintage Port;null;1997;1;7.5;false;250;500;200
+413;Noval Vintage Port;null;1997;1;7.5;false;250;500;200
+415;Chevalier-Montrachet;Domaine Michel Niellon;2011;6;7.5;true;1800;2400;1700
+416;Clos de Vougeot;Domaine Clair-Daü;1976;3;7.5;false;900;1200;800
+417;Vosne-Romanée Aux Malconsorts;Domaine Dujac;2008;6;7.5;false;1440;1800;1300
+418;Musigny;Domaine Christian Confuron & Fils;2009;6;7.5;true;3300;3900;3000
+419;Chambolle Musigny Les Cras;Domaine Georges Roumier;1999;1;7.5;false;300;450;280
+420;Chambolle Musigny Les Cras;Domaine Georges Roumier;1999;1;7.5;false;300;450;280
+421;Chambolle Musigny Les Cras;Domaine Georges Roumier;1999;6;7.5;false;1800;2700;1600
+422;Chambertin Domaine Tortochot;null;2010;12;7.5;true;1200;1560;1100
+423;Chambertin Domaine Tortochot;null;2010;12;7.5;true;1200;1560;1100
+424;Clos Vougeot;Domaine David Duband;2009;6;7.5;true;600;840;600
+425;Clos Vougeot;Domaine David Duband;2009;6;7.5;true;600;840;600
+426;Hermitage la Chapelle;Paul Jaboulet Aîné;2000;6;15;true;960;1320;900
+427;Ermitage blanc lErmite;Michel Chapoutier;2000;1;7.5;false;200;300;200
+428;Ermitage blanc lOrée;Michel Chapoutier;1997;2;7.5;false;300;450;300
+429;Ermitage blanc Le Méal;Michel Chapoutier;1997;2;7.5;false;300;450;300
+430;Ermitage rouge Le Pavillon;Michel Chapoutier;2001;3;15;true;900;1200;800
+431;Côte Rôtie La Landonne;E. Guigal;1993;6;7.5;true;960;1320;850
+432;Châteauneuf-du-Pape Vieilles Vignes;Côte du Domaine Marcoux;2004;6;7.5;false;480;660;480
+433;Châteauneuf-du-Pape Vieilles Vignes;Côte du Domaine Marcoux;2004;6;7.5;true;480;660;480
+434;Châteauneuf-du-Pape Vieilles Vignes;Côte du Domaine Marcoux;2006;6;7.5;false;480;660;480
+435;Châteauneuf-du-Pape Vieilles Vignes;Côte du Domaine Marcoux;2006;6;7.5;true;480;660;480
+436;Châteauneuf-du-Pape Croix de Bois;Domaine M. Chapoutier;2001;6;7.5;true;240;360;300
+437;Châteauneuf-du-Pape Croix de Bois;Domaine M. Chapoutier;2001;3;15;true;270;390;280
+438;Châteauneuf-du-Pape Croix de Bois;Domaine M. Chapoutier;2001;3;15;true;270;390;280
+439;Châteauneuf-du-Pape Croix de Bois;Domaine M. Chapoutier;2005;6;7.5;true;300;420;340
+440;Châteauneuf-du-Pape Croix de Bois;Domaine M. Chapoutier;2005;6;7.5;true;300;420;360
+441;Châteauneuf-du-Pape Croix de Bois;Domaine M. Chapoutier;2005;6;7.5;true;300;420;340
+442;Châteauneuf-du-Pape Hommage a Jacques Perrin;Château Beaucastel;1999;6;7.5;true;1980;2400;1600
+443;Châteauneuf-du-Pape;Domaine Clos St. Jean;2009;1;30;true;200;300;250
+444;Châteauneuf-du-Pape;Domaine Clos St. Jean;2009;1;30;true;200;300;250
+445;Châteauneuf-du-Pape;Domaine Clos St. Jean;2009;1;60;true;400;600;450
+446;La Porte du Ciel;Château de la Négly;2007;3;15;true;450;600;420
+447;La Porte du Ciel;Château de la Négly;2007;3;15;true;450;600;420
+448;Barolo Cascina ncia;Giacomo Conterno;2003;12;7.5;true;1080;1320;1150
+449;Barolo Cascina ncia;Giacomo Conterno;2003;12;7.5;true;1080;1320;1100
+450;Barolo riserva Le Rocche del Falletto;Bruno Giacosa;1996;1;15;false;700;1000;800
+451;Barolo riserva Le Rocche del Falletto;Bruno Giacosa;1996;2;15;false;700;1000;800
+452;Barolo riserva Le Rocche del Falletto;Bruno Giacosa;1996;3;15;false;700;1000;800
+453;Barolo riserva Le Rocche del Falletto;Bruno Giacosa;1996;4;15;false;700;1000;800
+454;Barolo riserva Le Rocche del Falletto;Bruno Giacosa;1996;5;15;false;700;1000;800
+455;Sassicaia;Tenuta San Guido;1996;1;15;true;350;500;420
+456;Giusto di Notri;Tua Rita;2008;6;7.5;true;300;420;280
+457;Giusto di Notri;Tua Rita;2008;6;7.5;true;300;420;280
+458;Numanthia;Numanthia Thermes;2006;6;7.5;true;300;420;320
+459;Numanthia;Numanthia Thermes;2006;6;7.5;true;300;420;320
+460;Numanthia;Numanthia Thermes;2006;6;7.5;true;300;420;300
+461;Numanthia;Numanthia Thermes;2006;6;7.5;true;300;420;300
+462;Dominio de Pingus;Peter Sisseck;1996;6;7.5;true;3300;4200;3000
+463;Pinot Noir;Gantenbein;2002;3;15;true;660;900;600
+464;Pinot Noir;Gantenbein;2003;1;15;true;270;350;260
+465;Pinot Noir;Gantenbein;2005;1;15;true;250;300;400
+466;Pinot Noir;Gantenbein;2005;1;30;true;500;800;450
+467;Pinot Noir;Gantenbein;2006;2;15;true;500;750;450
+468;Pinot Noir;Gantenbein;2006;3;15;true;750;900;700
+469;Pinot Noir;Gantenbein;2006;1;30;true;550;800;500
+470;Pinot Noir;Gantenbein;2007;1;30;true;500;800;600
+471;Pinot Noir;Gantenbein;2008;3;15;true;810;1050;800
+472;Pinot Noir;Gantenbein;2008;3;15;true;810;1050;700
+473;Sauvignon blanc Quarz;Kellerei Terlan;2011;6;15;true;360;480;360
+474;Sauvignon blanc Quarz;Kellerei Terlan;2011;6;15;true;360;480;340
+475;Sauvignon blanc Quarz;Kellerei Terlan;2011;6;15;true;360;480;340
+476;Sauvignon blanc Quarz;Kellerei Terlan;2011;6;15;true;360;480;340
+477;Château dYquem;null;1990;1;7.5;false;350;500;370
+478;Château dYquem;null;1990;1;7.5;false;350;500;360
+479;Château dYquem;null;1990;3;7.5;false;1050;1500;1050
+480;Mr. K The Straw Man;Kracher & Krankl;2001;3;3.75;true;600;900;500
+481;Mr. K The Straw Man;Kracher & Krankl;2001;3;3.75;true;600;900;500
+482;Mr. K The Straw Man;Kracher & Krankl;2001;3;3.75;true;600;900;500
+483;Mr. K The Straw Man;Kracher & Krankl;2001;3;3.75;true;600;900;500
+484;Penfolds Grange;Penfolds;1997;6;7.5;true;1980;2400;1700
+485;Kalimna Shiraz Bin 170;Penfolds;2010;3;7.5;true;3300;4500;3000
+486;Cuvée The Steading;Torbreck;2002;1;30;true;200;300;160
+487;Cuvée The Steading;Torbreck;2002;1;60;true;400;600;360
+488;Cuvée The Steading;Torbreck;2003;1;60;true;400;600;360
+489;Cuvée The Steading;Torbreck;2004;1;30;true;200;300;160
+490;Cuvée The Steading;Torbreck;2004;1;30;true;200;300;160
+491;Grenache Les Amis;Torbreck;2005;1;15;true;350;500;320
+492;Grenache Les Amis;Torbreck;2005;1;15;true;350;500;320
+493;Grenache Les Amis;Torbreck;2005;1;30;true;750;1000;700
+494;Shiraz Roennfeldt Road;Greenock Creek;2007;3;7.5;true;600;900;550
+495;Shiraz Roennfeldt Road;Greenock Creek;2007;3;7.5;true;600;900;500
+496;Cabernet Sauvignon Roennfeldt Road;Greenock Creek;2007;3;7.5;true;600;900;550
+497;Cabernet Sauvignon Roennfeldt Road;Greenock Creek;2007;3;7.5;true;600;900;500
+498;Shiraz Georgias Paddock;Jasper Hill;2001;12;7.5;true;480;720;420
+499;Shiraz Georgias Paddock;Jasper Hill;2001;12;7.5;true;480;720;420
+500;Champagne Cuvée Confidentielle;Champagne J.P Lalouelle;1979;3;7.5;true;240;330;150
+501;Champagne Cuvée Confidentielle;Champagne J.P Lalouelle;1983;3;7.5;true;240;330;0
+502;Champagne Cuvée Confidentielle;Champagne J.P Lalouelle;1985;3;7.5;true;240;330;0
+503;Château Sociando Mallet;Haut Médoc;2004;6;7.5;false;120;180;160
+504;Château Belle Vue;null;2008;12;7.5;true;240;360;0
+505;Château Poujeaux;null;2009;12;7.5;true;300;420;320
+506;Clos du Jaugueyron;null;2005;12;7.5;true;480;660;400
+507;Château Grand Puy Lacoste;null;1982;12;7.5;false;180;250;170
+508;Château Grand Puy Lacoste;null;2000;12;7.5;true;960;1200;960
+509;Château Pichon Baron;null;2006;12;7.5;true;900;1200;850
+510;Château Batailley;null;2008;12;7.5;true;360;480;0
+511;Château Montrose;null;2001;12;3.75;true;840;1200;800
+512;Château Lagrange;null;2005;12;3.75;true;300;420;300
+513;Château Haut-Gardère;null;1998;12;7.5;false;180;240;100
+514;Château Larcis Ducasse;null;2008;6;7.5;true;360;480;0
+515;La Gomerie;G. & D. Bécot;2001;12;7.5;true;1200;1800;0
+516;Château Figeac;null;2008;12;7.5;true;900;1200;940
+517;La Muntada;Domaine Gauby;2008;6;7.5;true;420;600;500
+518;Trebbiano dAbruzzo;Azienda Valentini;2010;12;7.5;true;660;780;500
+519;Trebbiano dAbruzzo;Azienda Valentini;2011;12;7.5;true;660;780;500
+520;Barbaresco Rabaja;Produttori del Barbaresco;1978;1;15;false;100;200;100
+521;Brunello di Montalcino annata Biondi Santi;Cantina Fattoria Il Greppo;1994;2;7.5;false;180;250;0
+522;Brunello di Montalcino annata Biondi Santi;Cantina Fattoria Il Greppo;1995;2;7.5;false;200;300;0
+523;Brunello di Montalcino annata Biondi Santi;Cantina Fattoria Il Greppo;1998;1;7.5;false;90;150;0
+524;Brunello di Montalcino annata Biondi Santi;Cantina Fattoria Il Greppo;2004;4;7.5;false;360;480;380
+525;Brunello di Montalcino riserva Biondi Santi;Cantina Fattoria Il Greppo;1970;1;7.5;false;200;300;0
+526;Brunello di Montalcino riserva Biondi Santi;Cantina Fattoria Il Greppo;1975;1;7.5;false;180;250;200
+527;Chianti Classico Gran Selezione Colonia;Azienda Felsina;2006;6;7.5;true;390;480;400
+528;Chianti Classico Gran Selezione Colonia;Azienda Felsina;2007;6;7.5;true;390;480;380
+529;Ornellaia;Tenuta dell Ornellaia;1994;1;60;true;800;1200;900
+530;Ornellaia;Tenuta dell Ornellaia;2011;12;3.75;true;840;1200;700
+531;Masseto;Tenuta dell Ornellaia;1995;1;15;true;1100;1500;950
+532;Sammarco;Castello dei Rampolla;2003;3;7.5;false;120;150;120
+533;Saffredi;Fattoria Le Pupille;1998;2;15;false;150;250;120
+534;Terra di Lavoro;null;1997;3;7.5;false;270;360;240
+535;Cúmaro Conero Riserva;Umani Ronchi;1994;2;15;true;100;150;50
+536;Cabernet Sauvignon Far Niente;Nickel & Nickel;1995;5;7.5;false;600;900;500
+537;Vin Santo Occhio di Pernice;Avigonesi 2;2000;1;7.5;true;150;250;120
+539;Nuits St. Georges;Domaine Henri Jayer;1992;1;7.5;false;500;800;380
+540;Le Montrachet;Domaine Romanée Conti;1995;1;7.5;false;3000;4500;2600
+541;Château Mouton Rothschild;null;1995;6;7.5;true;1800;2400;2000
+542;Château Cheval Blanc;null;1995;2;7.5;false;1000;1500;1000
+543;Château Cheval Blanc;null;1999;12;7.5;true;3300;4200;3220
+544;Kracher Collection 2000;Alois Kracher;2000;10;3.75;true;900;1500;650
+545;Château Poujeaux;null;2010;12;7.5;true;300;420;200
+546;Château Poujeaux;null;2010;12;7.5;true;300;420;200
+547;Château Les Grands Chênes;null;2009;12;7.5;true;270;390;280
+548;LAura de Cambon;Ch. Cambon la Pelouse;2006;6;7.5;true;180;240;140
+549;LAura de Cambon;Ch. Cambon la Pelouse;2008;3;15;true;150;240;100
+550;LAura de Cambon;Ch. Cambon la Pelouse;2008;3;15;true;150;240;100
+551;Château Palmer;null;2009;3;7.5;false;750;900;700
+552;Château Palmer;null;2009;6;7.5;true;1500;1800;1500
+553;Clos du Jaugueyron;null;2009;12;7.5;true;480;720;420
+554;Château Batailley;null;2010;12;7.5;true;360;540;310
+555;Château Batailley;null;2010;12;7.5;true;360;540;310
+556;Château Lynch Bages;null;2010;6;7.5;true;720;1050;750
+557;Château Lynch Bages;null;2010;12;7.5;true;1440;2100;1300
+558;Château Lynch Bages;null;2009;12;7.5;true;1560;2100;1400
+559;Château Lynch Bages;null;2009;12;7.5;true;1560;2100;1400
+560;Château Lynch Bages;null;2009;12;7.5;true;1560;2100;1400
+561;Château Lynch Bages;null;2009;12;7.5;true;1560;2100;1400
+562;Château Lynch Bages;null;2009;12;7.5;true;1560;2100;1400
+563;Château Lynch Bages;null;2009;12;7.5;true;1560;2100;1400
+564;Château Pichon Baron;null;2009;6;7.5;true;720;1050;800
+565;Château Pichon Baron;null;2009;12;7.5;true;1560;2100;1500
+566;Château Pichon Baron;null;2009;12;7.5;true;1560;2100;1550
+567;Château Pichon Lalande;null;2007;12;7.5;true;840;1080;800
+568;Château Branaire Ducru;null;2006;12;7.5;true;480;600;380
+569;Château Branaire Ducru;null;2010;12;7.5;true;600;840;550
+570;Château Léoville Poyferré;null;2010;6;7.5;true;660;840;720
+571;Château Léoville Las Cases;null;2007;12;7.5;true;900;1200;1080
+572;Château Cos dEstournel;null;2006;12;7.5;true;960;1200;980
+573;Château Cos dEstournel;null;2007;5;7.5;false;300;400;380
+574;Château Cos dEstournel;null;2007;6;7.5;true;360;480;360
+575;Domaine de Chevalier blanc;null;2009;6;7.5;true;480;600;500
+576;Château Haut Bailly;null;2009;3;7.5;false;540;720;460
+577;Château Haut Bailly;null;2009;6;7.5;false;1080;1440;850
+578;Château Haut Bailly;null;2009;12;7.5;true;2160;2880;1700
+579;Château Haut Bailly;null;2010;12;7.5;true;1320;1560;1200
+580;Château Haut Brion;null;2010;3;7.5;true;1800;2400;1700
+581;Château La Mission Haut Brion;null;2010;12;7.5;true;4800;6600;4800
+582;Château Bellevue;null;2008;12;7.5;true;420;540;400
+583;Château Bellevue;null;2010;12;7.5;true;480;660;480
+584;Château La Dominique;null;2009;12;7.5;true;420;600;340
+585;Château La Dominique;null;2009;12;7.5;true;420;600;340
+586;Château Canon La Gaffelière;null;2010;12;7.5;true;840;1080;800
+587;Château Pavie Macquin;null;2009;12;7.5;true;960;1200;750
+588;Château Troplong Mondot;null;2010;6;7.5;true;720;960;580
+589;Château Figeac;null;2009;12;7.5;true;1800;2400;1820
+590;Château Clinet;null;2009;6;7.5;true;1320;1800;1300
+591;Château Evangile;null;2009;3;7.5;false;810;1050;820
+592;Château Evangile;null;2009;6;7.5;false;1620;2100;1650
+593;Château Evangile;null;2009;12;7.5;true;3240;4200;3400
+594;Château dYquem;null;2008;12;7.5;true;2160;3000;2300
+595;Clos des Truffiers;Château de la Négly;2005;3;15;true;660;900;750
+596;Clos des Truffiers;Château de la Négly;2005;3;15;true;660;900;750
+597;Clos des Truffiers;Château de la Négly;2005;3;15;true;660;900;700
+598;Clos des Truffiers;Château de la Négly;2005;3;15;true;660;900;750
+599;Bienvenue-Batard-Montrachet;Anne-Claude Leflaive;1992;1;7.5;false;350;500;260
+600;Château Palmer;null;1995;12;7.5;true;1560;1920;1800
+601;Château Palmer;null;1995;12;7.5;true;1560;1920;1800
+602;Château Mouton Rothschild;null;1971;1;7.5;false;150;250;165
+603;Château Mouton Rothschild;null;1983;1;7.5;false;220;300;180
+604;Château Mouton Rothschild;null;1983;1;7.5;false;220;300;220
+605;Château Mouton Rothschild;null;1987;1;7.5;false;180;250;190
+606;Château Duhart Milon;null;1993;1;7.5;false;150;210;110
+607;Château Lafite Rothschild;null;1991;3;7.5;false;1050;1500;1150
+608;Château Latour;null;1998;4;7.5;false;1200;1600;1150
+609;Château Cheval Blanc;1985;1;7.5;false;270;350;0
+610;Opus One;Mondavi & Rothschild;1999;1;7.5;false;200;300;170
+611;Opus One;Mondavi & Rothschild;1981;1;7.5;false;180;300;200
+612;Opus One;Mondavi & Rothschild;1984;1;7.5;false;180;300;0
+613;Opus One;Mondavi & Rothschild;1988;1;7.5;false;150;250;0
+614;Opus One;Mondavi & Rothschild;1990;1;7.5;false;180;300;0
+615;Cardinale Proprietary Red;Cardinale;1998;6;7.5;true;450;660;350
+616;Cardinale Proprietary Red;Cardinale;1999;6;7.5;true;450;660;350
+617;Cardinale Proprietary Red;Cardinale;1999;6;7.5;true;450;660;350
+618;Cardinale Proprietary Red;Cardinale;2004;6;7.5;true;540;720;450
+619;Cabernet Sauvignon CCS;Schrader Cellars;2011;1;7.5;false;200;300;160
+620;Cabernet Sauvignon CCS;Schrader Cellars;2011;1;7.5;false;200;300;160
+621;Cabernet Sauvignon CCS;Schrader Cellars;2011;3;7.5;false;600;900;500
+622;Cabernet Sauvignon CCS;Schrader Cellars;2012;1;7.5;false;450;600;350
+623;Cabernet Sauvignon RBS;Schrader Cellars;2008;3;7.5;false;900;1200;750
+624;Cabernet Sauvignon RBS;Schrader Cellars;2009;3;7.5;false;750;900;650
+625;Cabernet Sauvignon RBS;Schrader Cellars;2009;3;7.5;false;750;900;650
+626;Cabernet Sauvignon RBS;Schrader Cellars;2009;3;7.5;false;750;900;650
+627;Cabernet Sauvignon T6;Schrader Cellars;2009;1;7.5;false;270;400;220
+628;Cabernet Sauvignon T6;Schrader Cellars;2009;1;7.5;false;270;400;220
+629;Cabernet Sauvignon T6;Schrader Cellars;2012;1;7.5;false;220;300;170
+630;Cabernet Sauvignon T6;Schrader Cellars;2012;1;7.5;false;220;300;170
+631;Cabernet Sauvignon T6;Schrader Cellars;2012;1;7.5;false;220;300;170
+632;Cabernet Sauvignon T6;Schrader Cellars;2013;1;7.5;false;300;400;270
+633;Cabernet Sauvignon Old Sparky;Schrader Cellars;2009;1;15;false;800;1300;650
+634;Cabernet Sauvignon Old Sparky;Schrader Cellars;2011;1;15;false;700;1200;550
+635;Cabernet Sauvignon Old Sparky;Schrader Cellars;2011;1;15;false;700;1200;550
+636;Cabernet Sauvignon Old Sparky;Schrader Cellars;2012;1;15;false;1200;2000;1000
+637;Merlot Rive Droite;Blankiet Estate;2005;3;7.5;false;240;360;180
+638;Merlot Rive Droite;Blankiet Estate;2005;3;7.5;false;240;360;180
+639;Merlot Rive Droite;Blankiet Estate;2005;3;7.5;false;240;360;180
+640;Merlot Rive Droite;Blankiet Estate;2005;3;7.5;false;240;360;180
+641;Merlot Rive Droite;Blankiet Estate;2005;1;15;false;300;500;220
+642;Merlot Rive Droite;Blankiet Estate;2005;1;15;false;300;500;220
+643;Merlot Rive Droite;Blankiet Estate;2005;1;15;false;300;500;220
+644;Merlot Rive Droite;Blankiet Estate;2005;3;15;false;900;1500;700
+645;Merlot Rive Droite;Blankiet Estate;2006;3;7.5;false;240;360;180
+646;Merlot Rive Droite;Blankiet Estate;2006;3;7.5;false;240;360;180
+647;Merlot Rive Droite;Blankiet Estate;2012;3;7.5;false;390;540;340
+648;Merlot Rive Droite;Blankiet Estate;2012;3;7.5;false;390;540;320
+649;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2004;3;7.5;false;360;540;280
+650;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2004;3;7.5;false;360;540;280
+651;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2005;3;7.5;false;300;450;240
+652;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2005;3;7.5;false;300;450;240
+653;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2012;3;7.5;false;540;720;480
+654;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2012;3;7.5;false;540;720;480
+655;Château;null;2002;1;7.5;false;270;350;260
+656;Château;null;2003;1;7.5;false;350;450;360
+657;Château Lafite Rothschild;null;2001;1;7.5;false;450;600;0
+658;Château Mouton Rothschild;null;2001;1;7.5;false;250;330;260
+659;Château Canon La Gaffelière;null;2004;12;7.5;true;600;840;800
+660;Château Trotanoy;null;2006;3;7.5;true;300;450;260
+661;Château Petrus;null;2006;3;7.5;true;4800;6000;4020
+662;Château Palmer;null;2008;1;7.5;true;120;150;130
+663;Château;null;2006;1;7.5;false;270;350;240
+664;Château;null;2008;1;7.5;false;300;400;300
+665;Château Mouton Rothschild;null;2006;1;7.5;false;350;450;360
+666;Château Mouton Rothschild;null;2008;1;7.5;false;300;400;340
+667;Château Latour;null;2008;1;7.5;false;400;500;360
+668;Château Lafite Rothschild;null;2005;1;7.5;true;600;800;600
+669;Château Lafite Rothschild;null;2006;1;7.5;false;480;600;420
+670;Château Léoville Las Cases;null;2006;1;7.5;false;120;150;130
+671;Château La Mission Haut Brion;null;2006;1;7.5;false;180;250;150
+672;Château Haut Brion;null;2008;1;7.5;false;250;300;250
+673;Château Petrus;null;2006;1;7.5;false;1300;1800;1340
+674;Château Petrus;null;2007;1;7.5;false;1300;1800;1300
+675;Château Petrus;null;2008;2;7.5;true;3200;4000;3000
+676;Château Cap de Faugères;Castillon côtes de Bordeaux;2005;12;7.5;true;240;330;0
+677;Château Cap de Faugères;Castillon côtes de Bordeaux;2005;6;15;true;240;330;0
+678;Château by Faugères;null;2005;1;7.5;false;200;300;250
+679;Château by Faugères;null;2005;1;7.5;false;200;300;250
+680;Château by Faugères;null;2005;3;7.5;true;600;900;950
+681;Château by Faugères;null;2005;6;7.5;true;1200;1800;1600
+682;Château Ausone;null;2002;1;7.5;true;350;500;0
+683;Château Faugères;null;2007;1;120;true;500;1000;400
+684;Château Faugères;null;2007;1;180,true;800;1200;600
+685;Château Faugères;null;2007;1;180;true;800;1200;600
+686;Château Faugères;null;2007;1;60;true;500;800;400
+687;Château Faugères;null;2007;1;60;true;500;800;400
+688;Château Faugères;null;2008;1;60;true;600;900;600
+689;Château Faugères;null;2009;1;60;true;1200;2000;1000
+690;Château Batailley;null;2010;1;60;true;400;600;350
+691;Château Batailley;null;2010;1;60;true;400;600;350
+692;Château Batailley;null;2010;1;60;true;400;600;350
+693;Château Lynch Bages;null;2008;1;30;true;500;800;480
+694;Château Pichon Baron;null;2009;1;30;true;600;900;600
+695;Château de Chambrun;Lalande de;2009;1;60;true;350;500;300
+696;Château Figeac;null;2009;12;7.5;true;2160;3000;1800
+697;Château Ausone;null;2006;12;7.5;true;7200;9600;0
+698;Flaccianello;Azienda Fontodi;2010;6;7.5;true;420;600;400
+699;Flaccianello;Azienda Fontodi;2010;6;7.5;true;420;600;400
+700;Ornellaia;Tenuta dell Ornellaia;2010;6;7.5;true;720;900;750
+701;Carruades de Lafite;Château Lafite Rothschild;1999;6;7.5;true;840;1200;850
+702;Carruades de Lafite;Château Lafite Rothschild;2000;12;7.5;true;2160;2700;2100
+703;Château Lascombes;null;1993;12;7.5;true;300;480;400
+704;Château Pichon Lalande;null;1997;11;7.5;true;770;990;900
+705;Château Léoville Poyferré;null;1998;12;7.5;true;600;840;800
+706;Château Talbot;null;1998;12;7.5;true;360;480;560
+707;Château Pavie;null;1997;12;7.5;true;1080;1320;1180
+708;Château Rayne Vigneau;null;1990;6;7.5;true;240;360;240
+709;Château Sigalas Rabaud;null;2007;12;7.5;true;480;720;450
+710;Château Suduiraut;null;1997;12;7.5;true;540;720;0
+711;Château La Mondotte;null;1999;12;7.5;true;1800;2400;0
+712;La Gomerie;G. & D. Bécot;2005;12;7.5;true;1200;1800;0
+713;Château La Serre;null;2006;6;7.5;true;210;330;0
+714;Château Bellevue-Mondotte;null;2006;12;7.5;true;2100;3000;0
+715;Château Bellevue-Mondotte;null;2007;12;7.5;true;1800;2700;1400
+716;Château de Chambrun;Lalande de;2007;12;7.5;true;240;360;0
+717;Château de Chambrun;Lalande de;2007;12;7.5;true;240;360;0
+718;Château Petit-Village;null;1998;6;7.5;true;600;840;580
+719;Latricières-Chambertin;Domaine J. Trapet;1988;6;7.5;false;540;780;400
+720;Chambertin;Domaine J. Trapet;1988;6;7.5;false;600;840;420
+721;Chambertin Vieilles Vignes;Domaine J. Trapet;1990;4;7.5;false;720;960;580
+722;Chambertin Vieilles Vignes;Domaine J. Trapet;1990;6;7.5;false;1080;1560;850
+723;Clos de Tart;Maison Mommessin;1985;2;7.5;false;600;900;500
+724;Clos de Tart;Maison Mommessin;1988;6;7.5;false;1500;2100;1200
+725;Échezeaux;Domaine Romanée Conti;1984;1;7.5;false;300;500;200
+726;Échezeaux;Domaine Romanée Conti;1984;1;7.5;false;300;500;0
+727;Grands-Échezeaux;Domaine Romanée Conti;1984;1;7.5;350;500;0
+728;Romanée St. Vivant;Domaine Romanée Conti;1982;1;7.5;false;600;900;420
+729;Romanée St. Vivant;Domaine Romanée Conti;1984;1;7.5;false;350;550;0
+730;Romanée St. Vivant;Domaine Romanée Conti;1984;1;7.5;false;350;550;220
+731;Richebourg;Domaine Romanée Conti;1984;1;7.5;false;400;600;0
+732;Richebourg;Domaine Romanée Conti;1984;1;7.5;false;400;600;280
+733;La Tâche;Domaine Romanée Conti;1984;1;7.5;false;650;900;600
+734;Romanée St. Vivants;Domaine Jean Grivot;1985;7;7.5;false;2100;3150;1700
+735;Romanée St. Vivants;Domaine Jean Grivot;1986;3;7.5;false;750;1200;0
+736;Richebourg;Domaine Jean Gros;1986;2;7.5;false;500;800;0
+737;Richebourg;Domaine Jean Gros;1986;6;7.5;false;1500;2400;0
+738;Richebourg;Domaine Jean Gros;1987;3;7.5;false;450;600;0
+739;Clos Vougeot;Domaine Monegard-Mugneret;1989;4;7.5;false;320;440;180
+740;Clos Vougeot;Domaine Jacques Prieur;1988;1;7.5;false;80;120;82
+741;Clos Vougeot;Domaine Jacques Prieur;1989;2;7.5;false;160;240;160
+742;Clos Vougeot;Domaine Jacques Prieur;1990;2;7.5;false;200;300;160
+743;Chambertin Clos de Bèze;Domaine Jacques Prieur;1989;2;7.5;false;480;700;0
+744;Chambertin Clos de Bèze;Domaine Jacques Prieur;1990;6;7.5;false;960;1500;900
+745;Chambertin;Domaine Jacques Prieur;1985;1;7.5;false;250;300;150
+746;Chambertin;Domaine Jacques Prieur;1988;1;7.5;false;200;270;120
+747;Chambertin;Domaine Jacques Prieur;1989;1;7.5;false;150;220;80
+748;Musigny;Domaine Jacques Prieur;1986;1;7.5;false;150;220;0
+749;Musigny;Domaine Jacques Prieur;1989;1;7.5;false;220;300;0
+750;Musigny;Domaine Jacques Prieur;1989;1;7.5;false;220;300;130
+751;Musigny;Domaine Jacques Prieur;1990;1;7.5;false;200;300;180
+752;Romanée St. Vivant;Domaine Cathiard Molinier;1986;6;7.5;false;2400;3300;1300
+753;Romanée St. Vivant;Domaine Michel Voarick;1985;1;7.5;false;120;200;80
+754;Romanée St. Vivant;Domaine Michel Voarick;1988;2;7.5;false;180;250;0
+755;Romanée St. Vivant;Domaine Michel Voarick;1988;6;7.5;false;480;750;350
+756;Romanée St. Vivant;Domaine Hudelot-Noellat;1985;1;7.5;false;150;200;200
+757;Romanée St. Vivant;Domaine Hudelot-Noellat;1988;2;7.5;false;400;600;0
+758;Romanée St. Vivant;Domaine Hudelot-Noellat;1988;6;7.5;false;1200;1800;0
+759;Romanée St. Vivant;Domaine Hudelot-Noellat;1988;6;7.5;false;1200;1800;1000
+760;Romanée St. Vivant;Domaine Hudelot-Noellat;1989;4;7.5;false;1080;1400;0
+761;Romanée St. Vivant;Domaine Hudelot-Noellat;1989;6;7.5;false;1620;2100;1300
+762;Romanée St. Vivant;Domaine Hudelot-Noellat;1990;5;7.5;false;1650;2000;1500
+763;Romanée St. Vivant;Domaine Hudelot-Noellat;1990;6;7.5;false;1980;2400;1900
+764;Romanée St. Vivant;Domaine Hudelot-Noellat;1991;8;7.5;false;1440;1760;2000
+765;Romanée St. Vivant;Domaine Hudelot-Noellat;1992;3;7.5;false;450;600;380
+766;Romanée St. Vivant;Domaine Hudelot-Noellat;1993;5;7.5;false;1200;1500;0
+767;Romanée St. Vivant;Domaine Hudelot-Noellat;1995;5;7.5;false;1250;1750;1100
+768;Romanée St. Vivant;Domaine Hudelot-Noellat;1996;2;7.5;false;500;700;0
+769;Romanée St. Vivant;Domaine Hudelot-Noellat;1997;2;7.5;false;350;500;0
+770;Richebourg;Domaine Hudelot Noellat;1988;5;7.5;false;1500;1750;1300
+771;Richebourg;Domaine Hudelot Noellat;1988;6;7.5;false;1800;2100;0
+772;Richebourg;Domaine Hudelot Noellat;1989;2;7.5;false;700;1000;0
+773;Richebourg;Domaine Hudelot Noellat;1989;6;7.5;false;2100;3000;1800
+774;Richebourg;Domaine Hudelot Noellat;1989;6;7.5;false;2100;3000;0
+775;Richebourg;Domaine Hudelot Noellat;1990;3;7.5;false;1500;2100;1000
+776;Richebourg;Domaine Hudelot Noellat;1990;6;7.5;false;3000;4200;2000
+777;Richebourg;Domaine Hudelot Noellat;1991;6;7.5;false;1500;2100;1800
+778;Richebourg;Domaine Hudelot Noellat;1992;4;7.5;false;1000;1500;900
+779;Richebourg;Domaine Hudelot Noellat;1993;1;7.5;false;220;300;0
+780;Richebourg;Domaine Hudelot Noellat;1995;1;7.5;false;300;500;260
+781;Richebourg;Domaine Hudelot Noellat;1995;1;7.5;false;300;500;0
+782;Richebourg;Domaine Hudelot Noellat;1996;1;7.5;false;300;500;260
+783;Richebourg;Domaine Gros F. & S.;1992;1;7.5;false;200;300;160
+784;Richebourg;Domaine Gros F. & S.;1992;3;7.5;false;600;900;0
+785;Clos des Lambrays;Domaine des Lambrays;1921;1;7.5;false;400;800;400
+786;Clos des Lambrays;Domaine des Lambrays;1921;1;7.5;false;400;800;0
+788;Le Petit Mouton de Château Mouton Rothschild;null;2010;6;7.5;true;780;960;550
+789;Le Petit Mouton de Château Mouton Rothschild;null;2010;12;7.5;true;1560;1920;1100
+790;Le Petit Mouton de Château Mouton Rothschild;null;2010;12;7.5;true;1560;1920;1100
+791;Château Pichon Baron;null;2005;6;7.5;true;660;840;540
+792;Château Pichon Baron;null;2005;6;7.5;true;660;840;540
+793;Château Pichon Baron;null;2005;12;7.5;true;1320;1680;1100
+794;Château Pichon Baron;null;2005;12;7.5;true;1320;1680;1100
+795;Château Pichon Baron;null;2009;12;7.5;true;1440;1800;1300
+796;Château Pichon Lalande;null;2010;4;7.5;false;560;720;500
+797;Château Montrose;null;2010;6;7.5;false;1050;1350;1250
+798;Château Montrose;null;2010;12;7.5;true;2100;2700;2500
+799;Château Troplong Mondot;null;2010;6;7.5;true;720;960;700
+800;Château Troplong Mondot;null;2010;6;7.5;true;720;960;700
+801;Château Troplong Mondot;null;2010;6;7.5;true;720;960;660
+802;Château Troplong Mondot;null;2010;12;7.5;true;1440;1920;1400
+803;Château Troplong Mondot;null;2010;2;15;false;500;700;500
+804;Château Troplong Mondot;null;2010;3;15;true;750;1050;620
+805;Château Troplong Mondot;null;2010;1;30;false;600;800;500
+806;Château Troplong Mondot;null;2010;1;30;true;600;800;500
+807;Zweigelt Schwarz Rot;Hans Schwarz;2012;6;7.5;true;270;360;240
+808;Zweigelt Schwarz Rot;Hans Schwarz;2012;6;7.5;true;270;360;240
+809;Zweigelt Schwarz Rot;Hans Schwarz;2012;12;7.5;true;540;720;450
+810;Zweigelt Schwarz Rot;Hans Schwarz;2012;12;7.5;true;540;720;450
+811;Zweigelt Schwarz Rot;Hans Schwarz;2012;12;7.5;true;540;720;450
+812;Zweigelt Schwarz Rot;Hans Schwarz;2012;12;7.5;true;540;720;450
+813;Zweigelt Schwarz Rot;Hans Schwarz;2012;12;7.5;true;540;720;450
+814;Zweigelt Schwarz Rot;Hans Schwarz;2012;2;15;true;200;300;140
+815;Zweigelt Schwarz Rot;Hans Schwarz;2012;1;30;true;450;600;180
+816;Cuvée G;Gesellmann;2008;6;7.5;true;420;600;340
+817;Cuvée G;Gesellmann;2009;6;7.5;true;480;660;380
+818;Cuvée G;Gesellmann;2009;6;7.5;true;480;660;380
+819;Cuvée G;Gesellmann;2009;6;7.5;true;480;660;380
+820;Cuvée G;Gesellmann;2009;3;15;true;480;660;380
+821;Cuvée G;Gesellmann;2009;1;30;true;400;700;260
+822;Château Phelan Ségu;null;1988;12;7.5;true;360;600;300
+823;Domaine de Chevalier rouge;null;1991;12;7.5;true;360;480;450
+824;Château La Tour Figeac;null;1996;12;7.5;true;300;420;180
+825;Clos de l‘Oratoire;null;1996;12;7.5;true;330;450;200
+826;Château Monbousquet;null;1996;12;7.5;true;480;600;380
+827;Château Monbousquet;null;1996;12;7.5;true;480;600;380
+828;Château by Faugères;null;2004;4;7.5;false;240;400;260
+829;Château Faugères;null;2004;12;7.5;true;300;420;200
+830;Château Faugères;null;2004;6;15;true;300;480;240
+831;Château Cheval Noir;null;1993;12;7.5;true;120;180;50
+832;Château Ausone;null;1993;5;7.5;false;1200;1500;850
+833;Château Ausone;null;1993;6;7.5;true;1440;2160;1100
+834;Château Petit Village;null;1985;9;7.5;false;360;450;450
+835;Château Petit Village;null;1988;6;7.5;true;300;480;400
+836;Château Petit Village;null;1994;12;7.5;true;480;720;500
+837;Baron dArques;Domaines Rothschild;2006;12;7.5;true;240;360;0
+838;Baron dArques;Domaines Rothschild;2006;12;7.5;true;240;360;0
+839;Baron dArques;Domaines Rothschild;2006;12;7.5;true;240;360;160
+840;Baron dArques;Domaines Rothschild;2006;12;7.5;true;240;360;160
+841;Barbera Bricco della Bigotta;null;2000;6;7.5;false;180;300;0
+842;Gaja Sperss;null;2010;6;7.5;true;840;1200;800
+843;Barolo Monprivato;Giacomo Conterno;2010;6;7.5;true;600;840;500
+844;Barolo riserva Fossati Case Nere;Robert Voerzio;2004;3;7.5;true;540;720;480
+845;Barolo riserva Fossati Case Nere;Robert Voerzio;2004;3;7.5;true;540;720;480
+846;Rocca di sinello Etichetta Renzo Piano;Rocca di sinello;2010;1;60;true;700;1000;700
+847;Saffredi;Fattoria Le Pupille;2004;1;120;true;1000;1500;1100
+848;Saffredi;Fattoria Le Pupille;2011;1;120;true;1000;1500;950
+849;Grattamacco;null;2012;6;15;true;540;720;520
+850;Paleo;Azienda Le Macchiole;2010;1;30;true;250;350;260
+851;Ornellaia;Tenuta dell Ornellaia;2011;1;30;true;750;1000;680
+852;Masseto;Tenuta dell Ornellaia;2012;1;15;true;1200;1600;1100
+853;Château Chasse Spleen;null;1999;12;7.5;true;180;300;200
+854;Les Forts de Latour;null;1993;2;7.5;false;240;360;0
+855;Château La Tour Blanche;null;1990;12;7.5;true;600;840;0
+856;Tayloss Fladgate Vintage Port;Taylors;2007;6;7.5;true;360;480;380
+857;Tayloss Fladgate Vintage Port;Taylors;2007;6;7.5;true;360;480;380
+858;Tayloss Fladgate Vintage Port;Taylors;2007;6;7.5;true;360;480;380
+859;Tayloss Fladgate Vintage Port;Taylors;2007;6;7.5;true;360;480;370
+860;Smith Woodhouse Vintage Port;Smith Woodhouse;2000;144;3.75;true;300;420;240
+861;Redoma Tinto;Dirk Niepoort;2001;6;7.5;true;150;270;110
+862;Château du Cauze;null;2000;12;7.5;true;120;180;60
+863;Ornellaia;Tenuta dell Ornellaia;1999;1;30;true;600;900;540
+864;Château Latour;null;1990;1;7.5;false;600;900;0
+865;Château Pichon Lalande;null;1990;2;7.5;false;180;300;0
+866;Château Montrose;null;1990;1;7.5;false;350;500;400
+867;Château Montrose;null;1990;1;7.5;false;350;500;400
+868;Brunello di Montalcino riserva Biondi Santi;Cantina Fattoria Il Greppo;1967;1;7.5;false;150;250;0
+869;Brunello di Montalcino riserva Biondi Santi;Cantina Fattoria Il Greppo;1970;1;7.5;false;250;400;0
+870;Brunello di Montalcino riserva Biondi Santi;Cantina Fattoria Il Greppo;1977;1;7.5;false;150;250;0
+871;Château Boyd-Cantenac;null;1975;12;7.5;true;480;660;0
+872;Château Rauzan-Gassies;null;1970;6;7.5;false;180;300;120
+874;Château Meyney;St. Estephe;1982;6;7.5;false;420;600;0
+876;Château Chasse Spleen;null;1997;6;7.5;true;120;180;70
+877;Château Malartic-Lagravière;null;1997;6;7.5;true;150;210;0
+878;Château Les Carmes Haut-Brion;null;1999;6;7.5;true;210;300;220
+879;Château Camensac;null;1999;12;7.5;true;180;300;0
+880;Château Croizet Bages;null;2000;12;7.5;true;270;360;0
+881;Château Grand Corbin;null;1996;12;7.5;true;240;360;190
+882;Château Faugères;null;2007;1;60;true;250;400;200
+883;Château Faugères;null;2010;1;30;true;180;250;150
+884;Château Faugères;null;2010;1;30;true;180;250;150
+885;Château Faugères;null;2010;1;30;true;180;250;170
+886;Château Figeac;null;2003;3;7.5;false;240;330;240
+887;Château Lafleur;null;2003;6;7.5;true;2100;3000;1800
+888;Vigna dAlceo;Castello dei Rampolla;2008;6;7.5;true;540;840;520

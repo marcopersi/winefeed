@@ -3,6 +3,7 @@ package ch.persi.java.vino.importers.steinfels;
 import static java.lang.String.valueOf;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -111,7 +112,7 @@ public class SteinfelsImportTask extends AbstractImportTask {
 	}
 
 	@Override
-	public void saveWineOfferings(final List<String> theLines) {
+	public void saveWineOfferings(final List<String> theLines) throws IOException {
 
 		int anOfferingId = 1;
 		for (String aRecordLine : theLines) {
@@ -142,12 +143,12 @@ public class SteinfelsImportTask extends AbstractImportTask {
 		}
 	}
 
-	private final void processLine(String theRecordLineWithoutLotNo, int theOfferingId) {
+	private final void processLine(String theRecordLineWithoutLotNo, int theOfferingId) throws IOException {
 
 		LineExtrator lineExtractor = evaluateLineExtractor(theRecordLineWithoutLotNo);
 		if (lineExtractor == null) {
-			anExcelSheet.addSkippedRow(theRecordLineWithoutLotNo);
-			log.debug("skipped row: " + theRecordLineWithoutLotNo);
+			aSkippedRowsWriter.write(theRecordLineWithoutLotNo);
+			log.warn("skipped row: " + theRecordLineWithoutLotNo);
 			return;
 		}
 
@@ -189,7 +190,7 @@ public class SteinfelsImportTask extends AbstractImportTask {
 		Unit unit = getUnit(theRecordLineWithoutLotNo);
 		WineOffering aWineOffering = new WineOffering(aWine, unit, anOffering);
 		log.info(aWineOffering.toXLSString());
-		anExcelSheet.addRow(aWineOffering);
+		anOutputWriter.write(aWineOffering.toXLSString());
 	}
 
 	private static final String extractRegion(String theLine) {

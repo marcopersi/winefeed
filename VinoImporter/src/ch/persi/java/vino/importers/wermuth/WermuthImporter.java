@@ -26,7 +26,6 @@ public class WermuthImporter implements ImportingStrategy {
 			log.info("running task:" + aTask);
 			aTask.execute();
 		}
-		log.info("Import successfully done !");
 	}
 	
 }

@@ -16,7 +16,7 @@ import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015DateExtr
 import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015ImportTask;
 import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthRecordLineExtractor;
 import ch.persi.java.vino.importers.wermuth.prices.WermuthPricePageParser;
-import ch.persi.java.vino.util.iTextUtil;
+import ch.persi.java.vino.util.WermuthParser;
 import junit.framework.TestCase;
 
 public class WermuthPre2015Tests extends TestCase {
@@ -154,7 +154,7 @@ public class WermuthPre2015Tests extends TestCase {
     @Test
 	public void testGetAuctionDate() throws Exception
     {
-    	List<String> someLines = new iTextUtil().parse(new File("test/resources/223.pdf").getAbsolutePath()); 
+    	List<String> someLines = new WermuthParser().parse(new File("test/resources/223.pdf").getAbsolutePath()); 
     	LocalDate aDate = new WermuthPre2015DateExtractingStrategy(someLines).getAuctionDate();
     	assertNotNull(aDate);
     }

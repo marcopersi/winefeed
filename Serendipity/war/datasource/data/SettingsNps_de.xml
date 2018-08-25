@@ -1,0 +1,17 @@
+<list>
+<record>
+    <icon>administration</icon>
+    <name>Administration</name>    
+    <displayName>Verwaltung</displayName>
+</record>
+<record>
+    <icon>templates</icon>
+    <name>Templates</name>    
+    <displayName>Schablonen</displayName>
+</record>
+<record>
+    <icon>datamanagement</icon>
+    <name>Data Management</name>    
+    <displayName>Datenverwaltung</displayName>
+</record>
+</list>

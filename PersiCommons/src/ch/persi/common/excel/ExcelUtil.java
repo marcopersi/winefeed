@@ -17,13 +17,17 @@ import java.util.regex.Pattern;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
 
 public class ExcelUtil {
 
@@ -94,12 +98,12 @@ public class ExcelUtil {
 
     if (theCell == null) return null;
 
-    switch (theCell.getCellType()) {
-      case Cell.CELL_TYPE_BLANK:
+    switch (theCell.getCellTypeEnum()) {
+      case BLANK:
         break;
-      case Cell.CELL_TYPE_NUMERIC:
+      case NUMERIC:
         return evaluateNumberFormat(theCell);
-      case Cell.CELL_TYPE_STRING:
+      case STRING:
         return theCell.getStringCellValue().trim();
       default:
         break;
@@ -109,7 +113,7 @@ public class ExcelUtil {
   }
 
   public static Double getNumericCellValueUnformatted(final Cell theCell) {
-    if (theCell == null || theCell.getCellType() != Cell.CELL_TYPE_NUMERIC) {
+    if (theCell == null || theCell.getCellTypeEnum() != CellType.NUMERIC) {
       return null;
     }
     return theCell.getNumericCellValue();
@@ -163,7 +167,7 @@ public class ExcelUtil {
     titleFont.setFontName("Trebuchet MS");
     style = theWorkBook.createCellStyle();
     style.setFont(titleFont);
-    style.setBorderBottom(CellStyle.BORDER_DOTTED);
+    style.setBorderBottom(BorderStyle.DOTTED);
     style.setBottomBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
     styles.put(TITLE_STYLE, style);
 
@@ -171,97 +175,97 @@ public class ExcelUtil {
     itemFont.setFontHeightInPoints((short)9);
     itemFont.setFontName("Trebuchet MS");
     style = theWorkBook.createCellStyle();
-    style.setAlignment(CellStyle.ALIGN_LEFT);
+    style.setAlignment(HorizontalAlignment.LEFT);
     style.setFont(itemFont);
     styles.put("item_left", style);
 
     style = theWorkBook.createCellStyle();
-    style.setAlignment(CellStyle.ALIGN_RIGHT);
+    style.setAlignment(HorizontalAlignment.RIGHT);
     style.setFont(itemFont);
     styles.put("item_right", style);
 
     style = theWorkBook.createCellStyle();
-    style.setAlignment(CellStyle.ALIGN_RIGHT);
+    style.setAlignment(HorizontalAlignment.RIGHT);
     style.setFont(itemFont);
-    style.setBorderRight(CellStyle.BORDER_DOTTED);
+    style.setBorderRight(BorderStyle.DOTTED);
     style.setRightBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderBottom(CellStyle.BORDER_DOTTED);
+    style.setBorderBottom(BorderStyle.DOTTED);
     style.setBottomBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderLeft(CellStyle.BORDER_DOTTED);
+    style.setBorderLeft(BorderStyle.DOTTED);
     style.setLeftBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderTop(CellStyle.BORDER_DOTTED);
+    style.setBorderTop(BorderStyle.DOTTED);
     style.setTopBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
     style.setDataFormat(theWorkBook.createDataFormat().getFormat("_($* #,##0.00_);_($* (#,##0.00);_($* \"-\"??_);_(@_)"));
     styles.put(STRING_STYLE, style);
 
     style = theWorkBook.createCellStyle();
-    style.setAlignment(CellStyle.ALIGN_RIGHT);
+    style.setAlignment(HorizontalAlignment.RIGHT);
     style.setFont(itemFont);
-    style.setBorderRight(CellStyle.BORDER_DOTTED);
+    style.setBorderRight(BorderStyle.DOTTED);
     style.setRightBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderBottom(CellStyle.BORDER_DOTTED);
+    style.setBorderBottom(BorderStyle.DOTTED);
     style.setBottomBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderLeft(CellStyle.BORDER_DOTTED);
+    style.setBorderLeft(BorderStyle.DOTTED);
     style.setLeftBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderTop(CellStyle.BORDER_DOTTED);
+    style.setBorderTop(BorderStyle.DOTTED);
     style.setTopBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
     style.setDataFormat(theWorkBook.createDataFormat().getFormat("0.000%"));
     styles.put("input_%", style);
 
     style = theWorkBook.createCellStyle();
-    style.setAlignment(CellStyle.ALIGN_RIGHT);
+    style.setAlignment(HorizontalAlignment.RIGHT);
     style.setFont(itemFont);
-    style.setBorderRight(CellStyle.BORDER_DOTTED);
+    style.setBorderRight(BorderStyle.DOTTED);
     style.setRightBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderBottom(CellStyle.BORDER_DOTTED);
+    style.setBorderBottom(BorderStyle.DOTTED);
     style.setBottomBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderLeft(CellStyle.BORDER_DOTTED);
+    style.setBorderLeft(BorderStyle.DOTTED);
     style.setLeftBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderTop(CellStyle.BORDER_DOTTED);
+    style.setBorderTop(BorderStyle.DOTTED);
     style.setTopBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
     style.setDataFormat(theWorkBook.createDataFormat().getFormat("0"));
     styles.put("input_i", style);
 
     style = theWorkBook.createCellStyle();
-    style.setAlignment(CellStyle.ALIGN_CENTER);
+    style.setAlignment(HorizontalAlignment.CENTER);
     style.setFont(itemFont);
     style.setDataFormat(theWorkBook.createDataFormat().getFormat("m/d/yy"));
     styles.put("input_d", style);
 
     style = theWorkBook.createCellStyle();
-    style.setAlignment(CellStyle.ALIGN_RIGHT);
+    style.setAlignment(HorizontalAlignment.RIGHT);
     style.setFont(itemFont);
-    style.setBorderRight(CellStyle.BORDER_DOTTED);
+    style.setBorderRight(BorderStyle.DOTTED);
     style.setRightBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderBottom(CellStyle.BORDER_DOTTED);
+    style.setBorderBottom(BorderStyle.DOTTED);
     style.setBottomBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderLeft(CellStyle.BORDER_DOTTED);
+    style.setBorderLeft(BorderStyle.DOTTED);
     style.setLeftBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderTop(CellStyle.BORDER_DOTTED);
+    style.setBorderTop(BorderStyle.DOTTED);
     style.setTopBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
     style.setDataFormat(theWorkBook.createDataFormat().getFormat("$##,##0.00"));
-    style.setBorderBottom(CellStyle.BORDER_DOTTED);
+    style.setBorderBottom(BorderStyle.DOTTED);
     style.setBottomBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
     style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-    style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
     styles.put("formula_$", style);
 
     style = theWorkBook.createCellStyle();
-    style.setAlignment(CellStyle.ALIGN_RIGHT);
+    style.setAlignment(HorizontalAlignment.RIGHT);
     style.setFont(itemFont);
-    style.setBorderRight(CellStyle.BORDER_DOTTED);
+    style.setBorderRight(BorderStyle.DOTTED);
     style.setRightBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderBottom(CellStyle.BORDER_DOTTED);
+    style.setBorderBottom(BorderStyle.DOTTED);
     style.setBottomBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderLeft(CellStyle.BORDER_DOTTED);
+    style.setBorderLeft(BorderStyle.DOTTED);
     style.setLeftBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
-    style.setBorderTop(CellStyle.BORDER_DOTTED);
+    style.setBorderTop(BorderStyle.DOTTED);
     style.setTopBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
     style.setDataFormat(theWorkBook.createDataFormat().getFormat("0"));
-    style.setBorderBottom(CellStyle.BORDER_DOTTED);
+    style.setBorderBottom(BorderStyle.DOTTED);
     style.setBottomBorderColor(IndexedColors.GREY_40_PERCENT.getIndex());
     style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-    style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
     styles.put("formula_i", style);
 
     return styles;

@@ -162,7 +162,7 @@ public class Offering {
 		aBuilder.append(";");
 
 		aBuilder.append("offeringDate=");
-		aBuilder.append(this.offeringDate); // FIXME: format this date appropriately !
+		aBuilder.append(VinoConstants.vinoDateFormat.format(this.offeringDate)); 
 		aBuilder.append(";");
 
 		aBuilder.append("priceMin=");

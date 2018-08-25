@@ -1,0 +1,42 @@
+<list>
+<record>
+    <column1Icon>announcements</column1Icon>
+    <column1Name>Activities</column1Name>
+    <column1DisplayName>&lt;b&gt;Ansagen&lt;/b&gt;&lt;br /&gt;</column1DisplayName>
+    <column1Description>&lt;b&gt;Ansagen&lt;/b&gt;&lt;br /&gt;Verursachen Sie, redigieren Sie und löschen Sie Ansagen.</column1Description>
+	<column2Icon>autonumbering</column2Icon>
+    <column2Name>Activities</column2Name>
+    <column2DisplayName>&lt;b&gt;Selbst-Nummerierung&lt;/b&gt;&lt;br /&gt;</column2DisplayName>
+    <column2Description>&lt;b&gt;Selbst-Nummerierung&lt;/b&gt;&lt;br /&gt;Spezifizieren Sie das Präfix für Anführungsstriche, Aufträge und Rechnungen.</column2Description>
+</record>
+<record>
+    <column1Icon>businessunits</column1Icon>
+    <column1Name>Activities</column1Name>
+    <column1DisplayName>&lt;b&gt;Unternehmenseinheiten&lt;/b&gt;&lt;br /&gt;</column1DisplayName>
+    <column1Description>&lt;b&gt;Unternehmenseinheiten&lt;/b&gt;&lt;br /&gt;Addieren Sie neue Unternehmenseinheiten. Redigieren Sie und entaktivieren Sie Unternehmenseinheiten. Ändern Sie die ElternteilUnternehmenseinheit.</column1Description>
+	<column2Icon>systemsettings</column2Icon>
+    <column2Name>Activities</column2Name>
+    <column2DisplayName>&lt;b&gt;Systems-Einstellungen&lt;/b&gt;&lt;br /&gt;</column2DisplayName>
+    <column2Description>&lt;b&gt;Systems-Einstellungen&lt;/b&gt;&lt;br /&gt;Stellen Sie das Format für verschiedene Werte, wie Zahlen, den Kalender und Währung ein.</column2Description>
+</record>
+<record>
+    <column1Icon>users</column1Icon>
+    <column1Name>Activities</column1Name>
+    <column1DisplayName>&lt;b&gt;Benutzer&lt;/b&gt;&lt;br /&gt;</column1DisplayName>
+    <column1Description>&lt;b&gt;Benutzer&lt;/b&gt;&lt;br /&gt;Addieren Sie neue Benutzer. Redigieren Sie Informationen über Benutzer und entaktivieren Sie Benutzeraufzeichnungen. Handhaben Sie die Mannschaften und die Rollen, die Benutzern zugewiesen werden.</column1Description>
+	<column2Icon>teams</column2Icon>
+    <column2Name>Activities</column2Name>
+    <column2DisplayName>&lt;b&gt;Mannschaften&lt;/b&gt;&lt;br /&gt;</column2DisplayName>
+    <column2Description>&lt;b&gt;Mannschaften&lt;/b&gt;&lt;br /&gt;Fügen Sie neue Mannschaften und neue Teammitglieder vorhandenen Mannschaften hinzu. Ändern Sie die Mannschaftbeschreibung und löschen Sie Mitglieder aus Mannschaften.</column2Description>
+</record>
+<record>
+    <column1Icon>privacypreferences</column1Icon>
+    <column1Name>Activities</column1Name>
+    <column1DisplayName>&lt;b&gt;Privatleben-Präferenzen&lt;/b&gt;&lt;br /&gt;</column1DisplayName>
+    <column1Description>&lt;b&gt;Privatleben-Präferenzen&lt;/b&gt;&lt;br /&gt;Stellen Sie die Privatlebenpräferenzen für die Organisation ein.</column1Description>
+	<column2Icon>productupdates</column2Icon>
+    <column2Name>Activities</column2Name>
+    <column2DisplayName>&lt;b&gt;Produkt-Updates&lt;/b&gt;&lt;br /&gt;</column2DisplayName>
+    <column2Description>&lt;b&gt;Produkt-Updatess&lt;/b&gt;&lt;br /&gt;Melden Sie sich an, von den Produktupdates mitgeteilt zu werden.</column2Description>
+</record>
+</list>

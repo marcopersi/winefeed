@@ -1,1 +1,4 @@
-/target/
+/target/**
+/VinoImporter.iml
+/.idea/
+import/Wermuth/*
