@@ -1,6 +1,0 @@
-"accountName","accountNumber","parentAccount","primaryContact","emailPrimaryContact","relationshipType","addressName","addressLine1","addressLine2","addressLine3","city","state","postalCode","country","addressType","mainPhone","fax","otherPhone","webSite","email"
-"PQR Corporation Pty Ltd","ABN: 666 666 666","","Mark Kirkpatrick","sales@uptick.com.au","","PQR House","Level 6","666 Kent Street","","Sydney","NSW","2000","Australia","Business","(06) 6666 6666","","","",""
-"STU Corporation Pty Ltd","ABN: 777 777 777","","Carl Blick","sales@uptick.com.au","","STU House","Level 7","777 Kent Street","","Sydney","NSW","2000","Australia","Business","(07) 7777 7777","","","",""
-"VWX Corporation Pty Ltd","ABN: 888 888 888","","Tony Savino","sales@uptick.com.au","","VWX House","Level 8","888 Kent Street","","Sydney","NSW","2000","Australia","Business","(08) 8888 8888","","","",""
-"YZA Corporation Pty Ltd","ABN: 999 999 999","","Jeff Campbell","sales@uptick.com.au","","YZA House","Level 9","999 Kent Street","","Sydney","NSW","2000","Australia","Business","(09) 9999 9999","","","",""
-"BCD Corporation Pty Ltd","ABN: 100 000 000","","Robert Russo","sales@uptick.com.au","","BCD House","Level 10","100 Kent Street","","Sydney","NSW","2000","Australia","Business","(10) 1000 0000","","","",""

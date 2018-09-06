@@ -1,6 +1,0 @@
-"accountName","accountNumber","parentAccount","primaryContact","emailPrimaryContact","relationshipType","addressName","addressLine1","addressLine2","addressLine3","city","state","postalCode","country","addressType","mainPhone","fax","otherPhone","webSite","email"
-"ABC Corporation Pty Ltd","ABN: 111 111 111","","Darren Poyner","sales@uptick.com.au","","ABC House","Level 1","111 Kent Street","","Sydney","NSW","2000","Australia","Business","(01) 1111 1111","","","",""
-"DEF Corporation Pty Ltd","ABN: 222 222 222","","Scott Davies","sales@uptick.com.au","","DEF House","Level 2","222 Kent Street","","Sydney","NSW","2000","Australia","Business","(02) 2222 2222","","","",""
-"GHI Corporation Pty Ltd","ABN: 333 333 333","","Ross Hodge","sales@uptick.com.au","","GHI House","Level 3","333 Kent Street","","Sydney","NSW","2000","Australia","Business","(03) 3333 3333 ","","","",""
-"JKL Corporation Pty Ltd","ABN: 444 444 444","","Graham King","sales@uptick.com.au","","GHI House","Level 4","444 Kent Street","","Sydney","NSW","2000","Australia","Business","(04) 4444 4444","","","",""
-"MNO Corporation Pty Ltd","ABN: 555 555 555","","Sean Doyle","sales@uptick.com.au","","GHI House","Level 5","555 Kent Street","","Sydney","NSW","2000","Australia","Business","(05) 5555 5555","","","",""
