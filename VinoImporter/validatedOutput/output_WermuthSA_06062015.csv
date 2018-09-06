@@ -326,9 +326,9 @@
 327;Chambertin;Domaine Armand Rousseau;2012;1;7.5;false;900;1200;850
 328;Chambertin;Domaine Armand Rousseau;2012;1;7.5;false;900;1200;850
 329;Chambertin;Domaine Armand Rousseau;2012;1;7.5;false;900;1200;850
-330;Chambertin  Clos de Bèze  Dom. A. Rousseau;null;2006;1;7.5;false;500;700;500
-331;Chambertin  Clos de Bèze  Dom. A. Rousseau;null;2009;1;7.5;false;850;1100;850
-332;Chambertin  Clos de Bèze  Dom. A. Rousseau;null;2011;1;7.5;false;500;700;520
+330;Chambertin Clos de Bèze  Dom. A. Rousseau;null;2006;1;7.5;false;500;700;500
+331;Chambertin Clos de Bèze  Dom. A. Rousseau;null;2009;1;7.5;false;850;1100;850
+332;Chambertin Clos de Bèze  Dom. A. Rousseau;null;2011;1;7.5;false;500;700;520
 333;Musigny  Vieilles Vignes ;Comte Vogüe;2012;3;7.5;true;1350;1800;1400
 334;Romanée Conti;Domaine Romanee Conti;2011;1;7.5;false;7500;10000;6800
 335;Romanée Conti;Domaine Romanee Conti;2012;1;7.5;false;9500;12000;8500
@@ -346,8 +346,8 @@
 347;Châteauneuf du Pape;Château Beaucastel;1998;6;15;false;780;1320;800
 348;Châteauneuf du Pape;Château Beaucastel;2000;2;15;false;180;300;250
 349;Châteauneuf du Pape;Château Beaucastel;2007;6;7.5;true;420;600;420
-350;Clos des Papes  Châteauneuf du Pape;null;2009;6;15;true;900;1200;860
-351;Clos des Papes  Châteauneuf du Pape;null;2012;6;15;true;960;1320;1000
+350;Clos des Papes Châteauneuf du Pape;null;2009;6;15;true;900;1200;860
+351;Clos des Papes Châteauneuf du Pape;null;2012;6;15;true;960;1320;1000
 352;Château Cap de Faugères;null;2005;12;7.5;true;240;330;0
 353;Château Cap de Faugères;null;2007;12;7.5;true;180;270;200
 354;Château Faugères;null;2006;6;15;true;360;480;0
@@ -456,9 +456,9 @@
 462;Syrah Eisele Vineyard;Araujo Estate;1995;6;7.5;false;1200;1500;1000
 463;Syrah Eisele Vineyard;Araujo Estate;1996;1;7.5;false;180;250;120
 464;Cabernet Sauvignon Bryant Family;null;1997;1;7.5;false;800;1100;720
-465;Harlan The Maiden;null;1995;4;7.5;false;600;1000;600
-466;Harlan The Maiden;null;1996;8;7.5;false;1440;1800;1200
-467;Harlan Estate;null;2000;2;7.5;false;700;1000;650
+465;Harlan The Maiden;Harlan Estate;1995;4;7.5;false;600;1000;600
+466;Harlan The Maiden;Harlan Estate;1996;8;7.5;false;1440;1800;1200
+467;Harlan Estate;Harlan Estate;2000;2;7.5;false;700;1000;650
 468;Merlot;Pahlmeyer;1995;2;7.5;false;180;250;180
 469;Merlot;Pahlmeyer;1996;4;7.5;false;480;600;480
 470;Merlot;Pahlmeyer;1997;2;7.5;false;200;300;260

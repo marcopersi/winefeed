@@ -11,7 +11,7 @@ public class WermuthMay2016Preparer {
 	public static void main(String[] args) throws IOException {
 		
 		//running through characters, drop carriage return /new line if the next line is not the next value in the sequence
-		File file = new File("import/Wermuth/WZ-257_28052016_Resultate.pdf");
+		File file = new File("import/Wermuth/WZ-257_28052016_Resultate");
 		List<String> someLines = new ArrayList<>();
 		
 		Pattern compile = Pattern.compile("^([0-9]{1,4}).*");

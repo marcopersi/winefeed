@@ -53,9 +53,9 @@
 53;Château Cos dEstournel;null;2001;6;15;true;1080;1320;1100
 54;Château Smith Haut Lafitte blanc;null;2005;12;7.5;true;780;1080;950
 55;Château Smith Haut Lafitte blanc;null;2008;12;7.5;true;720;960;780
-56;Clos lEglise;null;1998;6;7.5;true;600;900;520
-57;Château lEglise Clinet;Vignoble D. Durantou;1999;6;7.5;true;480;600;600
-58;Château lEglise Clinet;Vignoble D. Durantou;2003;6;15;true;1080;1320;0
+56;Clos l'Eglise;null;1998;6;7.5;true;600;900;520
+57;Château l'Eglise Clinet;Vignoble D. Durantou;1999;6;7.5;true;480;600;600
+58;Château l'Eglise Clinet;Vignoble D. Durantou;2003;6;15;true;1080;1320;0
 59;Château Doisy Vèdrines;null;1997;12;3.75;true;180;300;200
 60;Château Rieussec;null;1990;12;3.75;true;360;480;360
 61;Château Rieussec;null;1990;12;3.75;true;360;480;340
@@ -100,10 +100,10 @@
 100;Château Coutet;null;1996;12;7.5;true;300;420;180
 101;Château Coutet;null;1998;12;7.5;true;360;480;280
 102;Château Coutet;null;1998;12;7.5;true;360;480;280
-103;Château dYquem;null;1999;144;3.75;true;1320;1800;1000
-104;Château dYquem;null;1999;144;3.75;true;1320;1800;1000
-105;Château dYquem;null;2007;6;3.75;false;1200;1800;950
-106;Château dYquem;null;2007;6;3.75;false;1200;1800;950
+103;Château d'Yquem;null;1999;144;3.75;true;1320;1800;1000
+104;Château d'Yquem;null;1999;144;3.75;true;1320;1800;1000
+105;Château d'Yquem;null;2007;6;3.75;false;1200;1800;950
+106;Château d'Yquem;null;2007;6;3.75;false;1200;1800;950
 107;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2006;1;3.75;true;170;250;120
 108;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2006;1;3.75;true;170;250;120
 109;LExtravagant de Doisy Daëne;Barsac- Ch. Doisy Daëne;2006;1;3.75;true;170;250;150
@@ -263,7 +263,7 @@
 265;Château Angélus;null;2006;6;7.5;false;1080;1320;1100
 266;Château Angélus;null;2006;12;7.5;true;2160;2640;2400
 267;Château de Chambrun Le Bourg;Lalande de;2009;6;15;true;600;900;480
-268;Château lEglise Clinet;Vignoble D. Durantou;2006;12;7.5;true;1560;2100;1500
+268;Château l'Eglise Clinet;Vignoble D. Durantou;2006;12;7.5;true;1560;2100;1500
 269;Clos des Papes Châteauneuf du Pape;Vincent Avril;2011;12;7.5;true;600;780;600
 270;Clos des Papes Châteauneuf du Pape;Vincent Avril;2011;6;15;true;660;840;660
 271;Clos des Papes Châteauneuf du Pape;Vincent Avril;2012;12;7.5;true;720;960;720
@@ -295,9 +295,9 @@
 298;Château Lafite Rothschild;null;1993;24;3.75;true;3600;4800;0
 299;La Gomerie;G. & D. Bécot;2001;12;7.5;true;600;840;440
 300;La Gomerie;G. & D. Bécot;2001;12;7.5;true;600;840;440
-301;Château dYquem;null;1990;6;3.75;false;900;1200;900
-302;Château dYquem;null;1990;6;3.75;false;900;1200;800
-303;Château dYquem;null;1990;12;3.75;true;1800;2400;1500
+301;Château d'Yquem;null;1990;6;3.75;false;900;1200;900
+302;Château d'Yquem;null;1990;6;3.75;false;900;1200;800
+303;Château d'Yquem;null;1990;12;3.75;true;1800;2400;1500
 304;Kracher Collection 2000;Alois Kracher;2000;10;3.75;true;800;1200;600
 305;Messorio;Azienda Le Macchiole;2002;6;7.5;true;480;660;380
 306;Messorio;Azienda Le Macchiole;2002;6;7.5;true;480;660;380
@@ -320,7 +320,7 @@
 326;Château La Mission Haut Brion;null;2009;1;7.5;false;550;700;560
 327;Château La Mission Haut Brion;null;2010;1;7.5;false;400;500;340
 328;Château Haut Brion;null;1985;1;7.5;false;330;450;270
-329;Château dYquem;null;1937;1;7.5;false;2500;3500;1800
+329;Château d'Yquem;null;1937;1;7.5;false;2500;3500;1800
 330;Ermitage rouge lErmite;Michel Chapoutier;1996;12;7.5;true;2400;3000;0
 331;Ermitage rouge lErmite;Michel Chapoutier;1997;6;7.5;true;600;840;0
 332;Ermitage blanc lOrée;Michel Chapoutier;1995;6;7.5;true;600;840;600
@@ -381,7 +381,7 @@
 387;Clos de la Roche;Domaine Dujac;2013;1;7.5;false;300;400;0
 388;Gevrey-Chambertin Clos St. Jacques;Domaine Armand Rousseau;2013;1;7.5;false;400;550;0
 389;La Peira;La Peira en Damaisela;2009;6;7.5;false;600;900;700
-390;Château;null;1986;1;7.5;false;400;550;350
+390;Château Margaux;null;1986;1;7.5;false;400;550;350
 391;Château Latour;null;1985;1;7.5;false;350;500;260
 392;Château Latour;null;1989;1;7.5;false;350;500;350
 393;Château Latour;null;1999;1;7.5;false;400;550;340
@@ -467,9 +467,9 @@
 474;Sauvignon blanc Quarz;Kellerei Terlan;2011;6;15;true;360;480;340
 475;Sauvignon blanc Quarz;Kellerei Terlan;2011;6;15;true;360;480;340
 476;Sauvignon blanc Quarz;Kellerei Terlan;2011;6;15;true;360;480;340
-477;Château dYquem;null;1990;1;7.5;false;350;500;370
-478;Château dYquem;null;1990;1;7.5;false;350;500;360
-479;Château dYquem;null;1990;3;7.5;false;1050;1500;1050
+477;Château d'Yquem;null;1990;1;7.5;false;350;500;370
+478;Château d'Yquem;null;1990;1;7.5;false;350;500;360
+479;Château d'Yquem;null;1990;3;7.5;false;1050;1500;1050
 480;Mr. K The Straw Man;Kracher & Krankl;2001;3;3.75;true;600;900;500
 481;Mr. K The Straw Man;Kracher & Krankl;2001;3;3.75;true;600;900;500
 482;Mr. K The Straw Man;Kracher & Krankl;2001;3;3.75;true;600;900;500
@@ -583,7 +583,7 @@
 591;Château Evangile;null;2009;3;7.5;false;810;1050;820
 592;Château Evangile;null;2009;6;7.5;false;1620;2100;1650
 593;Château Evangile;null;2009;12;7.5;true;3240;4200;3400
-594;Château dYquem;null;2008;12;7.5;true;2160;3000;2300
+594;Château d'Yquem;null;2008;12;7.5;true;2160;3000;2300
 595;Clos des Truffiers;Château de la Négly;2005;3;15;true;660;900;750
 596;Clos des Truffiers;Château de la Négly;2005;3;15;true;660;900;750
 597;Clos des Truffiers;Château de la Négly;2005;3;15;true;660;900;700
@@ -644,16 +644,16 @@
 652;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2005;3;7.5;false;300;450;240
 653;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2012;3;7.5;false;540;720;480
 654;Cabernet Sauvignon Paradise Hills;Blankiet Estate;2012;3;7.5;false;540;720;480
-655;Château;null;2002;1;7.5;false;270;350;260
-656;Château;null;2003;1;7.5;false;350;450;360
+655;Château Margaux;null;2002;1;7.5;false;270;350;260
+656;Château Margaux;null;2003;1;7.5;false;350;450;360
 657;Château Lafite Rothschild;null;2001;1;7.5;false;450;600;0
 658;Château Mouton Rothschild;null;2001;1;7.5;false;250;330;260
 659;Château Canon La Gaffelière;null;2004;12;7.5;true;600;840;800
 660;Château Trotanoy;null;2006;3;7.5;true;300;450;260
 661;Château Petrus;null;2006;3;7.5;true;4800;6000;4020
 662;Château Palmer;null;2008;1;7.5;true;120;150;130
-663;Château;null;2006;1;7.5;false;270;350;240
-664;Château;null;2008;1;7.5;false;300;400;300
+663;Château Margaux;null;2006;1;7.5;false;270;350;240
+664;Château Margaux;null;2008;1;7.5;false;300;400;300
 665;Château Mouton Rothschild;null;2006;1;7.5;false;350;450;360
 666;Château Mouton Rothschild;null;2008;1;7.5;false;300;400;340
 667;Château Latour;null;2008;1;7.5;false;400;500;360

@@ -211,7 +211,7 @@
 213;Château Haut Brion;null;1990;1;7.5;false;500;750;560
 214;Château Haut Brion;null;1995;1;60;true;2500;3500;2800
 215;Château La Mission Haut Brion;null;1989;1;30;true;5000;7000;5600
-217;Château lEglise Clinet;null;1994;1;30;true;400;600;450
+217;Château l'Eglise Clinet;null;1994;1;30;true;400;600;450
 218;Château La Conseillante;null;1989;1;15;false;500;700;480
 219;Château Lafleur;null;1988;1;15;false;900;1500;1050
 220;Château Lafleur;null;1988;1;15;false;900;1500;1050
@@ -288,8 +288,8 @@
 296;Château Rieussec;null;1998;144;3.75;true;240;360;180
 297;Château Rieussec;null;1998;6;7.5;true;240;360;0
 298;Château Rieussec;null;1998;6;7.5;true;240;360;0
-299;Château dYquem;null;1990;144;3.75;false;1920;2400;1800
-300;Château dYquem;null;1990;144;3.75;true;1920;2400;1800
+299;Château d'Yquem;null;1990;144;3.75;false;1920;2400;1800
+300;Château d'Yquem;null;1990;144;3.75;true;1920;2400;1800
 301;Clos dAgon;Cellers Mas Gil;2000;6;7.5;true;210;300;150
 302;Clos dAgon;Cellers Mas Gil;2000;6;7.5;true;210;300;150
 303;Clos d’Agon;Cellers Mas Gil;2000;6;7.5;true;210;300;150

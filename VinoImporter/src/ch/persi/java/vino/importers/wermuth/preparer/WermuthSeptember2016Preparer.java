@@ -12,7 +12,7 @@ public class WermuthSeptember2016Preparer {
 	public static void main(String[] args) throws IOException {
 		
 		//running through characters, drop carriage return /new line if the next line is not the next value in the sequence
-		File file = new File("import/Wermuth/WZ-258_10092016_Resultate");
+		File file = new File("import/Wermuth/WZ-259_19112016_Resultate.txt");
 
 		List<String> someLines = new ArrayList<>();
 		Pattern compile = Pattern.compile("^([0-9]{1,4}).*");
