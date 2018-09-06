@@ -1,0 +1,42 @@
+<list>
+<record>
+    <column1Icon>announcements</column1Icon>
+    <column1Name>Activities</column1Name>
+    <column1DisplayName>&lt;b&gt;Announcements&lt;/b&gt;&lt;br /&gt;</column1DisplayName>
+    <column1Description>&lt;b&gt;Announcements&lt;/b&gt;&lt;br /&gt;Create, edit and delete announcements.</column1Description>
+	<column2Icon>autonumbering</column2Icon>
+    <column2Name>Activities</column2Name>
+    <column2DisplayName>&lt;b&gt;Auto-Numbering&lt;/b&gt;&lt;br /&gt;</column2DisplayName>
+    <column2Description>&lt;b&gt;Auto-Numbering&lt;/b&gt;&lt;br /&gt;Specify the prefix for quotes, orders and invoices.</column2Description>
+</record>
+<record>
+    <column1Icon>businessunits</column1Icon>
+    <column1Name>Activities</column1Name>
+    <column1DisplayName>&lt;b&gt;Business Units&lt;/b&gt;&lt;br /&gt;</column1DisplayName>
+    <column1Description>&lt;b&gt;Business Units&lt;/b&gt;&lt;br /&gt;Add new business units. Edit and deactivate business units. Change the parent business unit.</column1Description>
+	<column2Icon>systemsettings</column2Icon>
+    <column2Name>Activities</column2Name>
+    <column2DisplayName>&lt;b&gt;System Settings&lt;/b&gt;&lt;br /&gt;</column2DisplayName>
+    <column2Description>&lt;b&gt;System Settings&lt;/b&gt;&lt;br /&gt;Set the format for various values, such as numbers, the calendar and currency.</column2Description>
+</record>
+<record>
+    <column1Icon>users</column1Icon>
+    <column1Name>Activities</column1Name>
+    <column1DisplayName>&lt;b&gt;Users&lt;/b&gt;&lt;br /&gt;</column1DisplayName>
+    <column1Description>&lt;b&gt;Users&lt;/b&gt;&lt;br /&gt;Add new users. Edit information about users and deactivate user records. Manage the teams and roles assigned to users.</column1Description>
+	<column2Icon>teams</column2Icon>
+    <column2Name>Activities</column2Name>
+    <column2DisplayName>&lt;b&gt;Teams&lt;/b&gt;&lt;br /&gt;</column2DisplayName>
+    <column2Description>&lt;b&gt;Teams&lt;/b&gt;&lt;br /&gt;Add new teams and new team members to existing teams. Modify the team description and delete members from teams.</column2Description>
+</record>
+<record>
+    <column1Icon>privacypreferences</column1Icon>
+    <column1Name>Activities</column1Name>
+    <column1DisplayName>&lt;b&gt;Privacy Preferences&lt;/b&gt;&lt;br /&gt;</column1DisplayName>
+    <column1Description>&lt;b&gt;Privacy Preferences&lt;/b&gt;&lt;br /&gt;Set the privacy preferences for the organisation.</column1Description>
+	<column2Icon>productupdates</column2Icon>
+    <column2Name>Activities</column2Name>
+    <column2DisplayName>&lt;b&gt;Product Updates&lt;/b&gt;&lt;br /&gt;</column2DisplayName>
+    <column2Description>&lt;b&gt;Product Updates&lt;/b&gt;&lt;br /&gt;Sign up to be notified of product updates.</column2Description>
+</record>
+</list>

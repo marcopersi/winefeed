@@ -1,0 +1,16 @@
+<DataSource
+    ID="SettingsCa"
+    serverType="sql"
+>
+    <fields>
+		<field name="pk"           			type="sequence"   hidden="true"         		primaryKey="true" />		
+		<field name="column1Icon"  			type="text"       title="Column 1 Icon" 		required="true"   />
+        <field name="column1Name"   		type="text"       title="Column 1 Name" 		required="true"   />
+        <field name="column1DisplayName"  	type="text"       title="Column 1 Display Name" required="true"   />  
+		<field name="column1Description"  	type="text"       title="Column 1 Description"  required="true"   />  
+		<field name="column2Icon"  			type="text"       title="Column 2 Icon" 		required="true"   />
+        <field name="column2Name"   		type="text"       title="Column 2 Name" 		required="true"   />
+        <field name="column2DisplayName"  	type="text"       title="Column 2 Display Name" required="true"   />  	
+		<field name="column2Description"  	type="text"       title="Column 2 Description"  required="true"   />  		
+    </fields>
+</DataSource>
