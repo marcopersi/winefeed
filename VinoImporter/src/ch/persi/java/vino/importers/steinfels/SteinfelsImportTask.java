@@ -117,7 +117,11 @@ public class SteinfelsImportTask extends AbstractImportTask {
 		int anOfferingId = 1;
 		for (String aRecordLine : theLines) {
 			String anOptimizedLine = clean(aRecordLine).trim();
+<<<<<<< HEAD
 			log.debug("Working on offering Id: {} and line {}", anOfferingId, anOptimizedLine);
+=======
+			log.debug("Working on offering Id: %s and line %s", anOfferingId, anOptimizedLine);
+>>>>>>> branch 'master' of https://github.com/marcopersi/winefeed.git
 
 			// this nasty +1 thing below is required because the sequence of lot
 			// numbers is sometimes broker - these fu****rs
@@ -148,7 +152,11 @@ public class SteinfelsImportTask extends AbstractImportTask {
 		LineExtrator lineExtractor = evaluateLineExtractor(theRecordLineWithoutLotNo);
 		if (lineExtractor == null) {
 			aSkippedRowsWriter.write(theRecordLineWithoutLotNo);
+<<<<<<< HEAD
 			log.warn("skipped row: {}", theRecordLineWithoutLotNo);
+=======
+			log.warn("skipped row: %s", theRecordLineWithoutLotNo);
+>>>>>>> branch 'master' of https://github.com/marcopersi/winefeed.git
 			return;
 		}
 
