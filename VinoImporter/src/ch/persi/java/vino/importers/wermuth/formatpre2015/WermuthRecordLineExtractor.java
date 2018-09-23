@@ -27,10 +27,7 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 
 	@Override
 	public boolean isRecordLine() {
-		if (getMatcher().matches() && getMatcher().groupCount() >= 5) {
-			return true;
-		}
-		return false;
+		return (getMatcher().matches() && getMatcher().groupCount() >= 5) ? Boolean.TRUE: Boolean.FALSE;
 	}
 
 	@Override
@@ -63,7 +60,7 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 			if (isCreatable(aPossibleNumberOfBottlesString)) {
 				String furtherAmountDescription = getMatcher().group(3);
 				if (furtherAmountDescription.contains(DUTZEND)) {
-					int anAmount = Integer.valueOf(aPossibleNumberOfBottlesString);
+					int anAmount = Integer.parseInt(aPossibleNumberOfBottlesString);
 					return anAmount * 12;
 					
 				}
@@ -87,7 +84,7 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 		if (getMatcher().matches()) {
 			String aPossibleLotNumber = getMatcher().group(1);
 			if (isCreatable(aPossibleLotNumber)) {
-				log.debug("Extracted lot no:{}", matcher.group(1));
+				log.debug("Extracted lot no: {}", matcher.group(1));
 				return aPossibleLotNumber;
 			}
 		}
@@ -96,7 +93,7 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 
 	@Override
 	public Integer getRealizedPrice() {
-		// FIXME Auto-generated method stub, this is conceptually wrong, not all line extractors may deliver this price !!!
+		// FIXME this is conceptually wrong, not all line extractors may deliver this price !!!
 		// due to the nature of having two files ,....
 		return null;
 	}
@@ -133,7 +130,7 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 		String[] someStringParts = aMinMaxString.split("\\s");
 		if (someStringParts== null || someStringParts.length!=2)
 		{
-			log.error("The string operations in the price range(min/max) substring resulted in something unusable " + aMinMaxString);
+			log.error("The string operations in the price range(min/max) substring resulted in something unusable {}", aMinMaxString);
 			return 0;
 		}
 		

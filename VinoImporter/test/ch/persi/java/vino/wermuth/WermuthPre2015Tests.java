@@ -154,7 +154,7 @@ public class WermuthPre2015Tests extends TestCase {
     @Test
 	public void testGetAuctionDate() throws Exception
     {
-    	List<String> someLines = new WermuthParser().parse(new File("test/resources/223.pdf").getAbsolutePath()); 
+    	List<String> someLines = new WermuthParser().parse(new File("prototyping/resources/223.pdf").getAbsolutePath()); 
     	LocalDate aDate = new WermuthPre2015DateExtractingStrategy(someLines).getAuctionDate();
     	assertNotNull(aDate);
     }

@@ -86,12 +86,6 @@ public class VinoExcelUtil extends ExcelUtil {
 	private final Row createRow(final Sheet theSheet) {
 		int aNewLineRowIndex = ++lastUsedRow;
 		return theSheet.createRow(aNewLineRowIndex);
-		// if (aNewLineRowIndex < theSheet.getLastRowNum())
-		// {
-		// }
-		// null is here an indicator that it's not possible to add yet another
-		// row
-		// return null;
 	}
 
 	/**

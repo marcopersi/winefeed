@@ -14,8 +14,12 @@ import java.util.regex.Pattern;
  */
 public class ResultFilebasedLotLinePreparer {
 
+	private ResultFilebasedLotLinePreparer() {
+		
+	}
+	
 	// a pattern to check if there is a three digit tag in front of the lot no. of the record.
-	public static Pattern aWrongLinePattern = Pattern.compile("^[0-9]{3}\\s([0-9]{1,3}.*)");
+	public static final Pattern aWrongLinePattern = Pattern.compile("^[0-9]{3}\\s([0-9]{1,3}.*)");
 	
 	public static List<String> prepare(List<String> theLines) {
 		List<String> somePreparedLines = new ArrayList<>();
