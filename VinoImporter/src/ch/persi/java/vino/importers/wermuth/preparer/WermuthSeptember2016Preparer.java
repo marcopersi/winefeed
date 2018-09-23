@@ -120,7 +120,8 @@ public class WermuthSeptember2016Preparer {
 	private static final boolean isSequence(String theNextNumber, int theLastNumber)
 	{
 		Integer valueOf = Integer.valueOf(theNextNumber);
-		if (theLastNumber==valueOf) { return true; };
+		if (theLastNumber==valueOf) { return true; }
+		
 		for (int i = 1; i<=6;i++) {
 			if (theLastNumber+i == valueOf) return true;
 		}

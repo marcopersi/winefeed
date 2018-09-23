@@ -68,19 +68,16 @@ public class WeinboerseLineExtractor implements LineExtrator {
 
 	@Override
 	public Integer getMinPrice() {
-		// FIXME Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Integer getMaxPrice() {
-		// FIXME Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String getWine() {
-		// FIXME Auto-generated method stub
 		return null;
 	}
 
@@ -88,7 +85,6 @@ public class WeinboerseLineExtractor implements LineExtrator {
 	public String getLotNumber() {
 		if (getMatcher().matches())
 		{
-			// FIXME: replace hard coded 1 with const or enum or anything better
 			return getMatcher().group(1).trim();
 		}
 		return null;

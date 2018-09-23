@@ -30,7 +30,7 @@ public class WermuthPricePageParser implements PricePageParser {
 
 	public static final Pattern AUCTION_DATE_PATTERN = java.util.regex.Pattern.compile(".*(WZ)-([0-9]{3}).*");
 
-	public static Pattern LOT_AND_PRICE_PATTERN = Pattern.compile("^([0-9]{1,4})\\s.*(\\s[0-9\\'\\.]*\\s).*$");
+	public static final Pattern LOT_AND_PRICE_PATTERN = Pattern.compile("^([0-9]{1,4})\\s.*(\\s[0-9\\'\\.]*\\s).*$");
 
 	// third version, there are result files with and without the Sfr.
 	// one has to make sure, not getting crazy with these different patterns
@@ -97,7 +97,7 @@ public class WermuthPricePageParser implements PricePageParser {
 		Map<Integer, Integer> someResults = new HashMap<>();
 		List<String> someLines = parser.parse("import/Wermuth/" + aResultFileName);
 
-		if (someLines != null && someLines.size() > 0) {
+		if (someLines != null && !someLines.isEmpty()) {
 			int lotNumber = 1;
 			StringBuilder aLineBuilder = new StringBuilder();
 			for (int i = 0; i < someLines.size(); i++) {

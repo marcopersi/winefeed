@@ -83,14 +83,14 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 	@Override
 	public void saveWineOfferings(List<String> theLines) throws IOException {
 		
-		if (theLines == null || theLines.size() == 0) {
+		if (theLines.isEmpty()) {
 			throw new IllegalStateException("Received no lines from parser, something's terribly wrong !");
 		}
 		
 		int aProcessLineIndex = 0;
 		for (String aLine : theLines) {
 			// cleaning
-			log.debug("Working on line: " + aLine);
+			log.debug("Working on line: {}", aLine);
 			String aCleanedLine = clean(aLine);
 
 			// processing
@@ -106,7 +106,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 			}
 			aProcessLineIndex++;
 		}
-		log.info("Processed: " + aProcessLineIndex + " out of: " + theLines.size() + " lines !");
+		log.info("Processed: {} out of:{} lines ! ", aProcessLineIndex, theLines.size());
 	}
 	
 	
@@ -174,7 +174,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 	public static final String clean(String theLine)
 	{
 		return theLine.toString().replaceAll("1er", "").replaceAll("2ème|3ème|4ème|5ème", "").replaceAll("cru burgoise", "").replaceAll("1 cru ", "")
-				.replaceAll("1 er|cru", "").replaceAll("Total ", "").replaceAll("«|»|“|”|„|'", "").replaceAll("CHF ", "").replaceAll("Fr.", "")
+				.replaceAll("1 er|cru", "").replaceAll("Total ", "").replaceAll("«|»|“|”|„", "").replaceAll("CHF ", "").replaceAll("Fr.", "")
 				.replace(".00", "").replaceAll("\\(.*\\)", "").replaceAll("\\s{2,}", SPACE).replaceAll("Cru|cru", "");
 	}
 	
@@ -193,7 +193,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 	public static final LotPriceInfo processLotPricing(String theInput)
 	{
 		//the last part drops any characters, actually there should be only digits and probably a dash (-) character, but nothing else anymore.
-		String aCleanedInputLine = theInput.replaceAll("[a-zA-Z\\.]", "");
+		String aCleanedInputLine = theInput.replaceAll("[a-zA-Z\\.']", "");
 //		String aCleanedInputLine = theInput.replaceAll("[a-zA-Z\\.]", "").trim(); //1st file 2015
 
 		Pattern aPricePattern = Pattern.compile("^([0-9]{1,5})-([0-9]{1,5})\\s?{1,}([0-9\\-]{1,5})?\\s?$");

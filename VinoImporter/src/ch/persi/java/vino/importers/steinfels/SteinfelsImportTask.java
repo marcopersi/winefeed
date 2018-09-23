@@ -77,7 +77,7 @@ public class SteinfelsImportTask extends AbstractImportTask {
 
 		for (String aFileName : anImportDirectory.list()) {
 			try {
-				log.info("Start import of file: " + aFileName);
+				log.info("Start import of file: {}", aFileName);
 				
 				List<String> someLines = parser.parse(IMPORTDIRECTORY + aFileName);
 				log.info("Received '{}' lines out of the PDF file !", someLines.size());
@@ -117,7 +117,7 @@ public class SteinfelsImportTask extends AbstractImportTask {
 		int anOfferingId = 1;
 		for (String aRecordLine : theLines) {
 			String anOptimizedLine = clean(aRecordLine).trim();
-			log.debug("Working on offering Id: " + anOfferingId + " and line: " + anOptimizedLine);
+			log.debug("Working on offering Id: %s and line %s", anOfferingId, anOptimizedLine);
 
 			// this nasty +1 thing below is required because the sequence of lot
 			// numbers is sometimes broker - these fu****rs
@@ -148,7 +148,7 @@ public class SteinfelsImportTask extends AbstractImportTask {
 		LineExtrator lineExtractor = evaluateLineExtractor(theRecordLineWithoutLotNo);
 		if (lineExtractor == null) {
 			aSkippedRowsWriter.write(theRecordLineWithoutLotNo);
-			log.warn("skipped row: " + theRecordLineWithoutLotNo);
+			log.warn("skipped row: %s", theRecordLineWithoutLotNo);
 			return;
 		}
 
@@ -184,9 +184,6 @@ public class SteinfelsImportTask extends AbstractImportTask {
 		anOffering.setIsOHK(isOHK);
 		anOffering.setNoOfBottles(lineExtractor.getNoOfBottles());
 
-		// log.info("Found Wine Offering: " + aWine.getName() + ":" +
-		// aWineOffering.getOffering().getProviderOfferingId() + ":"
-		// + aWineOffering.getOffering().getRealizedPrice());
 		Unit unit = getUnit(theRecordLineWithoutLotNo);
 		WineOffering aWineOffering = new WineOffering(aWine, unit, anOffering);
 		log.info(aWineOffering.toXLSString());

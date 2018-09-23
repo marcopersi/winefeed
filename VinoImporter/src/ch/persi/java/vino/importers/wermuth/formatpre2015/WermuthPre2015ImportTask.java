@@ -1,7 +1,6 @@
 package ch.persi.java.vino.importers.wermuth.formatpre2015;
 
 import static ch.persi.java.vino.domain.VinoConstants.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.io.File;
 import java.io.IOException;
@@ -82,7 +81,7 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 			}
 			log.info("Job successfully done !");
 		}
-	};
+	}
 	
 	private void handleOfferings(final Wine theWine, final Map<String, LineExtrator> someOfferingLines, final StringBuilder theNote) throws IOException {
 
@@ -90,14 +89,6 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 			Offering anOffering = new Offering();
 			String aLine = anEntry.getKey();
 			LineExtrator aLineExtractor = anEntry.getValue();
-
-			String aNote = theNote.toString().trim();
-			if (isNotBlank(aNote)) {
-				// FIXME: need more 'security' around this, note can become
-				// huuuuge causing problems
-				// anOffering.setNote(aNote.replaceAll(",", "")); // cleaning
-				// the note from colon characters
-			}
 
 			anOffering.setIsOHK(aLineExtractor.isOHK());
 			anOffering.setProvider(Provider.WERMUTH.getProviderCode());
@@ -129,7 +120,7 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 
 			int aVintage = aLineExtractor.getVintage();
 			log.debug("Extracted vintage:{}", aVintage);
-			theWine.setVintage(Integer.valueOf(aVintage));
+			theWine.setVintage(aVintage);
 			
 			WineOffering aWineOffering = new WineOffering(theWine, aWineUnit, anOffering);
 			anOutputWriter.write(aWineOffering.toXLSString());
@@ -201,7 +192,7 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 		if (origin == null) {
 			log.error("Contract broken: origin info in line expected but not contained!. Lines are ignored!!!");
 			for (String aLine : theLines) {
-				log.debug("Dropped line: " + aLine);
+				log.debug("Dropped line: {}", aLine);
 			}
 			return; // exit handling of offerings here since informal contract
 			// is broken
@@ -260,7 +251,7 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 		return new Unit(determineSize(theLine));
 	}
 
-	public final static String getOrigin(final String theLine) {
+	public static final String getOrigin(final String theLine) {
 		// is it the origin line ?
 		for (Origin anOrigin : Origin.values()) {
 			Pattern aCompiledOriginPattern = Pattern.compile("^(" + anOrigin.getOriginIdentifier() + ")\\,.*");

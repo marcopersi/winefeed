@@ -2,3 +2,5 @@
 /VinoImporter.iml
 /.idea/
 import/Wermuth/*
+log/**
+log/vino.log

@@ -34,7 +34,7 @@ public class WeinboerseImportTask extends AbstractImportTask {
 
 		for (String aFileName : theImportDirectory.list()) {
 			try {
-				log.info("Start import of file: " + aFileName);
+				log.info("Start import of file: {}", aFileName);
 				
 				List<String> someLines = parser.parse(IMPORTDIRECTORY + aFileName);
 				log.info("Received '{}' lines out of the PDF file !", someLines.size());

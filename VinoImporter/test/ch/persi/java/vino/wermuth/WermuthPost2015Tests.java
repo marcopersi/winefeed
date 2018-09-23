@@ -27,7 +27,7 @@ public class WermuthPost2015Tests extends TestCase {
 
 	@Test
 	public void testLineRecognition() {
-		String[] someLines = new String[22];
+		String[] someLines = new String[23];
 		someLines[0] = "88 Château Magdeleine 1 Dutzend Flaschen, 2000, 6er OHK pro Dz. CHF 660-840 680.00";
 		someLines[1] = "135 Château Magrez Fombrauge 6 Flaschen, 2000, OHK pro Lot CHF 960-1200 900.00";
 		someLines[2] = "181 Château Doisy Vèdrines 24 3/8 Flaschen, 1997, OHK pro Lot CHF 480-720 400.00";
@@ -50,9 +50,11 @@ public class WermuthPost2015Tests extends TestCase {
 		someLines[19] = "12 Château Margaux 6 Flaschen, 2000,  (Parker 100) pro Lot 4200-5400 4'000.00";
 		someLines[20] = "6 Pommard 1 er cru “Les Epenots”, Domaine Parent 1 Dutzend Flaschen, 2005 pro Dz. CHF 600-840 CHF -";
 		someLines[21] = "185 Château d’Yquem, (Perfekter Zustand, Parker 98) 1 Imperialflasche, 1986, OHK pro Lot CHF 3000-5000 CHF 3'200.00";
-		
+		someLines[22] = "1 Château Canon La Gaffelière AC/MC, St. Emilion, 1 Dutzend Flaschen, 1998, OHK pro Lot 000-000 1020";
+
 		for (String aLine : someLines) {
 			Matcher matcher = Wermuth2015ImportTask.aRecordLinePattern.matcher(Wermuth2015ImportTask.clean(aLine));
+			assertNotNull(matcher);
 			assertTrue(matcher.matches());
 			
 			for (int i = 0; i<=matcher.groupCount();i++)
