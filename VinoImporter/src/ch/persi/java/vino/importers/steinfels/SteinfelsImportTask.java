@@ -118,7 +118,6 @@ public class SteinfelsImportTask extends AbstractImportTask {
 		for (String aRecordLine : theLines) {
 			String anOptimizedLine = clean(aRecordLine).trim();
 			log.debug("Working on offering Id: {} and line {}", anOfferingId, anOptimizedLine);
-
 			// this nasty +1 thing below is required because the sequence of lot
 			// numbers is sometimes broker - these fu****rs
 			// obviously take some offerings sometimes out of the catalog,
