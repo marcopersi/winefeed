@@ -2,6 +2,7 @@ package ch.persi.java.vino.wermuth;
 
 import static ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask.aRecordLinePattern;
 import static ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask.clean;
+import static java.lang.Integer.valueOf;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -108,12 +109,12 @@ public class WermuthPost2015Tests extends TestCase {
 	public void testNoOfBottles()
 	{
 		Map<Tuple2<String,String>,Integer> someInput = new HashMap<>();
-		someInput.put(new Tuple2<>("1"," pro Dz. "), new Integer(12));
-		someInput.put(new Tuple2<>("6"," pro Lot "), new Integer(6));
-		someInput.put(new Tuple2<>("21"," pro Lot "), new Integer(21));
-		someInput.put(new Tuple2<>("2"," pro Dutzend "), new Integer(24));
-		someInput.put(new Tuple2<>("1"," pro dz. "), new Integer(1));
-		someInput.put(new Tuple2<>("1"," pro Dz "), new Integer(12));
+		someInput.put(new Tuple2<>("1"," pro Dz. "), valueOf(12));
+		someInput.put(new Tuple2<>("6"," pro Lot "), valueOf(6));
+		someInput.put(new Tuple2<>("21"," pro Lot "), valueOf(21));
+		someInput.put(new Tuple2<>("2"," pro Dutzend "), valueOf(24));
+		someInput.put(new Tuple2<>("1"," pro dz. "), valueOf(1));
+		someInput.put(new Tuple2<>("1"," pro Dz "), valueOf(12));
 		
 		for (Entry<Tuple2<String, String>, Integer> anElement : someInput.entrySet()) {
 			int aNoOfBottles = Wermuth2015ImportTask.processNoOfBottles(anElement.getKey().getKey(), anElement.getKey().getValue());
@@ -121,6 +122,7 @@ public class WermuthPost2015Tests extends TestCase {
 		}
 	}
 	
+	@SuppressWarnings("null")
 	@Test
 	public void testLinePreparer() {
 		

@@ -98,14 +98,14 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	}
 
 	@Override
-	@SuppressWarnings({ "rawtypes", "unchecked", "cast" })
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<WineOffering> getAllWineOfferings() {
 		List someFoundWineOfferings = getHibernateTemplate().find("Select w from WineOffering w");
 		return (List<WineOffering>) someFoundWineOfferings;
 	}
 
 	@Override
-	@SuppressWarnings({ "unchecked", "cast", "rawtypes" })
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public List<WineOffering> findAllWineOfferingsByWine(Wine theWine) {
 		List someFoundWineOfferings = getHibernateTemplate().findByNamedParam("Select w from WineOffering w where w.wine=:aWine","aWine",theWine);
 		return (List<WineOffering>) someFoundWineOfferings;
@@ -140,14 +140,14 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	}
 
 	@Override
-	@SuppressWarnings({ "unchecked", "cast", "rawtypes" })
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public List<Offering> findAllOfferings() {
 		List someFoundOfferings = getHibernateTemplate().findByNamedQuery("FindAllOfferings");
 		return (List<Offering>) someFoundOfferings;
 	}
 
 	@Override
-	@SuppressWarnings({ "rawtypes", "unchecked", "cast" })
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<Offering> findAllOfferingsByProvider(Provider theProvider) {
 		List someFoundOfferings = getHibernateTemplate().findByNamedParam("Select o from Offering o where o.provider=:provider","provider", theProvider);
 		return (List<Offering>) someFoundOfferings;
@@ -195,7 +195,7 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	}
 
 	@Override
-	@SuppressWarnings({ "rawtypes", "unchecked", "cast" })
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<Wine> findWinesByOrigin(String theOrigin) {
 		List someFoundWines = getHibernateTemplate().findByNamedParam("Select w from Wine w where w.origin=:origin", "origin", theOrigin);
 		return (List<Wine>) someFoundWines;

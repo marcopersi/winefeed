@@ -1,10 +1,11 @@
 package ch.persi.common.excel;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.*;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -14,20 +15,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.BorderStyle;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
-import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.CellType;
 
 public class ExcelUtil {
 
@@ -61,16 +48,6 @@ public class ExcelUtil {
     throw new UnsupportedOperationException("Received unrecognized file type, may deal only with XLS and XLSX files !");
   }
 
-  public void close() {
-    try {
-      if (excelFileToRead != null) {
-        excelFileToRead.close();
-      }
-    } catch (IOException ex) {
-      ex.printStackTrace();
-    }
-  }
-
   private static Workbook readXLSFile(final String theFileName) throws IOException {
     return new HSSFWorkbook(new FileInputStream(new File(theFileName)));
   }
@@ -98,7 +75,7 @@ public class ExcelUtil {
 
     if (theCell == null) return null;
 
-    switch (theCell.getCellTypeEnum()) {
+    switch (theCell.getCellType()) {
       case BLANK:
         break;
       case NUMERIC:
@@ -113,7 +90,7 @@ public class ExcelUtil {
   }
 
   public static Double getNumericCellValueUnformatted(final Cell theCell) {
-    if (theCell == null || theCell.getCellTypeEnum() != CellType.NUMERIC) {
+    if (theCell == null || theCell.getCellType() != CellType.NUMERIC) {
       return null;
     }
     return theCell.getNumericCellValue();

@@ -12,12 +12,10 @@ public interface DateExtractingStrategy {
 	 * 
 	 * @return DateTime
 	 */
-	public LocalDate getAuctionDate();
-	
-	
+	LocalDate getAuctionDate();
 	
 	// Map with months of year, required probably at any date extracting strategy
-	static final Map<String, Integer> MONTHS = new HashMap<String, Integer>() {
+	Map<String, Integer> MONTHS = new HashMap<String, Integer>() {
 
 		private static final long serialVersionUID = -1653781997868876737L;
 
