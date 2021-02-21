@@ -1,28 +1,27 @@
 package ch.persi.java.vino.importers.weinboerse;
 
-import static ch.persi.java.vino.domain.VinoConstants.EMPTY;
+import ch.persi.java.vino.importers.DateExtractingStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import ch.persi.java.vino.importers.DateExtractingStrategy;
+import static ch.persi.java.vino.domain.VinoConstants.EMPTY;
 
 //FIXME very similar with WermuthPre2015DateExtractingStrategy, fix this.
 public class WeinboerseDateExtractingStrategy implements DateExtractingStrategy {
 
 	private static final Logger log = LoggerFactory.getLogger(WeinboerseDateExtractingStrategy.class);
-	private List<String> auctionLots;
-	private static final Pattern AUCTION_DATE_PATTERN = Pattern.compile("^.*\\,\\s([0-9]*)\\.(.*)\\s([0-9]{4}).*");	
-	
+	private static final Pattern AUCTION_DATE_PATTERN = Pattern.compile("^.*,\\s([0-9]*)\\.(.*)\\s([0-9]{4}).*");
+	private final List<String> auctionLots;
+
 	public WeinboerseDateExtractingStrategy(List<String> theAuctionLots) {
 		this.auctionLots = theAuctionLots;
 	}
-	
+
 	@Override
 	public LocalDate getAuctionDate() {
 		for (String aLine : auctionLots) {

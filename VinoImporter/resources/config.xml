@@ -1,53 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-	<bean id="wermuthImportJob" class="ch.persi.java.vino.importers.wermuth.WermuthImporter" >
+	<bean id="wermuthParser" class="ch.persi.java.vino.util.WermuthParser"/>
+
+	<bean id="wermuthImportTask" class="ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask">
+		<property name="inputParser" ref="wermuthParser"/>
+		<property name="importDirectory" value="import//wermuth//"/>
+	</bean>
+
+	<bean id="wermuthImportJob" class="ch.persi.java.vino.importers.wermuth.WermuthImporter">
 		<property name="tasks">
 			<set>
-				<ref bean="wermuthImportTask" />
-<!-- 				<bean id="wermuthCleanupTask" class="ch.persi.java.vino.importers.GenericCleanupTask"> -->
-<!-- 					<property name="importFilesLocation" value="import/Wermuth/"></property> -->
-<!-- 					<property name="doneFilesLocation" value="done/Wermuth/"></property> -->
-<!-- 				</bean> -->
+				<ref bean="wermuthImportTask"/>
+				<!-- 				<bean id="wermuthCleanupTask" class="ch.persi.java.vino.importers.GenericCleanupTask"> -->
+				<!-- 					<property name="importFilesLocation" value="import/Wermuth/"></property> -->
+				<!-- 					<property name="doneFilesLocation" value="done/Wermuth/"></property> -->
+				<!-- 				</bean> -->
 			</set>
 		</property>
 	</bean>
 
-	<bean id="steinfelsImportJob" class="ch.persi.java.vino.importers.steinfels.SteinfelsImporter" >
-		<property name="tasks">
-			<set>
-				<ref bean="steinfelsImportTask" />
-<!-- 				<bean id="steinfelsCleanupTask" class="ch.persi.java.vino.importers.GenericCleanupTask"> -->
-<!-- 					<property name="importFilesLocation" value="import/Steinfels/"></property> -->
-<!-- 					<property name="doneFilesLocation" value="done/Steinfels/"></property> -->
-<!-- 				</bean> -->
-			</set>
-		</property>
-	</bean>
-	
-	<bean id="steinfelsParser" class="ch.persi.java.vino.util.SteinfelsParser" />	
+	<bean id="steinfelsParser" class="ch.persi.java.vino.util.SteinfelsParser"/>
 
 	<bean id="steinfelsImportTask" class="ch.persi.java.vino.importers.steinfels.SteinfelsImportTask">
-			<property name="inputParser" ref="steinfelsParser" />
+		<property name="inputParser" ref="steinfelsParser"/>
+		<property name="importDirectory" value="import//Steinfels//"/>
 	</bean>
 
-	<bean id="weinboerseImportJob" class="ch.persi.java.vino.importers.weinboerse.WeinboerseImporter" >
+	<bean id="steinfelsImportJob" class="ch.persi.java.vino.importers.steinfels.SteinfelsImporter">
 		<property name="tasks">
 			<set>
-				<ref bean="weinboerseImportTask" />
+				<ref bean="steinfelsImportTask"/>
+				<!-- 				<bean id="steinfelsCleanupTask" class="ch.persi.java.vino.importers.GenericCleanupTask"> -->
+				<!-- 					<property name="importFilesLocation" value="import/Steinfels/"></property> -->
+				<!-- 					<property name="doneFilesLocation" value="done/Steinfels/"></property> -->
+				<!-- 				</bean> -->
+			</set>
+		</property>
+	</bean>
+
+	<bean id="weinboerseImportTask" class="ch.persi.java.vino.importers.weinboerse.WeinboerseImportTask">
+		<property name="importDirectory" value="import//Weinboerse//"/>
+	</bean>
+
+	<bean id="weinboerseImportJob" class="ch.persi.java.vino.importers.weinboerse.WeinboerseImporter">
+		<property name="tasks">
+			<set>
+				<ref bean="weinboerseImportTask"/>
 				<bean id="weinboerseCleanupTask" class="ch.persi.java.vino.importers.GenericCleanupTask">
-					<property name="importFilesLocation" value="import/Weinboerse/"></property>
-					<property name="doneFilesLocation" value="done/Weinboerse/"></property>
+					<property name="importFilesLocation" value="import/Weinboerse/"/>
+					<property name="doneFilesLocation" value="done/Weinboerse/"/>
 				</bean>
 			</set>
 		</property>
 	</bean>
 
-	<bean id="weinboerseImportTask" class="ch.persi.java.vino.importers.weinboerse.WeinboerseImportTask" />
 
-	<bean id="wermuthParser" class="ch.persi.java.vino.util.WermuthParser" />
 
 <!-- 	<bean id="priceParser" class="ch.persi.java.vino.importers.wermuth.prices.WermuthPricePageParser"> -->
 <!--     	<property name="inputParser" ref="iTextParser" /> -->
@@ -57,10 +67,5 @@
 <!-- 		<property name="inputParser" ref="wermuthParser" /> -->
 <!-- 		<property name="priceParser" ref="priceParser" /> -->
 <!-- 	</bean> -->
-
-	<bean id="wermuthImportTask" class="ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask">
-		<property name="inputParser" ref="wermuthParser" />
-	</bean>
-
 
 </beans>

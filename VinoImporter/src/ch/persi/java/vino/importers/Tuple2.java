@@ -1,28 +1,24 @@
 package ch.persi.java.vino.importers;
 
-public class Tuple2<T,V> {
+public class Tuple2<T, V> {
 
-	private T key;
-	private V value;
+	private final T key;
+	private final V value;
 
 	/**
-	 * 
-	 * @param theKey
-	 * @param theValue
+	 * @param theKey   the key of the tuple
+	 * @param theValue the value of the tuple
 	 */
-	public Tuple2(final T theKey, final V theValue)
-	{
-		key=theKey;
-		value=theValue;
+	public Tuple2(final T theKey, final V theValue) {
+		key = theKey;
+		value = theValue;
 	}
-	
-	public T getKey()
-	{
+
+	public T getKey() {
 		return key;
 	}
-	
-	public V getValue()
-	{
+
+	public V getValue() {
 		return value;
 	}
 

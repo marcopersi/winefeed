@@ -1,21 +1,18 @@
 package ch.persi.java.vino.importers.steinfels;
 
-import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
+import ch.persi.java.vino.importers.LineExtrator;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
-import ch.persi.java.vino.importers.LineExtrator;
-
+@Slf4j
 public class OldRecordLineExtractor implements LineExtrator {
 
 	private final String offeringLine;
 	private Matcher matcher = null;
-	
-	private static final Logger log = LoggerFactory.getLogger(ch.persi.java.vino.importers.steinfels.OldRecordLineExtractor.class);
 
 	public  OldRecordLineExtractor(String theLine) {
 		this.offeringLine = theLine;
@@ -82,15 +79,13 @@ public class OldRecordLineExtractor implements LineExtrator {
 
 	@Override
 	public String getLotNumber() {
-		if (getMatcher().matches())
-		{
+		if (getMatcher().matches()) {
 			return matcher.group(1).trim();
 		}
 		return null;
 	}
-	
-	private final static Pattern getRecordLineMatcher()
-	{
+
+	private static Pattern getRecordLineMatcher() {
 		// 'dynamically' building the pattern. Consider to apply a Builder pattern
 		StringBuilder aWineSizePatternBuilder = new StringBuilder();
 		aWineSizePatternBuilder.append("^([0-9]*)(\\s.*)(\\s([0-9]*)\\s");
@@ -101,11 +96,9 @@ public class OldRecordLineExtractor implements LineExtrator {
 		aWineSizePatternBuilder.append(".*([0-9]{1,5})\\s([0-9]*).*");
 		return Pattern.compile(aWineSizePatternBuilder.toString());
 	}
-	
-	private final Matcher getMatcher()
-	{
-		if (matcher == null)
-		{
+
+	private Matcher getMatcher() {
+		if (matcher == null) {
 			matcher = getRecordLineMatcher().matcher(offeringLine);
 		}
 		return matcher;

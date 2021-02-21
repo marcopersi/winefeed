@@ -1,23 +1,22 @@
 package ch.persi.java.vino.importers.wermuth;
 
-import java.util.Set;
-
+import ch.persi.java.vino.importers.ImportingStrategy;
+import ch.persi.java.vino.importers.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ch.persi.java.vino.importers.ImportingStrategy;
-import ch.persi.java.vino.importers.Task;
+import java.util.Set;
 
 public class WermuthImporter implements ImportingStrategy {
 	
 	private Set<Task> someTasks;
 	private final Logger log = LoggerFactory.getLogger(getClass());
-	
+
 	public void setTasks(final Set<Task> theTasks)
 	{
 		someTasks = theTasks;
 	}
-	
+
 	@Override
 	public void runImport() {
     	

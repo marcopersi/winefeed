@@ -1,22 +1,20 @@
 package ch.persi.java.vino.importers.weinboerse;
 
-import static ch.persi.java.vino.domain.VinoConstants.OHK;
-import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
-import static java.lang.Integer.parseInt;
+import ch.persi.java.vino.importers.LineExtrator;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static ch.persi.java.vino.domain.VinoConstants.OHK;
+import static java.lang.Integer.parseInt;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
-import ch.persi.java.vino.importers.LineExtrator;
-
+@Slf4j
 public class WeinboerseLineExtractor implements LineExtrator {
 
 	private final String offeringLine;
 	private Matcher matcher = null;
-	private static final Logger log = LoggerFactory.getLogger(ch.persi.java.vino.importers.weinboerse.WeinboerseLineExtractor.class);
 
 	public  WeinboerseLineExtractor(String theLine) {
 		this.offeringLine = theLine;
@@ -83,12 +81,23 @@ public class WeinboerseLineExtractor implements LineExtrator {
 
 	@Override
 	public String getLotNumber() {
-		if (getMatcher().matches())
-		{
+		if (getMatcher().matches()) {
 			return getMatcher().group(1).trim();
 		}
 		return null;
 
+	}
+
+	private static Pattern getRecordLineMatcher() {
+		// 'dynamically' building the pattern. Consider to apply a Builder pattern
+		StringBuilder aWineSizePatternBuilder = new StringBuilder();
+		aWineSizePatternBuilder.append("^([0-9]*)(\\s.*)(\\s([0-9]*)\\s");
+		aWineSizePatternBuilder.append("((Flaschen?)");
+		aWineSizePatternBuilder.append("|(Magnum)");
+		aWineSizePatternBuilder.append("|Jéroboam|Jeroboam");
+		aWineSizePatternBuilder.append("Imperial|Impèrial|Impèrial)))");
+		aWineSizePatternBuilder.append(".*([0-9]{4})\\s([0-9]*).*");
+		return java.util.regex.Pattern.compile(aWineSizePatternBuilder.toString());
 	}
 
 	@Override
@@ -100,26 +109,11 @@ public class WeinboerseLineExtractor implements LineExtrator {
 		{
 			return parseInt(aNumberValue);
 		}
-		return 0;	
+		return 0;
 	}
-	
-	private static final Pattern getRecordLineMatcher()
-	{
-		// 'dynamically' building the pattern. Consider to apply a Builder pattern
-		StringBuilder aWineSizePatternBuilder = new StringBuilder();
-		aWineSizePatternBuilder.append("^([0-9]*)(\\s.*)(\\s([0-9]*)\\s");
-		aWineSizePatternBuilder.append("((Flaschen?)");
-		aWineSizePatternBuilder.append("|(Magnum)");
-		aWineSizePatternBuilder.append("|Jéroboam|Jeroboam");
-		aWineSizePatternBuilder.append("Imperial|Impèrial|Impèrial)))");
-		aWineSizePatternBuilder.append(".*([0-9]{4})\\s([0-9]*).*");
-		return java.util.regex.Pattern.compile(aWineSizePatternBuilder.toString());
-	}
-	
-	private final Matcher getMatcher()
-	{
-		if (matcher == null)
-		{
+
+	private Matcher getMatcher() {
+		if (matcher == null) {
 			matcher = getRecordLineMatcher().matcher(offeringLine);
 		}
 		return matcher;

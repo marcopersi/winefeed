@@ -1,8 +1,9 @@
 package ch.persi.java.vino.importers.wermuth.prices;
 
-import static java.lang.Integer.parseInt;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
+import ch.persi.java.vino.importers.PricePageParser;
+import ch.persi.java.vino.util.InputParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Collections;
@@ -12,11 +13,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import ch.persi.java.vino.importers.PricePageParser;
-import ch.persi.java.vino.util.InputParser;
+import static java.lang.Integer.parseInt;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 public class WermuthPricePageParser implements PricePageParser {
 
@@ -168,7 +167,7 @@ public class WermuthPricePageParser implements PricePageParser {
 			String anOperatingSystemName = System.getProperty("os.name");
 			String aWorkingDirectory = null;
 			if (anOperatingSystemName.contains("Windows")) {
-				aWorkingDirectory = WORKING_DIRECTORY.substring(2, WORKING_DIRECTORY.length());
+				aWorkingDirectory = WORKING_DIRECTORY.substring(2);
 			} else if (anOperatingSystemName.contains("Mac")) {
 				aWorkingDirectory = WORKING_DIRECTORY;
 			}
@@ -218,8 +217,8 @@ public class WermuthPricePageParser implements PricePageParser {
 		}
 
 		if (log.isInfoEnabled()) {
-			log.info("Found prices: lower Limit was: '{}', upper {} and most important, realized price {}", new Object[] { aLowerLimit.toString(),
-					anUpperLimit.toString(), aRealizedPrice == null ? "" : aRealizedPrice.toString() });
+			log.info("Found prices: lower Limit was: '{}', upper {} and most important, realized price {}", aLowerLimit.toString(),
+					anUpperLimit.toString(), aRealizedPrice == null ? "" : aRealizedPrice.toString());
 		}
 
 		return aRealizedPrice;

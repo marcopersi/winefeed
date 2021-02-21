@@ -1,13 +1,13 @@
 package ch.persi.java.vino.util;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
 
 public class PDFBoxUtil implements InputParser {
 
@@ -28,7 +28,7 @@ public class PDFBoxUtil implements InputParser {
 	@Override
 	public List<String> parse(String theFileName) {
 
-		try (PDDocument pddDocument = PDDocument.load(new File(theFileName));) {
+		try (PDDocument pddDocument = PDDocument.load(new File(theFileName))) {
 			List<String> someLines = new ArrayList<>();
 
 			PDFTextStripper textStripper = new PDFTextStripper();

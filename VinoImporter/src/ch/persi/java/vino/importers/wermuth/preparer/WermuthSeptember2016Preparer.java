@@ -97,33 +97,34 @@ public class WermuthSeptember2016Preparer {
 						.replace("grand cru exceptionnel ", " ")
 						.replace("grand cru classé ", " ")
 						.replace("grand cru  classé ", " ")
-						.replace("grand cru", "")
-						.replace("1 er", " ")
-						.replace("1\\s{1,}|er", "")
-						.replace("grand cru ", " ")
-						.replace("2e", "")
-						.replace("2 e", "")
-						.replace("3 e", "")
-						.replace("5e grandscru", " ")
-						.replace("grandcrus", " ")
-						.replace("cru", " ")
-						.replace("Grand cru, ", " ")
-						.replace(" classé ", " ")
-						.replace("F lasche", "Flasche")
-						.replaceAll("\\s{2}", " ")
-						
-						);
-				}	
+					.replace("grand cru", "")
+					.replace("1 er", " ")
+					.replace("1\\s{1,}|er", "")
+					.replace("grand cru ", " ")
+					.replace("2e", "")
+					.replace("2 e", "")
+					.replace("3 e", "")
+					.replace("5e grandscru", " ")
+					.replace("grandcrus", " ")
+					.replace("cru", " ")
+					.replace("Grand cru, ", " ")
+					.replace(" classé ", " ")
+					.replace("F lasche", "Flasche")
+					.replaceAll("\\s{2}", " ")
+
+			);
 		}
-	
-	
-	private static final boolean isSequence(String theNextNumber, int theLastNumber)
-	{
-		Integer valueOf = Integer.valueOf(theNextNumber);
-		if (theLastNumber==valueOf) { return true; }
-		
-		for (int i = 1; i<=6;i++) {
-			if (theLastNumber+i == valueOf) return true;
+	}
+
+
+	private static boolean isSequence(String theNextNumber, int theLastNumber) {
+		var valueOf = Integer.parseInt(theNextNumber);
+		if (theLastNumber == valueOf) {
+			return true;
+		}
+
+		for (int i = 1; i <= 6; i++) {
+			if (theLastNumber + i == valueOf) return true;
 		}
 		return false;
 	}

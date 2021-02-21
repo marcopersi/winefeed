@@ -16,29 +16,26 @@ public class WermuthMarch2016Preparer {
 		List<String> someLines = new ArrayList<>();
 		Pattern compile = Pattern.compile("^([0-9]{1,4}).*");
 		int lastLotNumber = 1;
-		
-		try(Scanner input = new Scanner(file))
-		{
+
+		try (Scanner input = new Scanner(file)) {
 			while (input.hasNextLine()) {
-				
+
 				String nextLine = input.nextLine();
 				Matcher matcher = compile.matcher(nextLine);
-				
-				if (matcher.matches() && isSequence(matcher.group(1), lastLotNumber))
-				{
+
+				if (matcher.matches() && isSequence(matcher.group(1), lastLotNumber)) {
 					someLines.add(nextLine);
 					lastLotNumber++;
-				} else
-				{
-					// goto Line before and remove carriage return /new line characters	
-					String replaceAll = someLines.get(someLines.size()-1).replaceAll("[\\r\\n]+", "");
-					nextLine = replaceAll+" " + nextLine + " ";
-					someLines.remove(someLines.size()-1);
+				} else {
+					// goto Line before and remove carriage return /new line characters
+					String replaceAll = someLines.get(someLines.size() - 1).replaceAll("[\\r\\n]+", "");
+					nextLine = replaceAll + " " + nextLine + " ";
+					someLines.remove(someLines.size() - 1);
 					someLines.add(nextLine);
 				}
 			}
-		};
-		
+		}
+
 		for (String string : someLines) {
 			System.out.println(string.replaceAll("“|“|«|»|’|”|„", "")
 					.replaceAll("\\s{2}", " ")
@@ -55,9 +52,9 @@ public class WermuthMarch2016Preparer {
 					.replace("MO/DO, ", " ")
 					.replace("Côte de Nuits, ", " ")
 					.replace("Margaux,", " ")
-					.replace("Pauillac, ","")
-					.replace("St. Julien, "," ")
-					.replace("St. Emilion, "," ")
+					.replace("Pauillac, ", "")
+					.replace("St. Julien, ", " ")
+					.replace("St. Emilion, ", " ")
 					.replace("Pomerol, "," ")
 					.replace("Napa Valley, "," ")
 					.replace("St. Cruz Mountain, ","")
@@ -99,17 +96,18 @@ public class WermuthMarch2016Preparer {
 					.replace("Grand cru, ", " ")
 					.replace(" classé ", " ")
 					.replaceAll("\\s{2}", " ")
-					);
+			);
 		}
 	}
-	
-	
-	private static final boolean isSequence(String theNextNumber, int theLastNumber)
-	{
+
+
+	private static boolean isSequence(String theNextNumber, int theLastNumber) {
 		Integer valueOf = Integer.valueOf(theNextNumber);
-		if (theLastNumber==valueOf) { return true; };
-		for (int i = 1; i<=5;i++) {
-			if (theLastNumber+i == valueOf) return true;
+		if (theLastNumber == valueOf) {
+			return true;
+		}
+		for (int i = 1; i <= 5; i++) {
+			if (theLastNumber + i == valueOf) return true;
 		}
 		return false;
 	}

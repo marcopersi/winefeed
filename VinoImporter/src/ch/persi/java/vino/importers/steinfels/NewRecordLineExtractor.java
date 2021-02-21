@@ -1,17 +1,16 @@
 package ch.persi.java.vino.importers.steinfels;
 
-import static ch.persi.java.vino.domain.VinoConstants.OHK;
-import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
-import static java.lang.Integer.parseInt;
+import ch.persi.java.vino.importers.LineExtrator;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static ch.persi.java.vino.domain.VinoConstants.OHK;
+import static java.lang.Integer.parseInt;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
-import ch.persi.java.vino.importers.LineExtrator;
-
+@Slf4j
 public class NewRecordLineExtractor implements LineExtrator {
 
 //	private static final Pattern RECORD_LINE_PATTERN = Pattern.compile("^(.*\\s)([0-9]*)\\s(.*(Magnum|Jéroboam|Flasche).*)\\s([0-9]*)\\s(([0-9']*)\\s)?+$");
@@ -19,8 +18,6 @@ public class NewRecordLineExtractor implements LineExtrator {
 
 	private final String offeringLine;
 	private Matcher matcher = null;
-	
-	private static final Logger log = LoggerFactory.getLogger(ch.persi.java.vino.importers.steinfels.NewRecordLineExtractor.class);
 
 	public NewRecordLineExtractor(String theLine) {
 		this.offeringLine = theLine;
@@ -88,18 +85,15 @@ public class NewRecordLineExtractor implements LineExtrator {
 
 	@Override
 	public String getLotNumber() {
-		if (getMatcher().matches())
-		{
+		if (getMatcher().matches()) {
 			return getMatcher().group(6).trim();
 		}
 		return null;
 	}
 
-	
-	private final Matcher getMatcher()
-	{
-		if (matcher == null)
-		{
+
+	private Matcher getMatcher() {
+		if (matcher == null) {
 			matcher = RECORD_LINE_PATTERN.matcher(offeringLine);
 		}
 		return matcher;
@@ -108,8 +102,7 @@ public class NewRecordLineExtractor implements LineExtrator {
 	@Override
 	public Integer getRealizedPrice() {
 		// FIXME: redundant
-		if (getMatcher().matches())
-		{
+		if (getMatcher().matches()) {
 			String aNumberValue = getMatcher().group(5).replaceAll("'", "").trim();
 			if (isCreatable(aNumberValue)) // coud be the char - too , if not sold at auction !
 			{

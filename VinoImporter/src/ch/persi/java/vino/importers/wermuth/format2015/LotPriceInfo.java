@@ -2,16 +2,16 @@ package ch.persi.java.vino.importers.wermuth.format2015;
 
 public class LotPriceInfo {
 
-	private int lowerPrice;
-	private int upperPrice;
-	private int realizedPrice;
-	
-	public LotPriceInfo(int theLowerPrice, int theUpperPrice, int theRealizedPrice){
+	private final int lowerPrice;
+	private final int upperPrice;
+	private final int realizedPrice;
+
+	public LotPriceInfo(int theLowerPrice, int theUpperPrice, int theRealizedPrice) {
 		lowerPrice = theLowerPrice;
 		upperPrice = theUpperPrice;
 		realizedPrice = theRealizedPrice;
 	}
-	
+
 	public int getLowerPrice() {
 		return lowerPrice;
 	}
@@ -49,9 +49,7 @@ public class LotPriceInfo {
 			return false;
 		if (realizedPrice != other.realizedPrice)
 			return false;
-		if (upperPrice != other.upperPrice)
-			return false;
-		return true;
+		return upperPrice == other.upperPrice;
 	}
 	
 	@Override

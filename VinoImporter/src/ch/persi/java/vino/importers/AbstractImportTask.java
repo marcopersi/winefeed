@@ -1,52 +1,41 @@
 package ch.persi.java.vino.importers;
 
+import ch.persi.java.vino.domain.Provider;
+import ch.persi.java.vino.util.InputParser;
+
+import java.io.File;
 import java.io.FileWriter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import ch.persi.java.vino.domain.Provider;
-import ch.persi.java.vino.util.InputParser;
-
+@lombok.extern.slf4j.Slf4j
 public abstract class AbstractImportTask implements ImportTask {
 
-	private static final Logger log = LoggerFactory.getLogger(ch.persi.java.vino.importers.AbstractImportTask.class);
-
 	protected InputParser parser = null;
-
 	protected FileWriter anOutputWriter = null;
 	protected FileWriter aSkippedRowsWriter = null;
-	
-	protected DateExtractingStrategy dateExtractingStrategy = null;
-	
+
 	private LocalDate auctionDate = null;
 	private String eventIdentifier = null;
-	
-	public void setInputParser(final InputParser theParser) {
-		this.parser = theParser;
+
+	public void setInputParser(InputParser theInputParser) {
+		parser = theInputParser;
 	}
 
-	public void setEventIdentifier(String theEventIdentifier)
-	{
-		eventIdentifier = theEventIdentifier;
-	}
-	
-	public String getEventIdentifier()
-	{
+	public String getEventIdentifier() {
 		return eventIdentifier;
 	}
-	
-	
-	public void setAuctionDate(LocalDate theAuctionDate)
-	{
+
+	public void setEventIdentifier(String theEventIdentifier) {
+		eventIdentifier = theEventIdentifier;
+	}
+
+	public void setAuctionDate(LocalDate theAuctionDate) {
 		auctionDate = theAuctionDate;
 	}
-	
-	public LocalDate getAuctionDate()
-	{
+
+	public LocalDate getAuctionDate() {
 		return auctionDate;
 	}
 	
@@ -66,7 +55,7 @@ public abstract class AbstractImportTask implements ImportTask {
 				anOutputWriter.flush();
 				anOutputWriter.close();
 			}
-			
+
 			if (aSkippedRowsWriter != null) {
 				aSkippedRowsWriter.flush();
 				aSkippedRowsWriter.close();
@@ -75,4 +64,16 @@ public abstract class AbstractImportTask implements ImportTask {
 		}
 	}
 
+	public abstract String getImportDirectory();
+
+	protected File checkFiles() {
+		// checking for to be imported files at fileSystem, apply some validation
+		String anImportDirectoryPath = getImportDirectory();
+		File anImportFile = new File(anImportDirectoryPath);
+		if (anImportFile == null || anImportFile.list() == null || anImportFile.list().length < 1) {
+			log.error("The import directory {} does not exist or does not contain anything at all !", anImportFile);
+			return null;
+		}
+		return anImportFile;
+	}
 }

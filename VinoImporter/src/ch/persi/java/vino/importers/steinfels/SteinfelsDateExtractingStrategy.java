@@ -1,20 +1,19 @@
 package ch.persi.java.vino.importers.steinfels;
 
+import ch.persi.java.vino.importers.DateExtractingStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import ch.persi.java.vino.importers.DateExtractingStrategy;
-
 // FIXME very similar with WermuthPre2015DateExtractingStrategy, fix this.
 public class SteinfelsDateExtractingStrategy implements DateExtractingStrategy {
 
 	private static final Logger log = LoggerFactory.getLogger(SteinfelsDateExtractingStrategy.class);
-	private List<String> auctionLots;
+	private final List<String> auctionLots;
 
 	public SteinfelsDateExtractingStrategy(List<String> theAuctionLots) {
 		this.auctionLots = theAuctionLots;
@@ -45,7 +44,7 @@ public class SteinfelsDateExtractingStrategy implements DateExtractingStrategy {
 		return null;
 	}
 
-	private static final Pattern createAuctionDateMatcher() {
+	private static Pattern createAuctionDateMatcher() {
 		StringBuilder aWineRegionPatternBuilder = new StringBuilder();
 		aWineRegionPatternBuilder.append("^.*\\,\\s");
 		aWineRegionPatternBuilder.append("([0-9]{1,2})\\.\\s");

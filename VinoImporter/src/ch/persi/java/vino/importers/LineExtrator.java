@@ -1,23 +1,27 @@
 package ch.persi.java.vino.importers;
 
+/**
+ * This interface describes the methods which are required to extract a record line from source.
+ * At least these methods must be provides, else the record line is unusable respectively not representative.
+ */
 public interface LineExtrator {
 
-	public boolean isRecordLine();
-	
-	public Integer getVintage();
-	
-	public boolean isOHK();
-	
-	public Integer getNoOfBottles();
-	
-	public Integer getMinPrice();
-	
-	public Integer getMaxPrice();
-	
-	public String getWine();
-	
-	public String getLotNumber();
-	
-	public Integer getRealizedPrice();
-	
+    boolean isRecordLine();
+
+    Integer getVintage();
+
+    boolean isOHK();
+
+    Integer getNoOfBottles();
+
+    Integer getMinPrice();
+
+    Integer getMaxPrice();
+
+    String getWine();
+
+    String getLotNumber();
+
+    Integer getRealizedPrice();
+
 }

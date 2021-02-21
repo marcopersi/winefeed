@@ -9,22 +9,21 @@ import java.util.regex.Pattern;
 public class WermuthMay2016Preparer {
 
 	public static void main(String[] args) throws IOException {
-		
+
 		//running through characters, drop carriage return /new line if the next line is not the next value in the sequence
 		File file = new File("import/Wermuth/WZ-257_28052016_Resultate");
 		List<String> someLines = new ArrayList<>();
-		
+
 		Pattern compile = Pattern.compile("^([0-9]{1,4}).*");
 		int lastLotNumber = 1;
-		
-		try(Scanner input = new Scanner(file))
-		{
+
+		try (Scanner input = new Scanner(file)) {
 			while (input.hasNextLine()) {
 				String nextLine = input.nextLine();
 				someLines.add(nextLine);
 			}
-		};
-		
+		}
+
 		for (String string : someLines) {
 			System.out.println(string.replaceAll("“|“|«|»|’|”|„", "")
 					.replaceAll("\\s{2}", " ")
@@ -41,9 +40,9 @@ public class WermuthMay2016Preparer {
 					.replace("MO/DO, ", " ")
 					.replace("Côte de Nuits, ", " ")
 					.replace("Margaux,", " ")
-					.replace("Pauillac, ","")
-					.replace("St. Julien, "," ")
-					.replace("St. Emilion, "," ")
+					.replace("Pauillac, ", "")
+					.replace("St. Julien, ", " ")
+					.replace("St. Emilion, ", " ")
 					.replace("Pomerol, "," ")
 					.replace("Napa Valley, "," ")
 					.replace("St. Cruz Mountain, ","")
@@ -90,17 +89,19 @@ public class WermuthMay2016Preparer {
 					.replace("Grand cru, ", " ")
 					.replace(" classé ", " ")
 					.replaceAll("\\s{2}", " ")
-					);
+			);
 		}
 	}
-	
-	
-	private static final boolean isSequence(String theNextNumber, int theLastNumber)
-	{
+
+
+	private static boolean isSequence(String theNextNumber, int theLastNumber) {
 		Integer valueOf = Integer.valueOf(theNextNumber);
-		if (theLastNumber==valueOf) { return true; };
-		for (int i = 1; i<=5;i++) {
-			if (theLastNumber+i == valueOf) return true;
+		if (theLastNumber == valueOf) {
+			return true;
+		}
+
+		for (int i = 1; i <= 5; i++) {
+			if (theLastNumber + i == valueOf) return true;
 		}
 		return false;
 	}

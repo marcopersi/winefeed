@@ -1,8 +1,13 @@
 package ch.persi.java.vino.wermuth;
 
-import static ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask.aRecordLinePattern;
-import static ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask.clean;
-import static java.lang.Integer.valueOf;
+import ch.persi.java.vino.domain.Unit;
+import ch.persi.java.vino.domain.WineOffering;
+import ch.persi.java.vino.importers.Tuple2;
+import ch.persi.java.vino.importers.wermuth.format2015.LotPriceInfo;
+import ch.persi.java.vino.importers.wermuth.format2015.ResultFilebasedLotLinePreparer;
+import ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,17 +18,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 
-import org.junit.Test;
+import static ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask.aRecordLinePattern;
+import static ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask.clean;
+import static org.junit.Assert.assertEquals;
 
-import ch.persi.java.vino.domain.Unit;
-import ch.persi.java.vino.domain.WineOffering;
-import ch.persi.java.vino.importers.Tuple2;
-import ch.persi.java.vino.importers.wermuth.format2015.LotPriceInfo;
-import ch.persi.java.vino.importers.wermuth.format2015.ResultFilebasedLotLinePreparer;
-import ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask;
-import junit.framework.TestCase;
-
-public class WermuthPost2015Tests extends TestCase {
+public class WermuthPost2015Tests {
 
 
 	@Test
@@ -55,11 +54,10 @@ public class WermuthPost2015Tests extends TestCase {
 
 		for (String aLine : someLines) {
 			Matcher matcher = Wermuth2015ImportTask.aRecordLinePattern.matcher(Wermuth2015ImportTask.clean(aLine));
-			assertNotNull(matcher);
-			assertTrue(matcher.matches());
-			
-			for (int i = 0; i<=matcher.groupCount();i++)
-			{
+			Assert.assertNotNull(matcher);
+			Assert.assertTrue(matcher.matches());
+
+			for (int i = 0; i <= matcher.groupCount(); i++) {
 				System.out.println("group i " + i + ": " + matcher.group(i));
 			}
 		}
@@ -106,16 +104,15 @@ public class WermuthPost2015Tests extends TestCase {
 	}
 
 	@Test
-	public void testNoOfBottles()
-	{
-		Map<Tuple2<String,String>,Integer> someInput = new HashMap<>();
-		someInput.put(new Tuple2<>("1"," pro Dz. "), valueOf(12));
-		someInput.put(new Tuple2<>("6"," pro Lot "), valueOf(6));
-		someInput.put(new Tuple2<>("21"," pro Lot "), valueOf(21));
-		someInput.put(new Tuple2<>("2"," pro Dutzend "), valueOf(24));
-		someInput.put(new Tuple2<>("1"," pro dz. "), valueOf(1));
-		someInput.put(new Tuple2<>("1"," pro Dz "), valueOf(12));
-		
+	public void testNoOfBottles() {
+		Map<Tuple2<String, String>, Integer> someInput = new HashMap<>();
+		someInput.put(new Tuple2<>("1", " pro Dz. "), 12);
+		someInput.put(new Tuple2<>("6", " pro Lot "), 6);
+		someInput.put(new Tuple2<>("21", " pro Lot "), 21);
+		someInput.put(new Tuple2<>("2", " pro Dutzend "), 24);
+		someInput.put(new Tuple2<>("1", " pro dz. "), 1);
+		someInput.put(new Tuple2<>("1", " pro Dz "), 12);
+
 		for (Entry<Tuple2<String, String>, Integer> anElement : someInput.entrySet()) {
 			int aNoOfBottles = Wermuth2015ImportTask.processNoOfBottles(anElement.getKey().getKey(), anElement.getKey().getValue());
 			assertEquals(aNoOfBottles, anElement.getValue().intValue());
@@ -125,29 +122,29 @@ public class WermuthPost2015Tests extends TestCase {
 	@SuppressWarnings("null")
 	@Test
 	public void testLinePreparer() {
-		
+
 		List<String> someInput = new ArrayList<>();
 		someInput.add("252 1 Champagne Dom Pérignon 1 Flasche, 1996, OC pro Lot CHF 150-220 CHF 160.00");
 		someInput.add("252 2 Champagne Dom Pérignon 3 Flaschen, 1996, 1er OC pro Lot CHF 450-660 CHF 480.00");
-		
+
 		List<String> prepare = ResultFilebasedLotLinePreparer.prepare(someInput);
-		assertTrue(prepare != null && prepare.size() ==2);
+		assertEquals(2, prepare.size());
 		String string = someInput.get(0);
-		assertEquals(string.substring(4, string.length()), prepare.get(0));
+		assertEquals(string.substring(4), prepare.get(0));
 
 		String aSecondLine = someInput.get(1);
-		assertEquals(aSecondLine.substring(4, aSecondLine.length()), prepare.get(1));
+		assertEquals(aSecondLine.substring(4), prepare.get(1));
 	}
 	
 	@Test
 	public void testMatchingGroups() {
-		
-		String aLineExpression ="11 Château Margaux 4 Flaschen, 1999,  OHK pro Lot  1200-1500  1'200.00";
+
+		String aLineExpression = "11 Château Margaux 4 Flaschen, 1999,  OHK pro Lot  1200-1500  1'200.00";
 		Matcher matcher = aRecordLinePattern.matcher(aLineExpression);
-		
-		if (!matcher.matches()) fail("patter/line does not match");
-		for (int i=0;i<matcher.groupCount();i++) {
-			System.out.println("group: "+i +" is: "+matcher.group(i));
+
+		if (!matcher.matches()) Assert.fail("patter/line does not match");
+		for (int i = 0; i < matcher.groupCount(); i++) {
+			System.out.println("group: " + i + " is: " + matcher.group(i));
 		}
 	}
 	
@@ -163,17 +160,17 @@ public class WermuthPost2015Tests extends TestCase {
 		String aLine = "9 Château Poujeaux 1 Dutzend 3/8 Flaschen, 2000, OHK pro Dz. CHF 210-300 CHF 280.00";
 		String aCleanedLine = clean(aLine);
 		WineOffering aResultWineOffering = anImportTask.processLine(aCleanedLine);
-		
+
 		// asserting
-		assertNotNull(aResultWineOffering);
-		assertNotNull(aResultWineOffering.getOffering());
-		assertNotNull(aResultWineOffering.getWine());
+		Assert.assertNotNull(aResultWineOffering);
+		Assert.assertNotNull(aResultWineOffering.getOffering());
+		Assert.assertNotNull(aResultWineOffering.getWine());
 
 		assertEquals(aResultWineOffering.getOffering().getPriceMin(), 210);
 		assertEquals(aResultWineOffering.getOffering().getPriceMax(), 300);
-		assertEquals(aResultWineOffering.getOffering().getRealizedPrice(),280);
-		assertEquals(aResultWineOffering.getWine().getVintage(),2000);
-		assertTrue(aResultWineOffering.getOffering().isOHK());
+		assertEquals(aResultWineOffering.getOffering().getRealizedPrice(), 280);
+		assertEquals(aResultWineOffering.getWine().getVintage(), 2000);
+		Assert.assertTrue(aResultWineOffering.getOffering().isOHK());
 		assertEquals(aResultWineOffering.getOffering().getNoOfBottles(), 12);
 		assertEquals(aResultWineOffering.getOffering().getProviderOfferingId(), "9");
 		assertEquals(aResultWineOffering.getWineUnit().getDeciliters(), BigDecimal.valueOf(3.75));
@@ -182,30 +179,30 @@ public class WermuthPost2015Tests extends TestCase {
 		WineOffering aSecondWineRecord = anImportTask.processLine(clean("12 Château Margaux 6 Flaschen, 2000,  (Parker 100) pro Lot 4200-5400 4'000.00"));
 
 		// asserting
-		assertNotNull(aSecondWineRecord);
-		assertNotNull(aSecondWineRecord.getOffering());
-		assertNotNull(aSecondWineRecord.getWine());
+		Assert.assertNotNull(aSecondWineRecord);
+		Assert.assertNotNull(aSecondWineRecord.getOffering());
+		Assert.assertNotNull(aSecondWineRecord.getWine());
 		assertEquals(aSecondWineRecord.getOffering().getPriceMin(), 4200);
 		assertEquals(aSecondWineRecord.getOffering().getPriceMax(), 5400);
-		assertEquals(aSecondWineRecord.getOffering().getRealizedPrice(),4000);
-		assertEquals(aSecondWineRecord.getWine().getVintage(),2000);
-		assertEquals(aSecondWineRecord.getOffering().isOHK(),false);
+		assertEquals(aSecondWineRecord.getOffering().getRealizedPrice(), 4000);
+		assertEquals(aSecondWineRecord.getWine().getVintage(), 2000);
+		Assert.assertFalse(aSecondWineRecord.getOffering().isOHK());
 		assertEquals(aSecondWineRecord.getOffering().getNoOfBottles(), 6);
 		assertEquals(aSecondWineRecord.getOffering().getProviderOfferingId(), "12");
 		assertEquals(aSecondWineRecord.getWineUnit().getDeciliters(), BigDecimal.valueOf(7.5));
-		
+
 
 		WineOffering aThirdWineRecord = anImportTask.processLine(clean("266 Cabernet Sauvignon Beckstoffer Tokalon, Schrader 6 Flaschen, 2000 pro Lot 900-1200 750"));
 
 		// asserting
-		assertNotNull(aThirdWineRecord);
-		assertNotNull(aThirdWineRecord.getOffering());
-		assertNotNull(aThirdWineRecord.getWine());
+		Assert.assertNotNull(aThirdWineRecord);
+		Assert.assertNotNull(aThirdWineRecord.getOffering());
+		Assert.assertNotNull(aThirdWineRecord.getWine());
 		assertEquals(aThirdWineRecord.getOffering().getPriceMin(), 900);
 		assertEquals(aThirdWineRecord.getOffering().getPriceMax(), 1200);
-		assertEquals(aThirdWineRecord.getOffering().getRealizedPrice(),750);
-		assertEquals(aThirdWineRecord.getWine().getVintage(),2000);
-		assertEquals(aThirdWineRecord.getOffering().isOHK(),false);
+		assertEquals(aThirdWineRecord.getOffering().getRealizedPrice(), 750);
+		assertEquals(aThirdWineRecord.getWine().getVintage(), 2000);
+		Assert.assertFalse(aThirdWineRecord.getOffering().isOHK());
 		assertEquals(aThirdWineRecord.getOffering().getNoOfBottles(), 6);
 		assertEquals(aThirdWineRecord.getOffering().getProviderOfferingId(), "266");
 		assertEquals(aThirdWineRecord.getWineUnit().getDeciliters(), BigDecimal.valueOf(7.5));

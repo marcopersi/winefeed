@@ -1,16 +1,15 @@
 package ch.persi.java.vino.importers.wermuth.formatpre2015;
 
-import static ch.persi.java.vino.domain.VinoConstants.EMPTY;
-import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
+import ch.persi.java.vino.domain.VinoConstants;
+import ch.persi.java.vino.importers.LineExtrator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import ch.persi.java.vino.domain.VinoConstants;
-import ch.persi.java.vino.importers.LineExtrator;
+import static ch.persi.java.vino.domain.VinoConstants.EMPTY;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 public class WermuthRecordLineExtractor implements LineExtrator {
 
@@ -97,16 +96,14 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 		// due to the nature of having two files ,....
 		return null;
 	}
-	
-	private final Matcher getMatcher()
-	{
-		if (matcher == null)
-		{
+
+	private Matcher getMatcher() {
+		if (matcher == null) {
 			matcher = aPattern.matcher(offeringLine);
 		}
 		return matcher;
 	}
-	
+
 	@Override
 	public Integer getMinPrice() {
 		return extract(0);
@@ -120,20 +117,19 @@ public class WermuthRecordLineExtractor implements LineExtrator {
 	private Integer extract(final int theIndex) {
 		Matcher aMatcher = getMatcher();
 
-		if (!aMatcher.matches() || aMatcher.groupCount() != 6)
-		{
+		if (!aMatcher.matches() || aMatcher.groupCount() != 6) {
 			log.error("Line does not match as expected, cannot! extract min/max price !!");
 			return 0;
 		}
 
 		String aMinMaxString = aMatcher.group(6).replaceAll("[^0-9]", EMPTY).replaceAll("\\s{2,}", EMPTY);
 		String[] someStringParts = aMinMaxString.split("\\s");
-		if (someStringParts== null || someStringParts.length!=2)
-		{
+		if (someStringParts.length != 2) {
 			log.error("The string operations in the price range(min/max) substring resulted in something unusable {}", aMinMaxString);
 			return 0;
+		} else {
+			return Integer.parseInt(someStringParts[theIndex]);
 		}
-		
-		return Integer.parseInt(someStringParts[theIndex]);
+
 	}
 }

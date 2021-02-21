@@ -1,14 +1,13 @@
 package ch.persi.java.vino.util;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * an iText based extractor for all Wermuth result files
@@ -18,7 +17,6 @@ import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
 public class WermuthParser implements InputParser{
 
 	private static final Logger log = LoggerFactory.getLogger(SteinfelsParser.class);
-	
 	
 	@Override
 	public List<String> parse(String theFileName)  {

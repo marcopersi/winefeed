@@ -1,51 +1,47 @@
 package ch.persi.java.vino.importers.weinboerse;
 
-import static ch.persi.java.vino.domain.VinoConstants.OHK;
+import ch.persi.java.vino.domain.*;
+import ch.persi.java.vino.importers.AbstractImportTask;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static ch.persi.java.vino.domain.VinoConstants.OHK;
 
-import ch.persi.java.vino.domain.Offering;
-import ch.persi.java.vino.domain.Provider;
-import ch.persi.java.vino.domain.Unit;
-import ch.persi.java.vino.domain.Wine;
-import ch.persi.java.vino.domain.WineOffering;
-import ch.persi.java.vino.importers.AbstractImportTask;
-
+@Slf4j
 public class WeinboerseImportTask extends AbstractImportTask {
 
-	
-	private static final Logger log = LoggerFactory.getLogger(ch.persi.java.vino.importers.weinboerse.WeinboerseImportTask.class);
-	private static final String IMPORTDIRECTORY = "import//Weinboerse//";
+	private String importDirectory = null;
+
+	@Override
+	public String getImportDirectory() {
+		return importDirectory;
+	}
+
+	public void setImportDirectory(String theImportDirectory) {
+		importDirectory = theImportDirectory;
+	}
 
 	@Override
 	public void execute() {
-		// checking for to be imported files at fileSystem, apply some
-		// validation
-		File theImportDirectory = new File(IMPORTDIRECTORY);
-		if (theImportDirectory.list() == null || theImportDirectory.list().length < 1) {
-			log.error("The import directory {0} does not exist or does not contain anything at all !");
-			return;
-		}
+		val anImportDirectory = checkFiles();
+		if (anImportDirectory == null) return;
 
-		for (String aFileName : theImportDirectory.list()) {
+		for (String aFileName : anImportDirectory.list())
 			try {
 				log.info("Start import of file: {}", aFileName);
-				
-				List<String> someLines = parser.parse(IMPORTDIRECTORY + aFileName);
+
+				String anImportFile = getImportDirectory() + aFileName;
+				List<String> someLines = parser.parse(anImportFile);
 				log.info("Received '{}' lines out of the PDF file !", someLines.size());
 				setAuctionDate(new WeinboerseDateExtractingStrategy(someLines).getAuctionDate());
-				
+
 				importFile(someLines, Provider.WEINBOERSE);
 			} catch (Exception e) {
-				e.printStackTrace(System.out);
-				log.error("Executing Steinfels Import Task has a serious problem with the import of the file '{}'", aFileName, e);
+				log.error("Executing Weinboerse file import has a significant problem with file '{}'", aFileName);
 			}
-		}
 	}
 
 	@Override
@@ -74,12 +70,11 @@ public class WeinboerseImportTask extends AbstractImportTask {
 				// no validation of matcher needed, since isRecordLine already
 				// checked if matcher is valid at this point or not
 				anOffering.setProviderOfferingId(lineExtractor.getLotNumber());
-				String[] someLineParts = null;
 
 				// matcher seems to be somehow state full, without calling
 				// matches the group access to item 2 fails , funny enough
 				String aCompositeContentPart = lineExtractor.getWine();
-				someLineParts = aCompositeContentPart.split(" ");
+				String[] someLineParts = aCompositeContentPart.split(" ");
 
 				String aPossibleRegion = someLineParts[someLineParts.length - 1].trim();
 				aCompositeContentPart = aCompositeContentPart.replace(aPossibleRegion, ""); // reducing
@@ -121,16 +116,14 @@ public class WeinboerseImportTask extends AbstractImportTask {
 			} else {
 				aSkippedRowsWriter.write(aRecordLine);
 			}
-			// reseting OHK
+			// resetting OHK
 			isOHK = false;
 		}
 
 	}
 
-
-	private final Unit getUnit(final String theLine) {
+	private Unit getUnit(final String theLine) {
 		return new Unit(determineSize(theLine));
 	}
-
 
 }
