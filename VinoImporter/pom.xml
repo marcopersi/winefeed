@@ -3,7 +3,7 @@
   <parent>
      <groupId>com.exclusivewine.winefeed</groupId>
      <artifactId>wine-app</artifactId>
-     <version>1</version>
+     <version>0.0.1-SNAPSHOT</version>
    </parent>
      
   <groupId>com.exclusivewine.winefeed</groupId>
