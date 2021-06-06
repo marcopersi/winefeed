@@ -63,9 +63,11 @@
 <!--     	<property name="inputParser" ref="iTextParser" /> -->
 <!-- 	</bean> -->
 
-<!-- 	<bean id="wermuthImportTask" class="ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015ImportTask"> -->
-<!-- 		<property name="inputParser" ref="wermuthParser" /> -->
-<!-- 		<property name="priceParser" ref="priceParser" /> -->
-<!-- 	</bean> -->
+<!--
+ 	<bean id="wermuthImportTask" class="ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015ImportTask">
+ 		<property name="inputParser" ref="wermuthParser" />
+ 		<property name="priceParser" ref="priceParser" />
+ 	</bean>
+-->
 
 </beans>

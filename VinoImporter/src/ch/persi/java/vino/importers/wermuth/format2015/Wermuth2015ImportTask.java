@@ -39,7 +39,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 	 */
 	public static String clean(String theLine) {
 		return theLine.replaceAll("1er", "").replaceAll("2ème|3ème|4ème|5ème", "").replaceAll("cru burgoise", "").replaceAll("1 cru ", "")
-				.replaceAll("1 er|cru", "").replaceAll("Total ", "").replaceAll("«|»|“|”|„", "").replaceAll("CHF ", "").replaceAll("Fr.", "")
+				.replaceAll("1 er|cru", "").replaceAll("Total ", "").replaceAll("«|»|“|”|„", "").replaceAll("CHF ", "").replaceAll("SFr.", "").replaceAll("Fr.", "")
 				.replace(".00", "").replaceAll("\\(.*\\)", "").replaceAll("\\s{2,}", SPACE).replaceAll("Cru|cru", "");
 	}
 
@@ -91,8 +91,10 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 			// writing results
 			if (aWineOffering != null) {
 				anOutputWriter.write(aWineOffering.toXLSString());
+				anOutputWriter.flush();
 			} else {
 				aSkippedRowsWriter.write(aCleanedLine+"\n");
+				aSkippedRowsWriter.flush();
 			}
 			aProcessLineIndex++;
 		}
