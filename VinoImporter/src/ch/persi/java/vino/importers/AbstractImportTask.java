@@ -45,8 +45,8 @@ public abstract class AbstractImportTask implements ImportTask {
 		}
 
 		try {
-			anOutputWriter = new FileWriter("output_"+theProvider.getProviderCode()+"_"+getAuctionDate().format(DateTimeFormatter.ofPattern("ddMMyyyy")));	
-			aSkippedRowsWriter = new FileWriter("skippedRowsFrom_"+theProvider.getProviderCode()+"_"+getAuctionDate().format(DateTimeFormatter.ofPattern("ddMMyyyy")));
+			anOutputWriter = new FileWriter("output_"+theProvider.getProviderCode()+"_"+getAuctionDate().format(DateTimeFormatter.ofPattern("ddMMyyyy"))+".log");
+			aSkippedRowsWriter = new FileWriter("skippedRowsFrom_"+theProvider.getProviderCode()+"_"+getAuctionDate().format(DateTimeFormatter.ofPattern("ddMMyyyy"))+".log");
 			saveWineOfferings(someLines);
 		} catch (Exception theCause) {
 			log.error(theCause.getMessage(), theCause);
