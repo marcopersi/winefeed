@@ -305,9 +305,12 @@
 305;Riesling Trocken;Reichsrat von Buhl;2010;11;7.5;true;110;220;100
 306;Riesling GG Breumel in den Mauern;Müller Catoir;2009;1;30;true;150;200;130
 307;Riesling GG Forster Kirchenstück;Dr. von Bassermann Jordan;2009;1;30;false;200;300;200
+308;Grüner Veltliner Käferberg;null;2008;12;7.5;false;180;300;160
 309;Tokay Pinot Gris Reserve;Cave de Bennwihr;2009;12;7.5;false;180;300;160
 310;Sauvignon blanc Late Harvest;Concha y Toro;2005;12;3.75;true;120;180;100
-315;Châteauneuf du Pape ;Clos St. Jean;2007;12;7.5;false;480;720;360
+311;Sancerre blanc la Mousière;Alphonse Mellot;2009;12;7.5;false;330;480;280
+313;Hermitage;Chave;2009;11;7.5;false;220;330;340;
+315;Châteauneuf du Pape;Clos St. Jean;2007;12;7.5;false;480;720;360
 316;Château Smith Haut Lafitte blanc;null;2004;10;7.5;true;450;650;480
 317;Domaine de Chevalier blanc;null;2002;10;7.5;true;400;600;400
 319;Château d’Agassac;null;2002;2;30;true;150;220;150
@@ -334,6 +337,8 @@
 340;Château Rieussec;null;2004;2;15;false;120;200;90
 341;Château Rayne-Vigneau;null;1990;5;7.5;false;120;150;130
 342;Château Rayne-Vigneau;null;1997;6;7.5;false;210;300;180
+343;Château Doisy-Vedrines;null;2003;8;7.5;false;160;240;130
+346;Rioja Edition Limitada;null;2007;9;7.5;true;180;300;240
 347;Lamarein;Josephus Mayer;2009;6;7.5;false;300;420;380
 348;Guado al Tasso;Antinori;1993;6;7.5;true;240;360;180
 349;Guado al Tasso;Antinori;1996;6;7.5;true;240;360;180
@@ -351,22 +356,22 @@
 361;Sassicaia;Tenuta San Guido;2009;1;30;true;750;1000;650
 362;Sassicaia;Tenuta San Guido;2011;1;60;true;1800;2500;1600
 363;Tignanello;Antinori;1998;1;15;true;120;180;100
-364;Masseto;Tenuta dell Ornellaia;1996;1;7.5;false;500;700;480
-365;Masseto;Tenuta dell Ornellaia;1997;6;7.5;true;3300;3900;3400
-366;Masseto;Tenuta dell Ornellaia;2001;6;7.5;true;4200;4800;4300
-367;Masseto;Tenuta dell Ornellaia;2008;3;7.5;true;1350;1800;1400
-368;Masseto;Tenuta dell Ornellaia;2004;1;15;true;1200;1500;1300
-369;Masseto;Tenuta dell Ornellaia;2010;1;30;true;2400;3000;2200
-370;Ornellaia;Tenuta dellOrnellaia;1991;6;7.5;true;720;960;680
-371;Ornellaia;Tenuta dellOrnellaia;2003;6;7.5;true;720;960;780
-372;Ornellaia;Tenuta dellOrnellaia;1990;3;15;true;900;1200;850
-373;Ornellaia;Tenuta dellOrnellaia;1993;1;15;true;220;300;200
-374;Ornellaia;Tenuta dellOrnellaia;2010;1;30;true;750;1000;750
-375;Ornellaia;Tenuta dellOrnellaia;2008;1;60;true;1650;2000;1500
+364;Masseto;Tenuta dell'Ornellaia;1996;1;7.5;false;500;700;480
+365;Masseto;Tenuta dell'Ornellaia;1997;6;7.5;true;3300;3900;3400
+366;Masseto;Tenuta dell'Ornellaia;2001;6;7.5;true;4200;4800;4300
+367;Masseto;Tenuta dell'Ornellaia;2008;3;7.5;true;1350;1800;1400
+368;Masseto;Tenuta dell'Ornellaia;2004;1;15;true;1200;1500;1300
+369;Masseto;Tenuta dell'Ornellaia;2010;1;30;true;2400;3000;2200
+370;Ornellaia;Tenuta dell'Ornellaia;1991;6;7.5;true;720;960;680
+371;Ornellaia;Tenuta dell'Ornellaia;2003;6;7.5;true;720;960;780
+372;Ornellaia;Tenuta dell'Ornellaia;1990;3;15;true;900;1200;850
+373;Ornellaia;Tenuta dell'Ornellaia;1993;1;15;true;220;300;200
+374;Ornellaia;Tenuta dell'Ornellaia;2010;1;30;true;750;1000;750
+375;Ornellaia;Tenuta dell'Ornellaia;2008;1;60;true;1650;2000;1500
 376;Lodovico;Antinori;2008;1;30;true;800;1200;700
 377;Matarocchio;Lodovico Antinori;2009;1;30;true;1000;1500;900
-378;Gevrey-Chambertin  Clos St. Jacques ;Armand Rousseau;2012;1;15;false;1200;1800;1050
-379;Chambertin  Clos de Bèze ;Armand Rousseau;2012;1;15;false;2500;3500;2200
+378;Gevrey-Chambertin Clos St. Jacques;Armand Rousseau;2012;1;15;false;1200;1800;1050
+379;Chambertin Clos de Bèze;Armand Rousseau;2012;1;15;false;2500;3500;2200
 380;Chambertin;Domaine Armand Rousseau;2012;1;15;false;2500;3500;2200
 381;Le Montrachet;Domaine Romanée Conti;2008;1;7.5;false;2700;3500;2800
 382;Le Montrachet;Domaine Romanée Conti;2009;1;7.5;false;2700;3500;2800
@@ -450,7 +455,7 @@
 464;Shiraz Hill of Grace;Henschke;1991;1;7.5;false;350;600;0
 465;Shiraz Hill of Grace;Henschke;1997;3;7.5;true;1050;1500;1000
 466;Shiraz Astralis;Clarendon Hills;1995;2;7.5;false;300;500;270
-467;Shiraz Duck Muck;Wild Duck Creek;200;1;7.5;false;200;300;180
+467;Shiraz Duck Muck;Wild Duck Creek;2000;1;7.5;false;200;300;180
 468;Spätburgunder R Wildenstein;Bernhard Huber;2010;3;15;true;600;900;550
 469;Spätburgunder R Wildenstein;Bernhard Huber;2010;3;15;true;600;900;550
 470;Kracher Collection 2000;Alois Kracher;2000;10;3.75;true;1000;1500;800
@@ -515,9 +520,9 @@
 530;Clos de la Roche;Domaine Ponsot;1998;3;15;false;900;1500;800
 531;Sassicaia;Tenuta San Guido;2009;1;15;true;250;330;280
 532;Cabernet Sauvignon Hillside Select;Shafer;2003;1;15;true;600;1000;600
-533;Ornellaia;Tenuta dellOrnellaia;2011;6;7.5;true;600;780;750
+533;Ornellaia;Tenuta dell'Ornellaia;2011;6;7.5;true;600;780;750
 534;Biserno;Lodovico Antinori;2008;6;7.5;true;540;720;550
-535;Biserno;Lodovico Antinori;2008;1;1.5;true;180;240;0
+535;Biserno;Lodovico Antinori;2008;1;15;false;180;240;0
 536;Sassicaia;Tenuta San Guido;2011;12;7.5;true;1080;1320;1300
 537;Rennero;Gualdo del Re;2005;6;7.5;true;240;360;200
 538;Rennero;Gualdo del Re;2005;6;7.5;true;240;360;200
@@ -582,10 +587,10 @@
 597;Nuits St. Georges;Domaine Henri Jayer;1992;1;7.5;false;700;1000;600
 598;Nuits-St.-Georges Les Vaucrains;Domaine Henri Gouges;2006;3;7.5;false;210;300;160
 599;Nuits-St.-Georges Les Vaucrains;Domaine Henri Gouges;2006;6;7.5;true;420;600;360
-600;Musigny Vieilles Vignes ;Comte Vogüe;2011;2;7.5;false;700;1000;800
-601;Musigny Vieilles Vignes ;Comte Vogüe;2011;3;7.5;true;1050;1500;1100
-602;Musigny Vieilles Vignes ;Comte Vogüe;2012;2;7.5;false;900;1200;1000
-603;Musigny Vieilles Vignes ;Comte Vogüe;2012;3;7.5;true;1350;1800;1500
+600;Musigny Vieilles Vignes;Comte Vogüe;2011;2;7.5;false;700;1000;800
+601;Musigny Vieilles Vignes;Comte Vogüe;2011;3;7.5;true;1050;1500;1100
+602;Musigny Vieilles Vignes;Comte Vogüe;2012;2;7.5;false;900;1200;1000
+603;Musigny Vieilles Vignes;Comte Vogüe;2012;3;7.5;true;1350;1800;1500
 604;Romanée St. Vivant;Domaine Romanée Conti;2005;1;7.5;false;1000;1800;900
 605;Romanée St. Vivant;Domaine Romanée Conti;2005;1;7.5;false;1000;1800;880
 606;Romanée St. Vivant;Domaine Romanée Conti;1989;1;15;false;2200;2700;1800
