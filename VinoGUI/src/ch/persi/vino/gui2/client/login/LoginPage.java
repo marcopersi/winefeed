@@ -28,40 +28,8 @@ public class LoginPage implements EntryPoint {
 	  private static final String DEFAULT_USER_NAME = "Administrator";
 	  private static final String DEFAULT_PASSWORD = "N0More$ecrets";
 
-	
-	private static String html = "<div>\n"
-		    + "<table align=\"center\">\n"
-		    + "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
-		    + "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
-		    + "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
-		    + "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
-		    + "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
-		    + "  <tr>\n"
-		    + "    <td colspan=\"2\" style=\"font-weight:bold;\">Sign In <img src=\"images/signin.gif\"/></td>\n"
-		    + "  </tr>\n"
-		    + "  <tr>\n"
-		    + "    <td>User name</td>\n"
-		    + "    <td id=\"userNameFieldContainer\"></td>\n"
-		    + "  </tr>\n"
-		    + "  <tr>\n"
-		    + "    <td>Password</td>\n"
-		    + "    <td id=\"passwordFieldContainer\"></td>\n"
-		    + "  </tr>\n"
-		    + "  <tr>\n"
-		    + "    <td></td>\n"
-		    + "    <td id=\"signInButtonContainer\"></td>\n"
-		    + "  </tr>\n"
-		    + "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
-		    + "  <tr>\n"
-		    + "    <td colspan=\"2\">Forget your password?</td>\n"
-		    + "  </tr>\n"
-		    + "  <tr>\n"
-		    + "    <td colspan=\"2\">Contact your system administrator.</td>\n"
-		    + "  </tr>\n"
-		    + "</table>\n"
-		    + "</div>\n";
 
-		  private HTMLPanel panel;
+	private HTMLPanel panel;
 
 		  private  TextBox userNameField;
 		  private  PasswordTextBox passwordField;
@@ -70,10 +38,38 @@ public class LoginPage implements EntryPoint {
 	
 	@Override
 	public void onModuleLoad() {
-		// TODO Auto-generated method stub
-
-		    
-		    panel = new HTMLPanel(html);
+		String html = "<div>\n"
+				+ "<table align=\"center\">\n"
+				+ "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
+				+ "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
+				+ "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
+				+ "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
+				+ "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
+				+ "  <tr>\n"
+				+ "    <td colspan=\"2\" style=\"font-weight:bold;\">Sign In <img src=\"images/signin.gif\"/></td>\n"
+				+ "  </tr>\n"
+				+ "  <tr>\n"
+				+ "    <td>User name</td>\n"
+				+ "    <td id=\"userNameFieldContainer\"></td>\n"
+				+ "  </tr>\n"
+				+ "  <tr>\n"
+				+ "    <td>Password</td>\n"
+				+ "    <td id=\"passwordFieldContainer\"></td>\n"
+				+ "  </tr>\n"
+				+ "  <tr>\n"
+				+ "    <td></td>\n"
+				+ "    <td id=\"signInButtonContainer\"></td>\n"
+				+ "  </tr>\n"
+				+ "  <tr>\n" + "<td>&nbsp;</td>\n" + "<td>&nbsp;</td>\n" + "</tr>\n"
+				+ "  <tr>\n"
+				+ "    <td colspan=\"2\">Forget your password?</td>\n"
+				+ "  </tr>\n"
+				+ "  <tr>\n"
+				+ "    <td colspan=\"2\">Contact your system administrator.</td>\n"
+				+ "  </tr>\n"
+				+ "</table>\n"
+				+ "</div>\n";
+		panel = new HTMLPanel(html);
 		    
 		    userNameField = new TextBox();
 		    passwordField = new PasswordTextBox();
@@ -83,7 +79,7 @@ public class LoginPage implements EntryPoint {
 
 		    // See FieldVerifier
 		    // Passwords must contain at least 8 characters with at least one digit,
-		    // one upper case letter, one lower case letter and one special symbol (“@#$%”).
+		    // one upper case letter, one lower case letter and one special symbol (ï¿½@#$%ï¿½).
 		    passwordField.setText(DEFAULT_PASSWORD);
 
 		    panel.add(userNameField, "userNameFieldContainer");

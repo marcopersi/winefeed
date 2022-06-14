@@ -41,7 +41,7 @@
 		    <artifactId>maven-compiler-plugin</artifactId>
 		    <version>3.8.0</version>
 		    <configuration>
-		        <release>11</release>
+		        <release>18</release>
 		    </configuration>
 		</plugin>		
   	</plugins>  
@@ -50,7 +50,7 @@
   	<dependency>
   		<groupId>org.apache.commons</groupId>
   		<artifactId>commons-lang3</artifactId>
-  		<version>3.11</version>
+  		<version>3.12.0</version>
   	</dependency>
   </dependencies>
 </project>

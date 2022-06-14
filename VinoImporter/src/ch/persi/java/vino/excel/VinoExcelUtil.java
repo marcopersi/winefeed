@@ -36,12 +36,11 @@ public class VinoExcelUtil extends ExcelUtil {
 	private String fileName = null;
 
 	/**
-	 * @param theSheetIdentifier
-	 * @throws IOException
-	 * @throws FileNotFoundException
+	 * @param theSheetIdentifier the identifier of the sheet in the excel workbook
+	 * @throws IOException if the Excel file can't be read
+	 * @throws FileNotFoundException if the declared Excel file can't be found
 	 */
-	public void openStagingFile(final String theProviderCode, final String theSheetIdentifier) throws FileNotFoundException, IOException,
-	InvalidFormatException {
+	public void openStagingFile(final String theProviderCode, final String theSheetIdentifier) throws IOException {
 		if (isBlank(theSheetIdentifier)) {
 			throw new IllegalArgumentException("SheetIdentifier and title row column headers must be provided !");
 		}
@@ -89,9 +88,9 @@ public class VinoExcelUtil extends ExcelUtil {
 	}
 
 	/**
-	 * Dumps the passed objects to an excel row in the staging file
+	 * Dumps the passed objects to an Excel row in the staging file
 	 *
-	 * @param theWineOffering
+	 * @param theWineOffering the WineOffering structure which is dumped as one additional row in an Excel sheet
 	 */
 	public void addRow(final WineOffering theWineOffering) {
 		prepareTitleRow(theWineOffering);

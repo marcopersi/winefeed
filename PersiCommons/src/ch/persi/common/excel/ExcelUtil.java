@@ -6,6 +6,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -23,10 +24,10 @@ public class ExcelUtil {
   private InputStream excelFileToRead;
 
   /**
-   * @throws IOException
-   * @throws InvalidFormatException
+   * @param theFileName as @String the name of the file to be opened
+   * @throws IOException this exception will be thrown if the Excel file can't be read or opened
    */
-  public Workbook openFile(final String theFileName) throws IOException, InvalidFormatException {
+  public Workbook openFile(final String theFileName) throws IOException {
     File aTargetFile = new File(theFileName);
     if (!aTargetFile.exists() || !aTargetFile.isFile()) {
       try (FileOutputStream aFileOutputStream = new FileOutputStream(theFileName)) {
@@ -49,7 +50,7 @@ public class ExcelUtil {
   }
 
   private static Workbook readXLSFile(final String theFileName) throws IOException {
-    return new HSSFWorkbook(new FileInputStream(new File(theFileName)));
+    return new HSSFWorkbook(Files.newInputStream(new File(theFileName).toPath()));
   }
 
   private Workbook readXLSXFile(final String theFileName) throws IOException {
@@ -248,7 +249,7 @@ public class ExcelUtil {
     return styles;
   }
 
-  public Sheet getExcelSheet(final String theFileName, final String theSheetName) throws IOException, InvalidFormatException {
+  public Sheet getExcelSheet(final String theFileName, final String theSheetName) throws IOException {
 
     Workbook aWorkBook = openFile(theFileName);
 

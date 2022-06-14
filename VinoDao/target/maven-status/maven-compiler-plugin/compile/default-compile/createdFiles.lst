@@ -1,0 +1,9 @@
+ch/persi/java/vino/dataservice/DataService.class
+ch/persi/java/vino/dataservice/DataServiceImpl.class
+ch/persi/java/vino/persistence/test/InitializeDatabaseJob.class
+ch/persi/java/vino/dao/IDao.class
+ch/persi/java/vino/persistence/test/SpecialCharacterDatabaseTest.class
+ch/persi/java/vino/dao/impl/DaoImpl.class
+ch/persi/java/vino/persistence/test/DaoReadTests.class
+ch/persi/java/vino/persistence/test/SavePersistenceTest.class
+ch/persi/java/vino/persistence/test/AdvancedPersistencyTest.class

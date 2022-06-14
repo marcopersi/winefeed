@@ -1,6 +1,9 @@
 package ch.persi.java.vino.importers;
 
+import java.text.DateFormat;
+import java.text.ParseException;
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -9,8 +12,7 @@ public class DateParsingStrategy implements DateExtractingStrategy {
 	private LocalDate anAuctionDate;
 	
 	public DateParsingStrategy(String theDateTime) {
-		
-		Pattern compile = Pattern.compile("([0-9]{2})([0-9]{2})([0-9]{4}).*");
+		Pattern compile = Pattern.compile("(\\d{2})\\.(\\d{2})\\.(\\d{4}).*");
 		Matcher matcher = compile.matcher(theDateTime);
 		
 		if (matcher.matches())

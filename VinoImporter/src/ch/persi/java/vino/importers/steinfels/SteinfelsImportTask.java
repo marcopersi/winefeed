@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,7 +21,7 @@ public class SteinfelsImportTask extends AbstractImportTask {
 	private String importDirectory = null;
 
 	private static Pattern getRegionMatcher() {
-		StringBuilder aWineRegionPatternBuilder = new StringBuilder();
+		var aWineRegionPatternBuilder = new StringBuilder();
 		aWineRegionPatternBuilder.append("^.*\\s");
 		aWineRegionPatternBuilder.append("(Pomerol");
 		aWineRegionPatternBuilder.append("|Saint Emilion");
