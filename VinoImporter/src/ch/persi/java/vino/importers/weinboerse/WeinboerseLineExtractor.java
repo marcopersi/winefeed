@@ -44,7 +44,7 @@ public class WeinboerseLineExtractor implements LineExtrator {
 
 	@Override
 	public boolean isOHK() {
-		// FIXME Auto-generated method stub
+		// TODO this was auto generated, not the business logic required
 		return false;
 	}
 

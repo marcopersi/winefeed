@@ -22,7 +22,7 @@ public class WermuthImporter implements ImportingStrategy {
     	
 		for (Task aTask : someTasks) {
 			// FIXME: guarantee run in 100% sequential order, start second only if first is done
-			log.info("running task:" + aTask);
+			log.info("running task: {}", aTask);
 			aTask.execute();
 		}
 	}

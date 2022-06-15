@@ -1,13 +1,5 @@
 package ch.persi.java.vino.wermuth;
 
-import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015DateExtractingStrategy;
-import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015ImportTask;
-import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthRecordLineExtractor;
-import ch.persi.java.vino.importers.wermuth.prices.WermuthPricePageParser;
-import ch.persi.java.vino.util.WermuthParser;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.io.File;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,6 +8,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015DateExtractingStrategy;
+import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthPre2015ImportTask;
+import ch.persi.java.vino.importers.wermuth.formatpre2015.WermuthRecordLineExtractor;
+import ch.persi.java.vino.importers.wermuth.prices.WermuthPricePageParser;
+import ch.persi.java.vino.util.WermuthParser;
 
 public class WermuthPre2015Tests {
 

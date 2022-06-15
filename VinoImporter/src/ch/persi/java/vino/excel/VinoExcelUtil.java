@@ -2,7 +2,6 @@ package ch.persi.java.vino.excel;
 
 import ch.persi.common.excel.ExcelUtil;
 import ch.persi.java.vino.domain.WineOffering;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +10,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
-
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import static org.apache.commons.lang3.ArrayUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -40,7 +39,7 @@ public class VinoExcelUtil extends ExcelUtil {
 	 * @throws IOException if the Excel file can't be read
 	 * @throws FileNotFoundException if the declared Excel file can't be found
 	 */
-	public void openStagingFile(final String theProviderCode, final String theSheetIdentifier) throws IOException {
+	public void openStagingFile(final String theProviderCode, final String theSheetIdentifier) throws IOException, InvalidFormatException {
 		if (isBlank(theSheetIdentifier)) {
 			throw new IllegalArgumentException("SheetIdentifier and title row column headers must be provided !");
 		}

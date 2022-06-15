@@ -7,10 +7,10 @@ public enum Origin {
 	ACMO("AC/MO"),
 	
 	ACEA("AC/EA"),
-	
-	MO("MO"),
-	
+		
 	DOMO("DO/MO"),
+	
+	MODO("MO/DO"),
 	
 	MOIGT("MO/IGT"),
 	
@@ -20,7 +20,9 @@ public enum Origin {
 	
 	MODOCA("MO/DOCA"),
 	
-	MODOCa("MO/DOCa");
+	MODOCa("MO/DOCa"),
+	
+	MO("MO");
 	
 	private String originIdentifier;
 	

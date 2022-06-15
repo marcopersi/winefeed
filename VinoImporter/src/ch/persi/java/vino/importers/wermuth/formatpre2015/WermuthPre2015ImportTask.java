@@ -42,18 +42,6 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 
 	private String importDirectory = null;
 
-	public static String getOrigin(final String theLine) {
-		// is it the origin line ?
-		for (Origin anOrigin : Origin.values()) {
-			Pattern aCompiledOriginPattern = Pattern.compile("^(" + anOrigin.getOriginIdentifier() + ")\\,.*");
-			Matcher matcher = aCompiledOriginPattern.matcher(theLine);
-			if (matcher.matches()) {
-				return matcher.group(1);
-			}
-		}
-		return null;
-	}
-
 	@Override
 	public String getImportDirectory() {
 		return importDirectory;
@@ -215,8 +203,7 @@ public class WermuthPre2015ImportTask extends AbstractImportTask {
 			for (String aLine : theLines) {
 				log.debug("Dropped line: {}", aLine);
 			}
-			return; // exit handling of offerings here since informal contract
-			// is broken
+			return; // exit handling of offerings here since informal contract is broken
 		}
 
 		aWine.setOrigin(origin);

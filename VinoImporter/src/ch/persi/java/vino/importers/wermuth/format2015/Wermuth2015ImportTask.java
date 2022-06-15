@@ -1,11 +1,10 @@
 package ch.persi.java.vino.importers.wermuth.format2015;
 
-import ch.persi.java.vino.domain.*;
-import ch.persi.java.vino.importers.AbstractImportTask;
-import ch.persi.java.vino.importers.DateParsingStrategy;
-import lombok.val;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static ch.persi.java.vino.domain.VinoConstants.OC;
+import static ch.persi.java.vino.domain.VinoConstants.OHK;
+import static ch.persi.java.vino.domain.VinoConstants.SPACE;
+import static java.lang.Integer.parseInt;
+import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -13,9 +12,20 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static ch.persi.java.vino.domain.VinoConstants.*;
-import static java.lang.Integer.parseInt;
-import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
+import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import ch.persi.java.vino.domain.Offering;
+import ch.persi.java.vino.domain.Origin;
+import ch.persi.java.vino.domain.Provider;
+import ch.persi.java.vino.domain.Unit;
+import ch.persi.java.vino.domain.Wine;
+import ch.persi.java.vino.domain.WineOffering;
+import ch.persi.java.vino.importers.AbstractImportTask;
+import ch.persi.java.vino.importers.DateParsingStrategy;
+import ch.persi.java.vino.importers.Tuple2;
+import lombok.val;
 
 /**
  * The import task which cares about the Wermuth/Denz files which have changed since 2015.
@@ -27,7 +37,7 @@ import static org.apache.commons.lang3.math.NumberUtils.isCreatable;
 public class Wermuth2015ImportTask extends AbstractImportTask {
 
 	private static final Logger log = LoggerFactory.getLogger(Wermuth2015ImportTask.class);
-	public static Pattern aRecordLinePattern = Pattern.compile("^([0-9]{1,4})\\s(.*)\\s([0-9]{1,3})\\s(.*[fF]lasche.*),?\\s([0-9]{4}),?.*(pro[a-zA-Z\\.\\s]*\\s)([0-9]{2,5}.*$)");
+	public static final Pattern aRecordLinePattern = Pattern.compile("^([0-9]{1,4})\\s(.*)\\s([0-9]{1,3})\\s(.*[fF]lasche.*|Doppelmagnum.*),?\\s([0-9]{4}),?.*(pro[a-zA-Z\\.\\s]*\\s)([0-9]{2,5}.*$)");
 
 	private String importDirectory = null;
 
@@ -38,7 +48,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 	 * @return a cleaned String
 	 */
 	public static String clean(String theLine) {
-		return theLine.replaceAll("1er", "").replaceAll("2ème|3ème|4ème|5ème", "").replaceAll("cru burgoise", "").replaceAll("1 cru ", "")
+		return theLine.replaceAll("1er", "").replace("G|grand cru,", "").replaceAll("2ème|3ème|4ème|5ème", "").replaceAll("cru burgoise", "").replaceAll("1 cru ", "")
 				.replaceAll("1 er|cru", "").replaceAll("Total ", "").replaceAll("«|»|“|”|„", "").replaceAll("CHF ", "").replaceAll("SFr.", "").replaceAll("Fr.", "")
 				.replace(".00", "").replaceAll("\\(.*\\)", "").replaceAll("\\s{2,}", SPACE).replaceAll("Cru|cru", "");
 	}
@@ -56,10 +66,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 	public static LotPriceInfo processLotPricing(String theInput) {
 		//the last part drops any characters, actually there should be only digits and probably a dash (-) character, but nothing else anymore.
 		String aCleanedInputLine = theInput.replaceAll("[a-zA-Z\\.']", "");
-//		String aCleanedInputLine = theInput.replaceAll("[a-zA-Z\\.]", "").trim(); //1st file 2015
-
-		Pattern aPricePattern = Pattern.compile("^([0-9]{1,5})-([0-9]{1,5})\\s?{1,}([0-9\\-]{1,5})?\\s?$");
-//		Pattern aPricePattern = Pattern.compile("^([0-9]{1,5})-([0-9]{1,5})\\s{1,}([0-9\\-]{1,5})\\s?$"); // 1st file 2015
+		Pattern aPricePattern = Pattern.compile("^(\\d{1,5})-(\\d{1,5})\\s?{1,}([0-9\\-]{1,5})?\\s?$");
 
 		Matcher matcher = aPricePattern.matcher(aCleanedInputLine);
 		if (!matcher.matches()) {
@@ -101,19 +108,55 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 		log.info("Processed: {} out of:{} lines ! ", aProcessLineIndex, theLines.size());
 	}
 	
-	
-	public final WineOffering processLine(String theWineRecordLine) 
+	private static final Tuple2<Boolean,String> processOWC(String theLine)
 	{
+		
 		boolean isOHK = false;
-		if (theWineRecordLine.contains(OHK) || theWineRecordLine.contains(OC))
+		if (theLine.contains(OHK) || theLine.contains(OC))
 		{
 			isOHK =true;
 		}
-
-		// removing this OHK/OC tag
-		String cleanedLine = theWineRecordLine.replace(OHK, "").replace(OC, "");
 		
-		Matcher aRecordLineMatcher = aRecordLinePattern.matcher(cleanedLine);
+		return new Tuple2<>(isOHK, theLine.replace(OHK, "").replace(OC, ""));
+	}
+	
+	public static final Tuple2<String, String> processOrigin(String theLine)
+	{
+		
+		for(Origin o : Origin.values())
+		{
+			String anOriginIdentifier = o.getOriginIdentifier();
+			if (theLine.contains(anOriginIdentifier))
+			{
+				StringBuilder aRegex = new StringBuilder();
+				aRegex.append("^.*( ").append(anOriginIdentifier).append(", [a-zA-Zäüöôèé\\. ]*),.*");
+				Pattern aPattern = Pattern.compile(aRegex.toString(), Pattern.CASE_INSENSITIVE);
+				Matcher matcher = aPattern.matcher(theLine.trim());
+				if (matcher.matches())
+				{
+					String anOriginString = matcher.group(1);
+					String anOrigin = anOriginString.replace(",", "").trim(); 
+					return new Tuple2<>(anOrigin, theLine.replace(anOriginString,""));
+				}
+								
+			}
+		}		
+		return new Tuple2<>(null,theLine);
+		
+	}
+	
+	
+	public final WineOffering processLine(String theWineRecordLine) 
+	{		Tuple2<Boolean, String> anOWCProcess = processOWC(theWineRecordLine);		
+		String aWineRecordLineWithoutOWC = anOWCProcess.getValue();
+		
+		Tuple2<String,String> anOriginProcess = processOrigin(aWineRecordLineWithoutOWC);
+		String anOrigin = anOriginProcess.getKey();
+		String aWineRecordLineWithoutOWCOrigin = anOriginProcess.getValue();
+		
+		String aCleanLine = clean(aWineRecordLineWithoutOWCOrigin);		
+		Matcher aRecordLineMatcher = aRecordLinePattern.matcher(aCleanLine);
+		
 		if (aRecordLineMatcher.matches())
 		{
 			Offering anOffering = new Offering();
@@ -123,7 +166,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 			String aLotNumber = aRecordLineMatcher.group(1);
 			anOffering.setProviderOfferingId(aLotNumber);
 
-			anOffering.setIsOHK(isOHK);
+			anOffering.setIsOHK(anOWCProcess.getKey());
 			anOffering.setEventIdentifier(getEventIdentifier());
 
 			String aLinePart = aRecordLineMatcher.group(6);
@@ -136,17 +179,23 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 			anOffering.setRealizedPrice(processLotPricing.getRealizedPrice());
 
 			Wine aWine = new Wine();
-			String aWineText = aRecordLineMatcher.group(2);
-			if (aWineText.contains(",")) {
-				String[] split = aWineText.split(",");
-				aWineText = split[0].trim();
-				if (split.length==2)
-				{
-					aWine.setProducer(split[1].trim());
+			String aWineName = aRecordLineMatcher.group(2);
+			if (aWineName.contains(",")) {
+				String[] split = aWineName.split(",");
+				
+				// processing origin
+				if (!ArrayUtils.isEmpty(split)) {
+					String aPossibleWineName = split[0].trim();
+					if (split.length==2)
+					{
+						aWine.setProducer(split[1].trim());
+					}
+					aWineName = aPossibleWineName;
 				}
 			}
-		
-			aWine.setName(aWineText);
+			
+			aWine.setOrigin(anOrigin);
+			aWine.setName(aWineName);
 
 			String group = aRecordLineMatcher.group(5);
 			int vintage = parseInt(group);
@@ -183,7 +232,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 					log.info("Received '{}' lines out of the PDF file !", someLines.size());
 					setAuctionDate(new DateParsingStrategy(someFileNameParts[1]).getAuctionDate());
 
-					Matcher compile = Pattern.compile("(WZ\\-[0-9]{1,4}).*").matcher(aFileName);
+					Matcher compile = Pattern.compile("(WZ\\-//d{1,4}).*").matcher(aFileName);
 					if (compile.matches()) {
 						setEventIdentifier(compile.group(1));
 					}

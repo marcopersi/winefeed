@@ -78,6 +78,8 @@ public class WineOffering {
 		aBuilder.append(";");
 		aBuilder.append(getWine().getName());
 		aBuilder.append(";");
+		aBuilder.append(getWine().getOrigin());
+		aBuilder.append(";");		
 		aBuilder.append(getWine().getProducer());
 		aBuilder.append(";");
 		aBuilder.append(getWine().getVintage());

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.regex.Pattern;
 
 public class WermuthMay2016Preparer {
 
@@ -13,9 +12,6 @@ public class WermuthMay2016Preparer {
 		//running through characters, drop carriage return /new line if the next line is not the next value in the sequence
 		File file = new File("import/Wermuth/WZ-257_28052016_Resultate");
 		List<String> someLines = new ArrayList<>();
-
-		Pattern compile = Pattern.compile("^([0-9]{1,4}).*");
-		int lastLotNumber = 1;
 
 		try (Scanner input = new Scanner(file)) {
 			while (input.hasNextLine()) {
@@ -94,6 +90,7 @@ public class WermuthMay2016Preparer {
 	}
 
 
+	@SuppressWarnings("unused")
 	private static boolean isSequence(String theNextNumber, int theLastNumber) {
 		Integer valueOf = Integer.valueOf(theNextNumber);
 		if (theLastNumber == valueOf) {

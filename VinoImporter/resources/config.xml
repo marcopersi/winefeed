@@ -7,7 +7,7 @@
 
 	<bean id="wermuthImportTask" class="ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask">
 		<property name="inputParser" ref="wermuthParser"/>
-		<property name="importDirectory" value="import//Wermuth//"/>
+		<property name="importDirectory" value="import/Wermuth/"/>
 	</bean>
 
 	<bean id="wermuthImportJob" class="ch.persi.java.vino.importers.wermuth.WermuthImporter">

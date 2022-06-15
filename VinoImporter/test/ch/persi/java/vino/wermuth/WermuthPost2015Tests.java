@@ -17,17 +17,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask.aRecordLinePattern;
 import static ch.persi.java.vino.importers.wermuth.format2015.Wermuth2015ImportTask.clean;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class WermuthPost2015Tests {
 
+	
+	@Test
+	public void testAnotherTest() 
+	{		
+		Pattern aPattern = Pattern.compile("^.*(MO, [a-zA-Zäüö ]*, ).*", Pattern.CASE_INSENSITIVE);
+		Matcher matcher = aPattern.matcher("1 Chardonnay MO, Bündner Herrschaft, Martha und Daniel Gantenbein 1 Magnumflasche, 2010 pro Lot 400-600 480 ");
+		String anOrigin = null;
+		
+		if (matcher.matches())
+		{
+			String anOriginString = matcher.group(1);
+			anOrigin = anOriginString.replace(",", " "); 
+		}
+		assertNotNull(anOrigin);
+	}
+	
+	@Test
+	public void testOriginExtraction() {
+		String aTestString = "1 Chardonnay MO, Bündner Herrschaft, Martha und Daniel Gantenbein 1 Magnumflasche, 2010 pro Lot 400-600 480 ";		
+		Tuple2<String, String> processOrigin = Wermuth2015ImportTask.processOrigin(aTestString);
+		assertNotNull(processOrigin.getKey());
+		assertNotNull(processOrigin.getValue());
+		assertEquals("MO Bündner Herrschaft", processOrigin.getKey().trim());
+		assertEquals("1 Chardonnay, Martha und Daniel Gantenbein 1 Magnumflasche, 2010 pro Lot 400-600 480 ", processOrigin.getValue());		
+	}
 
 	@Test
 	public void testLineRecognition() {
-		String[] someLines = new String[23];
+		String[] someLines = new String[24];
 		someLines[0] = "88 Château Magdeleine 1 Dutzend Flaschen, 2000, 6er OHK pro Dz. CHF 660-840 680.00";
 		someLines[1] = "135 Château Magrez Fombrauge 6 Flaschen, 2000, OHK pro Lot CHF 960-1200 900.00";
 		someLines[2] = "181 Château Doisy Vèdrines 24 3/8 Flaschen, 1997, OHK pro Lot CHF 480-720 400.00";
@@ -51,7 +78,8 @@ public class WermuthPost2015Tests {
 		someLines[20] = "6 Pommard 1 er cru “Les Epenots”, Domaine Parent 1 Dutzend Flaschen, 2005 pro Dz. CHF 600-840 CHF -";
 		someLines[21] = "185 Château d’Yquem, (Perfekter Zustand, Parker 98) 1 Imperialflasche, 1986, OHK pro Lot CHF 3000-5000 CHF 3'200.00";
 		someLines[22] = "1 Château Canon La Gaffelière AC/MC, St. Emilion, 1 Dutzend Flaschen, 1998, OHK pro Lot 000-000 1020";
-
+		someLines[23] = "1 Chardonnay, Martha und Daniel Gantenbein 1 Magnumflasche, 2010 pro Lot 400-600 480"; 
+		
 		for (String aLine : someLines) {
 			Matcher matcher = Wermuth2015ImportTask.aRecordLinePattern.matcher(Wermuth2015ImportTask.clean(aLine));
 			Assert.assertNotNull(matcher);

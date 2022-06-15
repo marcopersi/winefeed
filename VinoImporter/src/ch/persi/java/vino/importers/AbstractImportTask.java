@@ -1,15 +1,19 @@
 package ch.persi.java.vino.importers;
 
+import ch.persi.java.vino.domain.Origin;
 import ch.persi.java.vino.domain.Provider;
 import ch.persi.java.vino.util.InputParser;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 public abstract class AbstractImportTask implements ImportTask {
 
 	protected InputParser parser = null;
@@ -66,14 +70,28 @@ public abstract class AbstractImportTask implements ImportTask {
 
 	public abstract String getImportDirectory();
 
-	protected File checkFiles() {
+	protected File checkFiles()  {
+
 		// checking for to be imported files at fileSystem, apply some validation
 		String anImportDirectoryPath = getImportDirectory();
 		File anImportFile = new File(anImportDirectoryPath);
-		if (anImportFile == null || anImportFile.list() == null || anImportFile.list().length < 1) {
+		if (anImportFile.list() == null || anImportFile.list().length < 1) {
 			log.error("The import directory {} does not exist or does not contain anything at all !", anImportFile);
 			return null;
 		}
 		return anImportFile;
 	}
+	
+	public static String getOrigin(final String theLine) {
+		// is it the origin line ?
+		for (Origin anOrigin : Origin.values()) {
+			Pattern aCompiledOriginPattern = Pattern.compile("^(" + anOrigin.getOriginIdentifier() + ")\\,.*");
+			Matcher matcher = aCompiledOriginPattern.matcher(theLine);
+			if (matcher.matches()) {
+				return matcher.group(1);
+			}
+		}
+		return null;
+	}
+
 }

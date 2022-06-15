@@ -3,6 +3,7 @@ package ch.persi.java.vino.dao.impl;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -78,8 +79,8 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	@SuppressWarnings("rawtypes")
 	public RatingAgency findRatingAgencyByName(String theRatingAgency) {
 		List aRatingAgency = getHibernateTemplate().findByNamedParam("Select r from RatingAgency r where r.ratingAgencyName=:ratingAgencyName", "ratingAgencyName", theRatingAgency);
-		logging.debug("Found {0} as ratingAgency for string {1}",aRatingAgency,theRatingAgency);
-		if (aRatingAgency.size()>=1)
+		logging.debug("Found {} as ratingAgency for string {}",aRatingAgency,theRatingAgency);
+		if (!aRatingAgency.isEmpty())
 		{
 			return (RatingAgency) aRatingAgency.get(0);
 		}
@@ -92,7 +93,7 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	{
 		@SuppressWarnings("rawtypes")
 		List aWine = getHibernateTemplate().findByNamedParam("Select w from Wine w where w.name=:wineName", "wineName", theWineName);
-		logging.info("Found wine {0} for string {1}",aWine,theWineName);
+		logging.info("Found wine {} for string {}",aWine,theWineName);
 		return aWine;
 		
 	}
@@ -101,14 +102,14 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<WineOffering> getAllWineOfferings() {
 		List someFoundWineOfferings = getHibernateTemplate().find("Select w from WineOffering w");
-		return (List<WineOffering>) someFoundWineOfferings;
+		return someFoundWineOfferings;
 	}
 
 	@Override
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public List<WineOffering> findAllWineOfferingsByWine(Wine theWine) {
 		List someFoundWineOfferings = getHibernateTemplate().findByNamedParam("Select w from WineOffering w where w.wine=:aWine","aWine",theWine);
-		return (List<WineOffering>) someFoundWineOfferings;
+		return someFoundWineOfferings;
 	}
 
 	@Override
@@ -121,10 +122,8 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	@SuppressWarnings("rawtypes")
 	public Unit findUnitByDeciliters(BigDecimal theDeciliters) {
 		List someFoundUnits = getHibernateTemplate().findByNamedParam("Select u from Unit u where u.deciliters=:Deciliters", "Deciliters", theDeciliters);
-		if (someFoundUnits != null && someFoundUnits.size()>=1)
-		{
+		if (!someFoundUnits.isEmpty())
 			return (Unit)someFoundUnits.get(0);
-		}
 		return null;
 	}
 
@@ -132,7 +131,7 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	@SuppressWarnings("rawtypes")
 	public Provider findProviderByName(String theProviderName) {
 		List someFoundProviders = getHibernateTemplate().findByNamedParam("Select p from Provider p where p.name=:ProviderName","ProviderName",theProviderName);
-		if (someFoundProviders != null && someFoundProviders.size()==1)
+		if (someFoundProviders.size()==1)
 		{
 			return (Provider)someFoundProviders.get(0);
 		}
@@ -143,14 +142,14 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public List<Offering> findAllOfferings() {
 		List someFoundOfferings = getHibernateTemplate().findByNamedQuery("FindAllOfferings");
-		return (List<Offering>) someFoundOfferings;
+		return someFoundOfferings;
 	}
 
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<Offering> findAllOfferingsByProvider(Provider theProvider) {
 		List someFoundOfferings = getHibernateTemplate().findByNamedParam("Select o from Offering o where o.provider=:provider","provider", theProvider);
-		return (List<Offering>) someFoundOfferings;
+		return someFoundOfferings;
 	}
 
 	@Override
@@ -163,7 +162,7 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 		theParamValues[1] = i;
 		
 		List someFoundWines = getHibernateTemplate().findByNamedParam("Select w from Wine w where w.name=:WineName and w.vintage=:WineYear",theParamNames,theParamValues);
-		if (someFoundWines != null && someFoundWines.size()==1)
+		if (!someFoundWines.isEmpty() && someFoundWines.size()==1)
 		{
 			return (Wine)someFoundWines.get(0);
 		}
@@ -181,24 +180,24 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 	@Override
 	public List<Wine> findWinesByCountry(String theCountry) {
 		List someFoundWines = getHibernateTemplate().findByNamedQuery("Select w from Wine w where w.country=:CountryName",theCountry);
-		if (someFoundWines != null && someFoundWines.size()==1)
+		if (!someFoundWines.isEmpty())
 		{
 			return someFoundWines;
 		}
-		return null;
+		return Collections.emptyList();
 	}
 
 	@Override
 	public List<Wine> findWinesByRegion(String theRegion) {
 		// TODO Auto-generated method stub
-		return null;
+		return Collections.emptyList();
 	}
 
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<Wine> findWinesByOrigin(String theOrigin) {
 		List someFoundWines = getHibernateTemplate().findByNamedParam("Select w from Wine w where w.origin=:origin", "origin", theOrigin);
-		return (List<Wine>) someFoundWines;
+		return someFoundWines;
 	}
 
 	@Override
@@ -209,7 +208,7 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 
 	@Override
 	public List<Offering> findOfferingsByWine(Wine theWine) {
-		return null;
+		return Collections.emptyList();
 	}
 
 	@Override
@@ -222,9 +221,9 @@ public class DaoImpl extends HibernateDaoSupport implements IDao {
 		theParamValues[1] = auctionDate;
 		List returnables = getHibernateTemplate().findByNamedParam("Select o from Offering o where o.providerOfferingId=:LosNummer and o.offeringDate=:AuctionDate", theParamNames, theParamValues);
 		
-		if (returnables == null || returnables.size()==0)
+		if (returnables.isEmpty())
 		{
-			logging.error("There's something wrong , didn't found an offering for id '" + theProviderOfferingIdentifier + "' and date: '" + auctionDate + "'");
+			logging.error("There's something wrong , didn't found an offering for id {} and date {}",theProviderOfferingIdentifier, auctionDate);
 			return null;
 		}
 		
