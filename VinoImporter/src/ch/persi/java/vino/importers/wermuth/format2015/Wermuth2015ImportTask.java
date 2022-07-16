@@ -93,8 +93,12 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 			String aCleanedLine = clean(aLine);
 
 			// processing
-			WineOffering aWineOffering = processLine(aCleanedLine);
-
+			WineOffering aWineOffering = processLine(aCleanedLine);			
+			
+			
+			// diese Zeilen sind auskommentiert / zu auskommentieren, weil ich nach dem Lesen der Files zuerst zur Vorbereitung 
+			// alles in eine Textdatei lese. Diese kann man mit Visual Studio Code schnell optimieren 
+			// das Resultat dieser Optimierung ist eine INput - Resultate Datei die nahezu 100% Verarbeitung gehen sollte. 
 			// writing results
 			if (aWineOffering != null) {
 				anOutputWriter.write(aWineOffering.toXLSString());
@@ -117,7 +121,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 			isOHK =true;
 		}
 		
-		return new Tuple2<>(isOHK, theLine.replace(OHK, "").replace(OC, ""));
+		return new Tuple2<>(isOHK, theLine.replace(OHK, "").replace(", "+OC, ""));
 	}
 	
 	public static final Tuple2<String, String> processOrigin(String theLine)
@@ -129,7 +133,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 			if (theLine.contains(anOriginIdentifier))
 			{
 				StringBuilder aRegex = new StringBuilder();
-				aRegex.append("^.*( ").append(anOriginIdentifier).append(", [a-zA-Zäüöôèé\\. ]*),.*");
+				aRegex.append("^.*( ").append(anOriginIdentifier).append(", [a-zA-Zäüöôèéâ\\. ]*),.*");
 				Pattern aPattern = Pattern.compile(aRegex.toString(), Pattern.CASE_INSENSITIVE);
 				Matcher matcher = aPattern.matcher(theLine.trim());
 				if (matcher.matches())
@@ -154,8 +158,7 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 		String anOrigin = anOriginProcess.getKey();
 		String aWineRecordLineWithoutOWCOrigin = anOriginProcess.getValue();
 		
-		String aCleanLine = clean(aWineRecordLineWithoutOWCOrigin);		
-		Matcher aRecordLineMatcher = aRecordLinePattern.matcher(aCleanLine);
+		Matcher aRecordLineMatcher = aRecordLinePattern.matcher(aWineRecordLineWithoutOWCOrigin);
 		
 		if (aRecordLineMatcher.matches())
 		{

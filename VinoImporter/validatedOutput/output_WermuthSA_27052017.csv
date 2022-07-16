@@ -1,0 +1,849 @@
+1;Chardonnay;MO Bündner Herrschaft;Gantenbein;2010;1;15;false;400;600;480
+2;Pinot Noir;MO Bündner Herrschaft;Gantenbein;2002;6;7.5;false;540;720;500
+3;Pinot Noir;MO Bündner Herrschaft;Gantenbein;2011;6;7.5;false;540;720;500
+6;Pinot Noir Unique;MO Bündner Herrschaft;Weingut Donatsch;2013;6;7.5;false;360;480;450
+7;Pinot Gris Brand;AC/MO Alsace;Josmeyer;2006;6;7.5;true;150;210;120
+8;Pinot Gris Sommerberg Séléction Grains Nobles;AC/MO Alsace;Albert Boxler;2008;6;7.5;true;360;540;300
+9;Chablis Valmur;AC/MO Chablis;Domaine nçois Raveneau;2005;1;7.5;false;250;350;250
+10;Chablis Blanchots;AC/MO Chablis;Domaine nçois Raveneau;2010;2;7.5;false;400;600;500
+11;Corton-Renardes;AC/MO Côte de Beaune;Domaine Leroy;2009;1;7.5;false;1200;1500;1100
+12;Chevalier- Montrachet Les Demoiselles blanc;AC/MO Côte de Beaune;Louis Jadot;2005;2;7.5;false;400;540;330
+13;Corton-Charlemagne blanc;AC/MO Côte de Beaune;Bonneau du Martray;2005;3;15;true;600;900;650
+14;Le Montrachet;AC/MO Côte de Beaune;Domaine Etienne Sauzet;2005;1;7.5;false;350;500;520
+15;PulignyMontrachet Les Pucelles;AC/MO Côte de Beaune;Domaine Leflaive;2005;1;7.5;false;180;250;190
+16;Meursault Les Perrières;AC/MO Côte de Beaune;Pierre Morey;2005;6;7.5;false;600;900;510
+17;Meursault Les Tessons;AC/MO Côte de Beaune;Pierre Morey;2005;3;7.5;false;240;390;190
+18;Le Montrachet;AC/MO Côte de Beaune;Louis Jadot;2010;3;7.5;true;750;1050;910
+19;Meursault Charmes;AC/MO Côte de Beaune;Domaine des Comtes Lafon;2010;6;7.5;false;960;1200;1150
+20;Meursault Les Perrières;AC/MO Côte de Beaune;Domaine des Comtes Lafon;2010;3;7.5;false;600;810;760
+21;Le Montrachet;AC/MO Côte de Beaune;Domaine des Comtes Lafon;2012;1;7.5;false;1100;1500;1100
+22;Meursault;AC/MO Côte de Beaune;Domaine Coche-Dury;2014;3;7.5;false;750;1200;950
+23;Meursault Caillerets;AC/MO Côte de Beaune;Domaine Coche-Dury;2013;2;7.5;false;1000;1400;1200
+24;Meursault Caillerets;AC/MO Côte de Beaune;Domaine Coche-Dury;2014;1;7.5;false;500;700;680
+25;Meursault Les Perrières;AC/MO Côte de Beaune;Domaine Coche-Dury;2014;1;7.5;false;1500;2000;1700
+26;Puligny-Montrachet Les Enseignères;AC/MO Côte de Beaune;Domaine Coche-Dury;2014;3;7.5;false;1500;2100;1850
+27;Grands-Echezeaux;AC/MO Côte de Nuits;Domaine Romanée Conti;2010;1;7.5;false;900;1200;1150
+28;La Tâche;AC/MO Côte de Nuits;Domaine Romanée Conti;2013;3;7.5;false;5100;6600;5500
+29;Chambolle Musigny Les Amoureuses;AC/MO Côte de Nuits;Lucien Le Moine;2014;3;7.5;false;540;750;640
+30;Griotte-Chambertin;AC/MO Côte de Nuits;Lucien Le Moine;2014;3;7.5;false;540;750;550
+31;Bonnes Mares;AC/MO Côte de Nuits;Lucien Le Moine;2014;6;7.5;false;1080;1500;1100
+32;Chambertin Clos de Bèze;AC/MO Côte de Nuits;Lucien Le Moine;2014;3;7.5;false;600;810;660
+33;Clos de la Roche;AC/MO Côte de Nuits;Lucien Le Moine;2014;6;7.5;false;1080;1500;890
+34;Chambolle Musigny Aux Beaux Bruns;AC/MO Côte de Nuits;Domaine Denis Mortet;2014;3;7.5;false;240;360;280
+35;Gevrey-Chambertin Lavaux St-Jaques;AC/MO Côte de Nuits;Domaine Denis Mortet;2014;3;7.5;false;270;390;280
+36;Clos de Vougeot;AC/MO Côte de Nuits;Domaine Denis Mortet;2014;3;7.5;false;540;750;500
+37;Mazis-Chambertin;AC/MO Côte de Nuits;Domaine Denis Mortet;2014;1;7.5;false;400;500;360
+38;Chambertin;AC/MO Côte de Nuits;Domaine Denis Mortet;2014;1;7.5;false;450;600;430
+39;Bonnes Mares;AC/MO Côte de Nuits;Domaine Denis Mortet;2014;1;7.5;false;400;500;370
+40;Chambertin;AC/MO Côte de Nuits;Dugat-Py;2012;1;7.5;true;1500;2200;1600
+41;Clos de Vougeot;AC/MO Côte de Nuits;Domaine Leroy;2009;1;7.5;false;900;1300;1000
+42;Champagne Blanc de Blancs;AC/MO Champagne;null;1999;1;15;false;800;1200;890
+43;Champagne Cristal;AC/MO Champagne;Champagne Louis Roederer;1999;1;30;false;1200;2000;1050
+44;Château Malartic-Lagravière rouge;AC/MC Pessac Léognan;null;1961;1;7.5;false;120;200;80
+45;Château Ausone;AC/MC St. Emilion;null;2001;1;7.5;false;550;700;480
+46;Château d’Arche;AC/MC Sauternes;null;1961;1;7.5;false;180;300;180
+47;Château d’Arche;AC/MC Sauternes;null;1961;1;7.5;false;180;300;150
+48;Château d’Arche;AC/MC Sauternes;null;1961;1;7.5;false;180;300;150
+49;Château Rayas Réservé;AC/MO Châteauneuf du Pape;Rayas;2003;1;7.5;false;300;500;370
+50;Château Rayas Réservé;AC/MO Châteauneuf du Pape;Rayas;2003;1;7.5;false;300;500;370
+51;Chateauneuf-du Pape Cuvée des Célestins;AC/MO Châteauneuf du Pape;Domaine Henri Bonneau;2005;1;7.5;false;300;400;360
+52;Chateauneuf-du Pape Cuvée des Célestins;AC/MO Châteauneuf du Pape;Domaine Henri Bonneau;2007;1;15;false;700;1000;800
+53;Clos Rougeard;AC/MO Saumur-Champigny;null;2000;2;7.5;false;440;600;550
+54;Clos Rougeard;AC/MO Saumur-Champigny;null;2004;3;7.5;false;660;900;900
+55;Clos Rougeard;AC/MO Saumur-Champigny;null;2008;3;7.5;false;660;900;700
+56;Clos Rougeard;AC/MO Saumur-Champigny;null;2007;2;15;false;800;1200;1200
+57;La Grange des Pères;AC/MO Languedoc-Roussillon;null;2013;2;7.5;false;120;180;140
+58;La Grange des Pères;AC/MO Languedoc-Roussillon;null;2011;1;15;false;150;200;140
+59;Alzero;MO/IGP Veneto;Quintarelli;2001;1;7.5;false;200;300;260
+60;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;1999;1;15;true;1000;1300;1000
+61;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;1999;1;15;true;1000;1300;1000
+62;Pingus;MO/DOCa Ribera del Duero;Peter Sisseck;2005;3;7.5;true;1350;1800;1650
+63;Termanthia;MO/DO Toro;Bodegas Numanthia Thermes;2004;6;7.5;true;900;1200;780
+64;Insignia;MO Napa Valley;Joseph Phelps;2012;6;7.5;true;960;1200;840
+65;Proprietary Red;MO Napa Valley;Continuum;2012;6;7.5;true;780;960;800
+66;Pinot Noir Ma Danseuse;MO Sonoma Coast;Peter Michael Winery;2012;1;7.5;false;270;350;380
+67;Ridge Monte Bello;MO Santa z Mountains;Ridge Vineyards;2007;3;15;true;660;900;840
+68;Shafer Hillside Select Sunspot Valley;MO Napa Valley;Shafer Vineyards;1996;1;7.5;false;500;800;400
+69;Shafer Hillside Select Sunspot Valley;MO Napa Valley;Shafer Vineyards;1996;1;7.5;false;500;800;400
+71;Château Pichon Baron;AC/MC Pauillac;null;1998;6;15;true;1080;1320;1100
+72;Château Pichon Baron;AC/MC Pauillac;null;1998;12;7.5;true;1080;1320;1150
+73;Château Pichon Baron;AC/MC Pauillac;null;2011;12;7.5;true;900;1080;840
+74;Château Léoville Barton;AC/MC St. Julien;null;1979;1;15;false;150;300;150
+75;Château Cos d’Estournel;AC/MC St. Estèphe;null;2003;12;7.5;true;1800;2400;1950
+76;Château l’Hermitage;AC/MC St. Emilion;null;2005;12;7.5;true;600;840;520
+77;Château l’Hermitage;AC/MC St. Emilion;null;2005;12;7.5;true;600;840;520
+78;Château La Gomerie;AC/MC St. Emilion;G. & D. Bécot;2005;12;7.5;true;1080;1320;850
+79;Clos St.-Martin;AC/MC St. Emilion;null;2011;12;7.5;true;540;720;480
+80;Château Faugères;AC/MC St. Emilion;null;2000;6;7.5;true;210;300;210
+81;Château Faugères;AC/MC St. Emilion;null;2000;6;7.5;true;210;300;210
+82;Château Faugères;AC/MC St. Emilion;null;2003;6;15;true;420;600;400
+83;Château Faugères;AC/MC St. Emilion;null;2004;6;15;true;360;480;340
+84;Château de Chambrun AC/MC;null;Lalande de Pomerol;2005;12;7.5;true;330;420;240
+85;Château de Chambrun AC/MC;null;Lalande de Pomerol;2005;12;7.5;true;330;420;240
+86;Château Le Moulin ;AC/MC Pomerol;2000;3;7.5;false;150;240;110
+87;Château Le Pin ;AC/MC Pomerol;1996;1;7.5;false;1500;2200;1300
+88;Château Le Pin ;AC/MC Pomerol;1996;1;7.5;false;1500;2200;1300
+89;Château Rieussec;AC/MC Sauternes;null;1998;12;3.75;true;210;300;165
+90;Clos Erasmus;MO/DOCa Priorat;Clos i Terrasses;2003;6;7.5;true;1500;2100;1500
+91;Clos Erasmus;MO/DOCa Priorat;Clos i Terrasses;2003;1;15;true;500;800;480
+92;Chardonnay Richie Vineyard;MO Sonoma Valley;null;2003;4;7.5;false;360;480;380
+93;Chardonnay Richie Vineyard;MO Sonoma Valley;null;2004;5;7.5;false;500;750;500
+94;Chardonnay Jayson;MO Napa Valley;Pahlmeyer;2001;3;7.5;false;150;250;120
+95;Chardonnay Jayson;MO Napa Valley;Pahlmeyer;2002;6;7.5;false;300;450;240
+96;Chardonnay Jayson;MO Napa Valley;Pahlmeyer;2002;7;7.5;false;350;525;280
+97;Harlan Estate The Maiden;MO Napa Valley;Harlan Estate;2001;2;7.5;true;360;540;400
+98;Harlan Estate The Maiden;MO Napa Valley;Harlan Estate;2003;3;7.5;true;450;600;450
+99;Shiraz Turkey Flat;MO Barossa Valley;Turkey Flat Vineyards;1996;6;7.5;false;270;360;210
+100;Deusyls de La Peira;AC/MO Languedoc;La Peira en Damaisela;2007;7;7.5;false;210;350;180
+101;Château Laville Haut Brion blanc;AC/MC Pessac Léognan;null;1994;1;7.5;false;120;200;90
+102;Château Laville Haut Brion blanc;AC/MC Pessac Léognan;null;2000;2;7.5;false;300;500;240
+103;Château Laville Haut Brion blanc;AC/MC Pessac Léognan;null;2003;6;7.5;true;1200;1500;1200
+104;Château Haut-Brion blanc;AC/MC Pessac Léognan;null;1999;5;7.5;false;1750;2500;2200
+105;Château Haut-Brion blanc;AC/MC Pessac Léognan;null;2001;1;7.5;false;350;500;420
+106;Château Lafite Rothschild;AC/MC Pauillac;null;2003;6;7.5;true;4200;6000;4700
+107;Château Lafite Rothschild;AC/MC Pauillac;null;2003;1;15;false;1500;2000;1500
+108;Château Lafite Rothschild;AC/MC Pauillac;null;2009;12;7.5;true;8400;10800;7800
+109;Château Lafite Rothschild;AC/MC Pauillac;null;2010;12;7.5;true;9600;12000;8200
+110;Château Montrose;AC/MC St. Estèphe;null;2008;12;7.5;true;960;1200;880
+111;Château Montrose;AC/MC St. Estèphe;null;2010;12;7.5;true;2160;2640;2250
+112;Château de Valandraud;AC/MC St. Emilion;null;2003;6;7.5;true;1080;1500;900
+113;Château de Valandraud;AC/MC St. Emilion;null;2003;6;7.5;true;1080;1500;900
+114;L’Interdit de Château Valandraud;AC/MC Pomerol;null;2000;3;7.5;false;360;480;300
+115;Château Ausone;AC/MC St. Emilion;null;2003;1;7.5;true;900;1200;790
+116;Château Ausone;AC/MC St. Emilion;null;2003;3;7.5;true;2700;3600;2800
+117;Château La Serre;AC/MC St. Emilion;null;2006;6;7.5;true;240;330;200
+118;Château l’Hermitage;AC/MC St. Emilion;null;2005;12;7.5;true;600;840;520
+119;Château de Chambrun Le Bourg;AC/MC Pomerol;Lalande de Pomerol;2009;6;15;true;480;720;420
+120;Château Le Pin ;AC/MC Pomerol;2001;3;7.5;false;6000;9000;6000
+121;Château Clinet ;AC/MC Pomerol;2009;3;7.5;true;660;900;810
+122;Château Climens;AC/MC Barsac;null;1995;3;7.5;false;120;180;80
+123;Luce della Vite;MO/IGT Toscana;Luce della Vite;2000;6;7.5;true;330;450;270
+124;Solaia;MO/IGT Toscana;Piero Antinori;1998;3;7.5;false;450;600;400
+125;Redigaffi;MO/IGT Toscana;Tua Rita;2007;1;15;true;400;600;380
+126;Marc de Bourgogne;AC/MO Côte de Nuits;Domaine Romanée Conti;1995;1;7.5;false;800;1000;800
+128;Cognac Centaure Napoléon;AC/MO Cognac;Remy Martin;1983;1;7.5;false;300;500;240
+132;Messorio;MO/IGT Bolgheri;Azienda Le Macchiole;2002;6;7.5;true;480;660;400
+133;Messorio;MO/IGT Bolgheri;Azienda Le Macchiole;2002;6;7.5;true;480;660;400
+134;Messorio;MO/IGT Bolgheri;Azienda Le Macchiole;2002;6;7.5;true;480;660;400
+135;Barbaresco;MO/DOCG Piemonte;Angelo Gaja;2012;2;7.5;true;200;300;200
+136;Barbaresco;MO/DOCG Piemonte;Angelo Gaja;1989;6;15;true;2400;3000;2400
+137;Barbaresco;MO/DOCG Piemonte;Angelo Gaja;1990;6;15;true;2700;3600;2700
+138;Cabernet Sauvignon Darmagi;MO/IGT Piemonte;Angelo Gaja;1989;6;15;true;1800;2400;1800
+139;Cabernet Sauvignon Darmagi;MO/IGT Piemonte;Angelo Gaja;1990;6;15;true;2100;2700;2100
+140;Solaia;MO/IGT Toscana;Piero Antinori;1995;1;15;true;300;400;280
+141;Solaia;MO/IGT Toscana;Piero Antinori;1997;1;15;true;500;700;450
+142;Ornellaia;MO/DOC Bolgheri;Tenuta dell’Ornellaia;1997;6;7.5;true;960;1200;960
+143;Ornellaia;MO/DOC Bolgheri;Tenuta dell’Ornellaia;1998;6;7.5;true;960;1200;930
+144;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;1996;3;15;true;990;1200;1000
+145;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;1997;3;15;true;1500;2100;1380
+146;Opus One;MO Napa Valley;Mondavi & Rothschild;1985;6;7.5;true;1080;1320;1520
+147;Opus One;MO Napa Valley;Mondavi & Rothschild;1990;6;7.5;true;1200;1500;1500
+148;Opus One;MO Napa Valley;Mondavi & Rothschild;1992;6;7.5;true;1200;1500;1500
+149;Cabernet Sauvignon Hillside Select;MO Napa Valley;Shafer Vineyards;1997;6;7.5;true;1980;2400;1800
+150;Cabernet Sauvignon Hillside Select;MO Napa Valley;Shafer Vineyards;1997;6;7.5;true;1980;2400;1800
+151;Cabernet Sauvignon Hillside Select;MO Napa Valley;Shafer Vineyards;1997;6;7.5;true;1980;2400;1800
+152;Cabernet Sauvignon Hillside Select;MO Napa Valley;Shafer Vineyards;1997;6;7.5;true;1980;2400;1800
+153;Ridge Monte Bello;MO Santa z Mountains;Ridge Vineyards;1997;6;7.5;true;720;900;930
+154;Shiraz SVS Hoffmann;MO Barossa Valley;Rockford;2000;12;7.5;true;480;600;450
+155;Shiraz SVS Hoffmann;MO Barossa Valley;Rockford;2000;12;7.5;true;480;600;450
+156;Grenache Old Vines Romas Vineyard;MO McLaren Vale;Clarendon Hills;2001;12;7.5;true;480;720;420
+157;Grenache Old Vines Romas Vineyard;MO McLaren Vale;Clarendon Hills;2001;24;7.5;true;480;720;420
+158;Grenache Old Vines Romas Vineyard;MO McLaren Vale;Clarendon Hills;2001;36;7.5;true;480;720;420
+159;Syrah Moritz Vineyard;MO McLaren Vale;Clarendon Hills;2002;12;7.5;true;420;540;350
+160;White Blend The Boot;MO Kalifornien;null;2000;1;15;false;700;1000;750
+161;Syrah Against the Wall;MO Kalifornien;null;1996;1;7.5;false;600;900;580
+162;Syrah Just for the Love of it;MO Kalifornien;null;2002;1;7.5;false;650;1000;700
+163;Red Blend Claret;MO Napa Valley;Robert Foley;2004;3;7.5;false;330;450;330
+164;Red Blend Claret;MO Napa Valley;Robert Foley;2004;6;7.5;false;660;900;660
+165;Riesling Eiswein Burgberg EA/MO;null;null;1998;3;3.75;false;360;600;300
+166;Châteauneuf du PapeClos des Papes;AC/MO Rhône;Vincent Avril;2003;12;7.5;true;900;1200;900
+167;Châteauneuf du PapeCôtes Capelan;AC/MO Rhône;La Ferme du Mont;2010;6;7.5;true;360;480;360
+168;Clos de la Roche;AC/MO Côte de Nuits;Domaine Dujac;2014;1;7.5;false;300;450;270
+169;Clos de la Roche;AC/MO Côte de Nuits;Domaine Dujac;2014;1;7.5;false;300;450;270
+170;Clos Saint-Denis;AC/MO Côte de Nuits;Domaine Dujac;2014;1;7.5;false;330;500;300
+171;Clos Saint-Denis;AC/MO Côte de Nuits;Domaine Dujac;2014;1;7.5;false;330;500;300
+172;Riesling Smaragd Setzberg;AC/MO Wachau;Franz Hirtzberger;2006;6;7.5;true;270;360;240
+173;Riesling Smaragd Singerriedel;AC/MO Wachau;Franz Hirtzberger;2005;6;7.5;true;420;540;400
+174;Riesling Smaragd Singerriedel;AC/MO Wachau;Franz Hirtzberger;2006;6;7.5;true;480;660;480
+175;Grüner Veltliner Smaragd Rotes Tor;AC/MO Wachau;Franz Hirtzberger;2006;6;7.5;true;210;300;180
+176;Grüner Veltliner Smaragd Honivogl;AC/MO Wachau;Franz Hirtzberger;2005;6;7.5;true;360;480;360
+177;Grüner Veltliner Smaragd Honivogl;AC/MO Wachau;Franz Hirtzberger;2006;6;7.5;true;420;540;480
+178;Chardonnay Clessidra;MO Alto Adige;Cantina Pelz Pfiffer;1997;6;7.5;true;120;180;90
+179;Vermentino Selezione GG;MO/DOCG Marche;Garofoli;2006;5;7.5;true;150;200;120
+180;Chardonnay The Judge;MO Napa Valley;Kongsgaard;2012;1;7.5;false;300;500;300
+181;Chardonnay The Judge;MO Napa Valley;Kongsgaard;2014;1;7.5;false;300;500;300
+182;Merlot Tre Campi;AC/MO Tessin;Cadenazzo;2009;6;7.5;true;150;240;110
+183;Merlot Tre Campi;AC/MO Tessin;Cadenazzo;2010;6;7.5;false;150;240;110
+184;Barolo Casa Mate;MO/DOCG Piemont;Elio Grasso;2008;6;7.5;true;660;840;600
+185;Galatrona;MO/IGT Toscana;Petrolo;2006;6;7.5;true;720;960;600
+186;Giusto di Notri;MO/IGT Toscana;Tua Rita;2006;6;7.5;true;420;560;360
+187;Giusto di Notri;MO/IGT Toscana;Tua Rita;2008;6;7.5;true;330;450;290
+188;Giusto di Notri;MO/IGT Toscana;Tua Rita;2008;3;15;true;360;480;300
+189;Redigaffi;MO/IGT Toscana;Tua Rita;2006;3;7.5;true;540;720;600
+190;Redigaffi;MO/IGT Toscana;Tua Rita;2008;1;15;true;400;600;400
+191;Redigaffi;MO/IGT Toscana;Tua Rita;2008;1;15;true;400;600;400
+192;Syrah;MO/IGT Toscana;Tua Rita;2007;3;7.5;true;390;480;360
+193;Syrah;MO/IGT Toscana;Tua Rita;2007;1;15;true;300;450;300
+194;Barbaresco Sori San Lorenzo Piemont;null;Angelo Gaja;1999;1;30;true;1350;1450;1300
+195;Scrio;MO/IGT Toscana;Azienda Le Macchiole;2009;1;15;true;205;220;170
+196;Lodovico;MO/IGT Toscana;Tenuta di Biserno;2008;3;15;true;1260;1350;1200
+197;Gabbro;MO/IGT Toscana;Montepeloso;2009;6;7.5;true;350;370;350
+198;Solaia;MO/IGT Toscana;Piero Antinori;2011;1;15;true;360;380;340
+199;Solaia;MO/IGT Toscana;Piero Antinori;2012;6;7.5;true;920;970;900
+200;Bolgheri Superiore Pinea;MO/DOC Toscana;Ceralti;2010;1;60;true;200;300;180
+201;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;1999;1;15;true;150;160;140
+202;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;1999;1;30;true;280;300;260
+203;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;2001;1;15;true;130;140;140
+204;Paleo;MO/DOC Bolgheri;Azienda Le Macchiole;2001;1;30;true;420;440;410
+205;Biserno;MO/IGT Toscana;Tenuta di Biserno;2012;1;30;true;260;270;290
+206;Collezione de Marchi;MO/IGT Toscana;Isole e Olena;2011;6;7.5;true;280;300;240
+207;Primitivo di Manduria;MO/DOC Apulien;Gianfranco Fino;2011;1;45;true;300;500;240
+208;Amarone Monte Lodoletta;MO/DOCG Veneto;Romano Dal Forno;1998;1;7.5;true;200;270;180
+209;Amarone Monte Lodoletta;MO/DOCG Veneto;Romano Dal Forno;1998;1;7.5;true;220;300;180
+210;Barbaresco;MO/DOCG Piemont;Angelo Gaja;2001;1;15;true;270;400;220
+211;Ornellaia;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2008;2;7.5;true;250;300;270
+212;Solaia;MO/IGT Toscana;Piero Antinori;2004;3;7.5;false;450;600;450
+213;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;1995;1;15;true;350;450;330
+214;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;1998;1;15;true;450;600;440
+215;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2003;6;7.5;true;960;1200;850
+216;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2013;1;60;true;1800;2500;1650
+217;Ornellaia;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2012;1;30;true;700;1000;700
+218;Ornellaia;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2013;1;60;true;1500;2500;1700
+219;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2010;1;15;true;1200;1800;1300
+220;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2011;1;30;true;3000;4000;3000
+221;Château Margaux;AC/MC Margaux;null;2005;6;7.5;true;3300;3900;3820
+222;Château Mouton Rothschild;AC/MC Pauillac;null;2005;6;7.5;true;2700;3600;2800
+223;Château Haut Brion;AC/MC Pessac Léognan;null;2006;6;7.5;true;1800;2400;2000
+224;Château Pichon Lalande;AC/MC Pauillac;null;2002;12;7.5;true;900;1080;950
+225;Château Lynch Bages;AC/MC Pauillac;null;1999;4;7.5;false;270;360;350
+226;Château Lynch Bages;AC/MC Pauillac;null;2001;12;7.5;true;1080;1200;1200
+227;Château Lynch Bages;AC/MC Pauillac;null;2002;12;7.5;true;1020;1200;1100
+228;Château Léoville Barton;AC/MC St. Julien;null;1999;4;7.5;false;200;280;220
+229;Château Gruaud Larose;AC/MC St. Julien;null;2002;12;7.5;true;600;780;550
+230;Virginie de Valandraud;AC/MC St. Emilion;null;1999;3;7.5;false;105;1350;100
+231;Champagne Taittinger Arman;AC/MO Champagne;null;1981;1;7.5;true;150;200;120
+232;Château La Lagune AC/MC;null;Haut-Médoc;2004;12;7.5;true;420;540;450
+233;Clos René ;AC/MC Pomerol;2000;12;7.5;true;600;840;490
+234;Château Hosanna ;AC/MC Pomerol;2011;12;7.5;true;960;1320;950
+235;Vega Sicilia Especial;MO/DOCa Ribera del Duero;Bodegas Vega Sicilia;2013;3;true;750;1050;720
+236;Vega Sicilia Especial;MO/DOCa Ribera del Duero;Bodegas Vega Sicilia;2013;3;true;750;1050;700
+237;Schwarz-Weiss;AC/MO Burgenland;Johann Schwarz;2013;6;7.5;true;150;210;150
+238;Schwarz-Weiss;AC/MO Burgenland;Johann Schwarz;2013;6;7.5;true;150;210;150
+239;Schwarz-Rot;AC/MO Burgenland;Johann Schwarz;2012;6;7.5;true;240;360;210
+240;Schwarz-Rot;AC/MO Burgenland;Johann Schwarz;2012;6;7.5;true;240;360;210
+241;Cuvée Kerschbaum;AC/MO Burgenland;Paul Kerschbaum;2011;6;7.5;true;270;360;260
+242;Cuvée Kerschbaum;AC/MO Burgenland;Paul Kerschbaum;2011;6;7.5;true;270;360;250
+243;Cuvée G;DAC/MO Burgenland;Gesellmann;2009;6;7.5;true;480;660;420
+244;Châteauneuf du Pape rougeClos des Papes;AC/MO Rhône;Vincent Avril;2008;3;7.5;false;120;180;110
+245;Las Flors de la Peira;AC/MO Languedoc;La Peira en Damaisela;2008;12;7.5;true;360;480;310
+246;La Peira;AC/MO Languedoc;La Peira en Damaisela;2008;12;7.5;true;600;780;480
+247;La Peira;AC/MO Languedoc;La Peira en Damaisela;2008;12;7.5;true;600;780;480
+248;La Porte du Ciel;AC/MO Languedoc;Château de la Négly;2005;1;15;false;150;200;110
+249;La Porte du Ciel;AC/MO Languedoc;Château de la Négly;2005;1;15;false;150;200;110
+250;La Porte du Ciel;AC/MO Languedoc;Château de la Négly;2005;3;15;true;450;600;400
+251;La Porte du Ciel;AC/MO Languedoc;Château de la Négly;2005;3;15;true;450;600;400
+252;La Porte du Ciel;AC/MO Languedoc;Château de la Négly;2005;3;15;true;450;600;400
+253;Finca Dofi;MO/DOCa Priorat;Alvaro Palacios;2002;6;7.5;true;270;360;220
+254;Finca Dofi;MO/DOCa Priorat;Alvaro Palacios;2002;6;7.5;true;270;360;230
+255;Cardinale Proprietary Red;MO Napa Valley;Cardinale;1998;6;7.5;true;420;600;370
+256;Cardinale Proprietary Red;MO Napa Valley;Cardinale;1999;6;7.5;true;450;660;400
+257;Cabernet Sauvignon Paradise Hills;MO Napa Valley;Blankiet Estate;2005;6;7.5;true;540;720;490
+258;Cabernet Sauvignon Paradise Hills;MO Napa Valley;Blankiet Estate;2006;3;7.5;false;300;450;270
+259;Cabernet Sauvignon Paradise Hills;MO Napa Valley;Blankiet Estate;2006;6;7.5;true;600;900;540
+260;Cabernet Sauvignon Paradise Hills;MO Napa Valley;Blankiet Estate;2012;3;7.5;false;480;600;420
+262;Château Le Pin;AC/MC Pomerol;null;2004;3;15;true;8100;10500;8300
+263;Château Le Pin;AC/MC Pomerol;null;2005;1;15;true;4000;6000;4800
+264;Château Le Pin;AC/MC Pomerol;null;2007;1;15;true;2700;3300;2800
+265;Chambolle Musigny Les Amoureuses;AC/MO Côte de Nuits;Comte de Vogüe;1999;1;7.5;false;600;1000;650
+266;Chambolle Musigny Les Amoureuses;AC/MO Côte de Nuits;Comte de Vogüe;2004;1;7.5;false;350;500;360
+267;Chambertin;AC/MO Côte de Nuits;Domaine Armand Rousseau;1999;1;7.5;false;1200;1800;1520
+268;Chambertin;AC/MO Côte de Nuits;Domaine Armand Rousseau;2002;1;7.5;false;900;1200;1150
+269;Chambertin;AC/MO Côte de Nuits;Domaine Armand Rousseau;2013;1;7.5;false;700;900;750
+270;Chambertin;AC/MO Côte de Nuits;Domaine Armand Rousseau;2014;1;7.5;false;700;900;880
+271;Corton Charlemagne;AC/MO Côte de Beaune;Bonneau du Martray;2014;6;7.5;true;600;780;620
+272;Chambolle Musigny;AC/MO Côte de Nuits;Comte de Vogüe;2008;6;7.5;true;900;1200;870
+273;Chambolle Musigny;AC/MO Côte de Nuits;Comte de Vogüe;2011;6;7.5;true;840;1080;820
+274;Chambolle Musigny;AC/MO Côte de Nuits;Comte de Vogüe;2011;6;7.5;true;840;1080;820
+275;Hermitage La Chapelle;AC/MO Côte du Rhône;Paul Jaboulet Aîné;2000;6;15;true;840;1080;780
+276;Châteauneuf-du-Pape La Combe des Fous;AC/MO Châteauneuf du Pape;Domaine Clos St. Jean;2012;1;60;true;800;1200;780
+277;Châteauneuf-du-Pape Deus ex Machina;AC/MO Châteauneuf du Pape;Domaine Clos St. Jean;2012;1;60;true;1000;1500;1000
+278;Pinot Noir;MO Bündner Herrschaft;Gantenbein 1;2005;9;7.5;true;1800;2500;1750
+279;Mystique MO/DAC;Burgenland;Pöckl;2003;1;15;false;330;400;300
+280;Mystique MO/DAC;Burgenland;Pöckl;2004;2;7.5;false;300;400;300
+281;Mystique MO/DAC;Burgenland;Pöckl;2006;3;7.5;false;450;600;480
+282;Mystique MO/DAC;Burgenland;Pöckl;2006;1;15;false;350;500;300
+283;Mystique MO/DAC;Burgenland;Pöckl;2007;2;7.5;false;280;400;240
+284;Mystique MO/DAC;Burgenland;Pöckl;2007;3;7.5;false;420;600;320
+285;Mystique MO/DAC;Burgenland;Pöckl;2007;1;15;false;350;500;360
+286;Mystique MO/DAC;Burgenland;Pöckl;2009;3;7.5;false;420;600;290
+287;Mystique MO/DAC;Burgenland;Pöckl;2009;1;15;false;330;450;290
+288;Cabernet Sauvignon Stags Leap;MO/DO Napa Valley;Cliff Lede Vineyards;2013;6;7.5;false;360;480;380
+289;Cabernet Sauvignon Stags Leap;MO/DO Napa Valley;Cliff Lede Vineyards;2013;6;7.5;false;360;480;370
+290;Dominus Napanook;MO/DO Napa Valley;Dominus Estate;2012;12;7.5;true;720;960;700
+291;Dominus Napanook;MO/DO Napa Valley;Dominus Estate;2012;12;7.5;true;720;960;700
+292;Proprietary Red Insignia;MO Napa Valley;Joseph Phelps;2010;3;15;true;1080;1200;1020
+293;Proprietary Red Insignia;MO Napa Valley;Joseph Phelps;2013;3;15;true;1320;1560;1250
+294;Cabernet Sauvignon Special Selection";MO Napa Valley;Caymus;2012;6;7.5;true;780;960;780
+295;Vérité La Joie;MO Sonoma County;Vérité Wines;2013;6;7.5;true;1980;2400;1800
+296;Vérité La Joie;MO Sonoma County;Vérité Wines;2013;6;7.5;true;1980;2400;1800
+297;Vérité La Muse;MO Sonoma County;Vérité Wines;2013;6;7.5;true;1980;2400;1800
+298;Vérité La Muse;MO Sonoma County;Vérité Wines;2013;6;7.5;true;1980;2400;1800
+299;Vérité Le Desir;MO Sonoma County;Vérité Wines;2013;6;7.5;true;1980;2400;1800
+300;Vérité Le Desir;MO Sonoma County;Vérité Wines;2013;6;7.5;true;1980;2400;1800
+301;Malbec Argentino;MO/DO Mendoza;Bodegas Catena Zapata;2006;6;7.5;true;420;600;420
+302;Malbec Argentino;MO/DO Mendoza;Bodegas Catena Zapata;2006;6;7.5;true;420;600;410
+303;Columella;MO/DO Südafrika;null;2011;6;7.5;true;450;600;430
+304;Columella;MO/DO Südafrika;null;2011;6;7.5;true;450;600;430
+305;Shiraz Eligo;MO Barossa Valley;John Duval Wines;2012;6;7.5;true;360;480;370
+306;Shiraz Eligo;MO Barossa Valley;John Duval Wines;2012;6;7.5;true;360;480;370
+307;Syrah Run Rig;MO Barossa Valley;Torbreck;2012;6;7.5;true;780;960;720
+308;Astralis;MO McLaren Vale;Clarendon Hills;2010;6;7.5;true;1500;2100;1430
+309;Dominus;MO Napa Valley;Dominus Estate;1991;6;7.5;true;1200;1500;1350
+310;Dominus;MO Napa Valley;Dominus Estate;1997;6;7.5;true;960;1200;1000
+311;Château Margaux;AC/MC Margaux;null;1990;1;15;false;1400;2000;1450
+312;Château Margaux;AC/MC Margaux;null;1990;1;15;false;1400;2000;1420
+313;Château Margaux;AC/MC Margaux;null;1990;1;15;false;1400;2000;1420
+314;Château Margaux;AC/MC Margaux;null;1990;1;15;false;1400;2000;1420
+315;Château Lafite Rothschild;AC/MC Pauillac;null;1994;1;45;false;2500;3500;3300
+316;Château Latour;AC/MC Pauillac;null;1993;1;15;false;550;700;620
+317;Château Du Beaucaillou;AC/MC St. Julien;null;1990;1;15;false;300;400;240
+318;Château Du Beaucaillou;AC/MC St. Julien;null;1999;1;15;false;100;150;170
+319;Château Pavie;AC/MC St. Emilion;null;1986;1;15;false;300;500;280
+320;Château Pavie;AC/MC St. Emilion;null;1999;1;30;true;800;1000;800
+321;Château Pétrus;AC/MC Pomerol;null;1993;1;30;false;5000;7000;5400
+322;Château Lafleur;AC/MC Pomerol;null;1993;1;30;false;800;1200;900
+323;Château Lafite Rothschild;AC/MC Pauillac;null;1999;1;15;false;1000;1500;1050
+324;Château Lafite Rothschild;AC/MC Pauillac;null;1999;1;15;true;1000;1500;1000
+325;Château Lafite Rothschild;AC/MC Pauillac;null;1999;1;30;false;2200;3500;2200
+326;Château Lafite Rothschild;AC/MC Pauillac;null;1999;1;30;true;2200;3500;2200
+327;Château Lafite Rothschild;AC/MC Pauillac;null;2000;1;15;false;2500;3500;2350
+328;Château Lafite Rothschild;AC/MC Pauillac;null;2000;1;60;true;10000;15000;12500
+329;Château Lagrange;AC/MC St. Julien;null;1970;6;7.5;true;180;240;170
+330;Château Canon;AC/MC St. Emilion;1980;12;7.5;true;360;480;330
+331;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;2006;1;30;true;200;300;230
+332;Château Citran;AC/MC Haut Médoc;null;1995;3;15;true;150;240;130
+333;Château Citran;AC/MC Haut Médoc;null;2000;12;7.5;true;240;360;280
+334;Château Pichon Lalande;AC/MC Pauillac;null;2002;12;7.5;true;900;1200;950
+335;Château Lafite Rothschild;AC/MC Pauillac;null;1996;5;7.5;false;3500;4200;4100
+336;Château Conseillante ;AC/MC Pomerol;1998;12;7.5;true;1200;1560;1400
+337;Bruno di Rocca;MO/IGT Toscana;Vecchie Terre di Montefili;1997;3;7.5;false;180;240;150
+338;Cepparello;MO/IGT Toscana;Isole e Olena;2007;6;7.5;true;360;480;390
+339;Cepparello;MO/IGT Toscana;Isole e Olena;2007;3;15;true;420;600;390
+340;Cepparello;MO/IGT Toscana;Isole e Olena;2008;2;15;true;240;300;260
+341;Cepparello;MO/IGT Toscana;Isole e Olena;2009;6;7.5;true;300;420;280
+342;Cepparello;MO/IGT Toscana;Isole e Olena;2009;1;15;true;120;180;100
+343;Cepparello;MO/IGT Toscana;Isole e Olena;2010;6;7.5;true;360;480;350
+344;Cepparello;MO/IGT Toscana;Isole e Olena;2010;2;15;true;250;330;260
+345;Il Bruciato;MO/DOC Bolgheri;Tenuta Guado al Tasso;2005;6;7.5;true;120;180;110
+346;Il Bruciato;MO/DOC Bolgheri;Tenuta Guado al Tasso;2006;6;7.5;true;120;180;110
+347;Il Bruciato;MO/DOC Bolgheri;Tenuta Guado al Tasso;2007;6;7.5;true;120;180;110
+348;Il Bruciato;MO/DOC Bolgheri;Tenuta Guado al Tasso;2007;4;15;true;180;240;150
+349;Guado al Tasso;MO/DOC Bolgheri;Tenuta Guado al Tasso;2005;6;7.5;true;330;420;300
+350;Guado al Tasso;MO/DOC Bolgheri;Tenuta Guado al Tasso;2006;6;7.5;true;360;480;340
+351;Guado al Tasso;MO/DOC Bolgheri;Tenuta Guado al Tasso;2006;1;15;true;120;180;110
+352;Guado al Tasso;MO/DOC Bolgheri;Tenuta Guado al Tasso;2007;6;7.5;true;360;480;360
+353;Guado al Tasso;MO/DOC Bolgheri;Tenuta Guado al Tasso;2008;6;7.5;true;390;480;390
+354;Guado al Tasso;MO/DOC Bolgheri;Tenuta Guado al Tasso;2009;6;7.5;true;390;480;390
+355;Syrah;MO/IGT Toscana;Tua Rita;2007;6;7.5;true;720;960;680
+356;Syrah;MO/IGT Toscana;Tua Rita;2008;6;7.5;true;660;960;600
+357;Sammarco;MO/IGT Toscana;Castello dei Rampolla;2003;6;7.5;true;240;360;200
+358;Sammarco;MO/IGT Toscana;Castello dei Rampolla;2003;6;7.5;true;240;360;200
+359;Sammarco;MO/IGT Toscana;Castello dei Rampolla;2006;6;7.5;true;300;420;260
+360;Sammarco;MO/IGT Toscana;Castello dei Rampolla;2006;2;15;true;200;300;200
+361;Vigna d’Alceo;MO/IGT Toscana;Castello dei Rampolla;2003;6;7.5;true;480;660;520
+362;Le Serre Nuove;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2005;6;7.5;true;240;360;200
+363;Galatrona;MO/IGT Toscana;Petrolo;2002;6;7.5;true;270;360;250
+364;Galatrona;MO/IGT Toscana;Petrolo;2004;6;7.5;true;360;480;450
+365;Flaccianello;MO/IGT Toscana;Azienda Fontodi;2008;6;7.5;true;300;420;280
+366;Flaccianello;MO/IGT Toscana;Azienda Fontodi;2009;6;7.5;true;300;420;300
+367;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;1997;1;7.5;true;550;700;520
+368;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;1997;1;7.5;true;550;700;520
+369;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;1998;3;7.5;true;1350;1800;1550
+370;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2000;1;7.5;true;450;600;450
+371;Masseto;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2000;3;7.5;true;1350;1800;1280
+372;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;1998;1;15;true;400;600;430
+373;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2002;4;7.5;true;600;780;535
+374;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2003;3;7.5;true;375;480;400
+375;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2003;6;7.5;true;750;960;800
+376;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2004;2;7.5;true;300;500;305
+377;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2005;5;7.5;true;700;900;680
+378;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2006;5;7.5;true;800;1000;860
+379;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2006;1;15;true;350;500;400
+380;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2007;6;7.5;true;840;1200;900
+381;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2008;6;7.5;true;840;1200;800
+382;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2009;6;7.5;true;780;960;750
+383;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2009;1;15;true;300;400;350
+384;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2010;6;7.5;true;720;900;700
+385;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2012;6;7.5;true;660;840;620
+386;Tignanello;MO/IGT Toscana;Antinori;2008;6;7.5;true;390;480;400
+387;Tignanello;MO/IGT Toscana;Antinori;2008;3;15;true;420;600;450
+388;Tignanello;MO/IGT Toscana;Antinori;2009;6;7.5;true;420;540;400
+389;Merlot Rovere;AC/MO Tessin;Cantina Monti;2013;6;7.5;true;150;210;150
+390;Merlot Rovere;AC/MO Tessin;Cantina Monti;2013;6;7.5;true;150;210;150
+391;Rosso dei Ronci;AC/MO Tessin;Cantina Monti;2013;6;7.5;true;210;300;210
+392;Rosso dei Ronci;AC/MO Tessin;Cantina Monti;2013;6;7.5;true;210;300;210
+393;Il Canto della Terra;AC/MO Tessin;Cantina Monti;2012;6;7.5;true;450;540;400
+394;Il Canto della Terra;AC/MO Tessin;Cantina Monti;2012;6;7.5;true;450;540;400
+395;Castello di Morcote Riserva;AC/MO Tessin;Tenuta Castello di Morcote;2011;6;7.5;true;240;330;250
+396;Castello di Morcote Riserva;AC/MO Tessin;Tenuta Castello di Morcote;2011;6;7.5;true;240;330;250
+397;Castello di Morcote Riserva;AC/MO Tessin;Tenuta Castello di Morcote;2011;6;7.5;true;240;330;250
+398;Riserva del Padrone;AC/MO Tessin;Tenimento dell’Ör;2011;6;7.5;true;210;300;210
+399;Riserva del Padrone;AC/MO Tessin;Tenimento dell’Ör;2011;6;7.5;true;210;300;210
+400;Riva del Tasso;AC/MO Tessin;Cantina Pelossi;2011;6;7.5;true;120;180;120
+401;Riva del Tasso;AC/MO Tessin;Cantina Pelossi;2012;6;7.5;true;150;210;150
+402;Riva del Tasso;AC/MO Tessin;Cantina Pelossi;2012;6;7.5;true;150;210;140
+403;Costera Riserva;AC/MO Tessin;Daniel Huber Vini;2011;6;7.5;true;120;180;110
+404;Costera Riserva;AC/MO Tessin;Daniel Huber Vini;2011;6;7.5;true;120;180;100
+405;Montagna Magica;AC/MO Tessin;Daniel Huber Vini;2012;6;7.5;true;210;330;215
+406;Montagna Magica;AC/MO Tessin;Daniel Huber Vini;2012;6;7.5;true;210;330;215
+407;Gran Risavier;AC/MO Tessin;Eric Klausener;2012;12;7.5;true;600;780;550
+408;San Vigilio 75 zu 25;AC/MO Tessin;Vini Ronco Rovio;2012;5;15;false;100;150;100
+409;Château Belgrave AC/MC;null;Haut-Médoc;2004;12;7.5;true;150;210;150
+410;Château Chasse Spleen;AC/MC Moulis;null;1995;12;7.5;true;300;420;300
+411;Château Lascombes;AC/MC Margaux;null;2003;6;7.5;true;360;450;360
+412;Château Lascombes;AC/MC Margaux;null;2003;6;7.5;true;360;450;360
+413;Château du Tertre;AC/MC Margaux;null;2005;6;7.5;true;300;420;300
+414;Château du Tertre;AC/MC Margaux;null;2005;6;7.5;true;300;420;300
+415;Château Clerc Milon;AC/MC Pauillac;null;1999;12;7.5;true;420;600;650
+416;Château Clerc Milon;AC/MC Pauillac;null;1999;12;7.5;true;420;600;650
+417;Château Duhart Milon;AC/MC St. Julien;null;2003;6;7.5;true;360;450;400
+418;Carruades de Lafite;AC/MC Pauillac;null;2002;6;7.5;true;900;1200;1150
+419;Château Lafite Rothschild;AC/MC Pauillac;null;1999;6;7.5;true;2700;3600;3300
+420;Château Mouton Rothschild;AC/MC Pauillac;null;1973;1;7.5;false;200;300;240
+421;Château Mouton Rothschild;AC/MC Pauillac;null;1982;1;7.5;false;700;1000;940
+422;Château Pontet Canet;AC/MC Pauillac;null;1999;12;7.5;true;480;660;700
+423;Château Pontet Canet;AC/MC Pauillac;null;2003;6;7.5;true;450;600;440
+424;Château Pontet Canet;AC/MC Pauillac;null;2004;6;7.5;true;360;480;340
+425;Château Pontet Canet;AC/MC Pauillac;null;2004;6;7.5;true;360;480;340
+426;Château Lynch Bages;AC/MC Pauillac;null;2000;6;7.5;true;1080;1320;1150
+427;Château Lynch Bages;AC/MC Pauillac;null;2000;6;7.5;true;1080;1320;1150
+428;Château Beychevelle;AC/MC St. Julien;null;2000;6;7.5;true;540;720;680
+429;Château Beychevelle;AC/MC St. Julien;null;2000;6;7.5;true;540;720;650
+430;Château Montrose;AC/MC St. Estèphe;null;2003;6;7.5;true;960;1200;1000
+431;Château Montrose;AC/MC St. Estèphe;null;2003;6;7.5;true;960;1200;1050
+432;Château Cos d’Estournel;AC/MC St. Estèphe;null;2002;6;7.5;true;480;600;530
+433;Château Cos d’Estournel;AC/MC St. Estèphe;null;2002;6;7.5;true;480;600;530
+434;Château La Mission Haut-Brion;AC/MC Pessac Léognan;null;1994;6;7.5;true;540;660;0
+435;Château Fombrauge;AC/MC St. Emilion;null;2001;12;7.5;true;240;360;240
+436;Château Fombrauge;AC/MC St. Emilion;null;2001;12;7.5;true;240;360;240
+437;Château Troplong Mondot;AC/MC St. Emilion;null;2002;12;7.5;true;480;720;520
+438;Chardonnay Eterium;MO Napa Valley;Maybach;2012;6;7.5;false;480;600;480
+439;Chardonnay Eterium;MO Napa Valley;Maybach;2013;6;7.5;false;480;600;480
+440;Pinot Noir Irmgard;MO Napa Valley;Maybach;2013;6;7.5;false;420;540;450
+441;Cabernet Sauvignon Materium;MO Napa Valley;Maybach;2010;1;15;true;350;450;300
+442;Cabernet Sauvignon Materium;MO Napa Valley;Maybach;2012;1;15;true;350;450;350
+444;Stoneridge Vineyard Cabernet-Syrah King Coal;MO Columbia Valley;Charles Smith Wines;2008;2;7.5;false;220;300;170
+445;Cabernet -Syrah Ovide;MO Walla Walla Valley;Charles Smith / K Vintners;2009;1;7.5;false;40;60;25
+446;Syrah Milbrandt;MO Columbia Valley;Charles Smith Wines / K Vintners;2010;8;7.5;false;160;240;130
+447;Grenache God only knows;MO Walla Walla Valley;null;2008;2;7.5;false;180;300;150
+448;Cabernet Sauvignon Quilceda Creek;MO Columbia Valley;Quilceda Creek;2002;3;7.5;false;540;750;550
+449;Cabernet Sauvignon Quilceda Creek;MO Columbia Valley;Quilceda Creek;2002;1;15;false;400;500;400
+450;Cabernet Sauvignon Quilceda Creek;MO Columbia Valley;Quilceda Creek;2004;3;7.5;false;450;600;480
+451;Cabernet Sauvignon Quilceda Creek;MO Columbia Valley;Quilceda Creek;2005;1;15;false;400;500;480
+452;Cabernet Sauvignon Quilceda Creek;MO Columbia Valley;Quilceda Creek;2007;3;7.5;false;600;900;720
+453;Cabernet Sauvignon Quilceda Creek;MO Columbia Valley;Quilceda Creek;2008;3;7.5;false;450;600;480
+454;Cabernet Sauvignon Quilceda Creek;MO Columbia Valley;Quilceda Creek;2008;1;15;false;350;450;400
+455;Proprietary Red Rothwell Hyde;MO Napa Valley;David Abreu;2011;3;7.5;false;330;420;280
+456;Cabernet Sauvignon Madrona Ranch;MO Napa Valley;David Abreu;2000;1;7.5;false;170;220;150
+457;Proprietary Red Altagracia;MO Napa Valley;Araujo Estate;2011;3;7.5;false;240;330;180
+458;Proprietary Red Altagracia;MO Napa Valley;Araujo Estate;2011;1;15;false;250;300;190
+459;Cabernet Sauvignon Private Reserve;MO Napa Valley;Beringer;1995;1;7.5;false;80;120;60
+460;Cabernet Sauvignon Private Reserve;MO Napa Valley;Beringer;2002;5;7.5;false;400;550;400
+461;Bacio Divino;MO Napa Valley;Bacio Divino Cellars;2000;1;15;true;120;180;90
+462;Cabernet Sauvignon Beckstoffer To Kalon Vineyard;MO Napa Valley;B Cellars;2008;4;7.5;false;520;720;460
+463;Contrarian;MO Napa Valley;Blackbird Vineyards;2009;1;15;false;150;200;120
+464;The Matriarch;MO Napa Valley;Bond Estate;2006;3;7.5;false;300;390;250
+465;Proprietary Red DB4;MO Napa Valley;Bryant Family;2009;6;7.5;false;720;900;640
+466;Cain Five;MO Napa Valley;Cain Vineyard;1994;1;7.5;false;80;110;70
+467;Cerro Sur;MO Napa Valley;Favia;2005;1;15;false;270;350;220
+468;Cabernet Sauvignon;MO Napa Valley;Inglenook;1968;1;7.5;false;180;250;150
+469;Cabernet Sauvignon Inaugural Vintage;MO Napa Valley;KaDieM Cellars;2009;1;7.5;false;70;100;55
+470;Col Solare;MO Napa Valley;Ch. St. Michelle & Marchesi Antinori;2001;2;7.5;false;80;120;80
+471;Cabernet Sauvignon Corra;MO Napa Valley;Corra Wines;2011;2;7.5;false;160;240;130
+472;Cabernet Sauvignon Signature;MO Napa Valley;Chappellet Vineyard;2010;3;7.5;false;120;180;120
+473;Cabernet Sauvignon Caymus;MO Napa Valley;Caymus;2008;5;7.5;false;300;450;250
+474;Cabernet Sauvignon Caymus;MO Napa Valley;Caymus;2008;6;7.5;false;360;540;300
+475;Cabernet Sauvignon 40th Anniversary;MO Napa Valley;Caymus;2012;3;7.5;false;300;450;300
+476;Cabernet Sauvignon 40th Anniversary;MO Napa Valley;Caymus;2012;3;7.5;false;300;450;300
+477;Cabernet Sauvignon Special Selection";MO Napa Valley;Caymus;2009;3;7.5;false;360;480;320
+478;Cabernet Sauvignon Special Selection";MO Napa Valley;Caymus;2011;6;7.5;true;600;900;600
+479;Dominus;MO/DO Napa Valley;Dominus Estate;1992;1;15;false;350;450;380
+480;Dominus;MO/DO Napa Valley;Dominus Estate;1997;6;7.5;true;720;900;820
+481;Dominus;MO/DO Napa Valley;Dominus Estate;1999;1;7.5;false;90;120;110
+482;Dominus;MO/DO Napa Valley;Dominus Estate;2000;6;7.5;true;480;660;480
+483;Novicium;MO Napa Valley;Continuum;2011;6;7.5;false;420;600;350
+484;Novicium;MO Napa Valley;Continuum;2012;6;7.5;false;420;600;350
+485;Novicium;MO Napa Valley;Continuum;2013;6;7.5;false;480;720;400
+486;Proprietary Red;MO Napa Valley;Continuum;2008;3;7.5;false;360;480;360
+487;Proprietary Red;MO Napa Valley;Continuum;2009;3;7.5;false;330;450;360
+488;Proprietary Red;MO Napa Valley;Continuum;2010;3;7.5;false;390;540;420
+489;Proprietary Red;MO Napa Valley;Continuum;2010;6;7.5;true;780;1080;780
+490;Proprietary Red;MO Napa Valley;Continuum;2011;1;15;true;300;400;260
+491;Cabernet Sauvignon Reserve;MO Napa Valley;Groth;2005;3;7.5;false;300;450;320
+492;Cabernet Sauvignon Reserve;MO Napa Valley;Groth;2007;3;7.5;false;300;450;350
+493;Cabernet Sauvignon Reserve;MO Napa Valley;Groth;2007;1;15;false;200;300;220
+494;Cabernet Sauvignon Yao Ming;MO Napa Valley;Yao Family Wines;2009;1;15;false;250;350;190
+495;Cabernet Sauvignon Yao Ming;MO Napa Valley;Yao Family Wines;2010;3;7.5;false;390;510;330
+496;Cabernet Sauvignon Bergfeld;MO Napa Valley;Hall Wines;2006;3;7.5;false;210;300;160
+497;Cabernet Sauvignon Jack’s Masterpiece;MO Napa Valley;Hall Wines;2009;3;7.5;false;210;300;170
+498;Cabernet Sauvignon Ark;MO Napa Valley;Hundred Acre;2008;3;7.5;true;750;1050;640
+499;Cabernet Sauvignon Kayli Morgan Vineyard;MO Napa Valley;Hundred Acre;2008;3;7.5;true;810;1050;720
+500;Cabernet Sauvignon Kayli Morgan Vineyard;MO Napa Valley;Hundred Acre;2008;3;7.5;true;810;1050;720
+501;Cabernet Sauvignon Kayli Morgan Vineyard;MO Napa Valley;Hundred Acre;2011;3;7.5;true;660;900;560
+502;Cabernet Sauvignon Few and Far Between;MO Napa Valley;Hundred Acre;2009;3;7.5;true;660;900;580
+503;Cabernet Sauvignon Few and Far Between;MO Napa Valley;Hundred Acre;2009;6;7.5;true;1320;1800;1160
+504;Cabernet Sauvignon Few and Far Between;MO Napa Valley;Hundred Acre;2009;1;15;true;500;700;420
+505;Cabernet Sauvignon Few and Far Between;MO Napa Valley;Hundred Acre;2010;6;7.5;true;2400;3000;2250
+506;Cabernet Sauvignon Few and Far Between;MO Napa Valley;Hundred Acre;2011;3;7.5;true;660;900;580
+507;Cabernet Sauvignon Fortification;MO Napa Valley;Hundred Acre;2005;1;7.5;true;500;700;440
+508;Proprietary Red Insignia;MO Napa Valley;Joseph Phelps;2006;6;7.5;true;720;960;660
+509;Proprietary Red Insignia;MO Napa Valley;Joseph Phelps;2009;6;7.5;true;540;720;600
+510;Proprietary Red Insignia;MO Napa Valley;Joseph Phelps;2010;6;7.5;true;720;960;680
+511;Proprietary Red Endre;MO Napa Valley;Kapcsándy Family Winery;2009;6;7.5;false;180;300;190
+512;Estate Cuvée State Lane Vineyard;MO Napa Valley;Kapcsándy Family Winery;2011;6;7.5;false;480;660;400
+513;Cabernet Sauvignon Mole Hill;MO Napa Valley;Lail Vineyards;2010;1;7.5;false;140;200;100
+514;Cabernet Sauvignon Mole Hill;MO Napa Valley;Lail Vineyards;2010;3;7.5;false;420;600;360
+515;Cabernet Sauvignon Animo;MO Napa Valley;Michael Mondavi Family;2010;6;7.5;false;270;420;210
+516;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2005;1;7.5;false;150;200;130
+517;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2006;4;7.5;false;480;720;420
+518;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2007;4;7.5;false;600;800;480
+519;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2007;3;7.5;true;450;600;390
+520;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2007;3;15;false;1200;1650;960
+521;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2008;3;7.5;true;360;540;290
+522;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2009;3;7.5;true;360;540;290
+523;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2009;1;15;false;300;400;250
+524;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2010;3;7.5;true;450;600;390
+525;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2010;1;15;false;300;400;250
+526;Cabernet Sauvignon M;MO Napa Valley;Michael Mondavi;2007;3;7.5;true;420;540;350
+527;Cabernet Sauvignon Reserve;MO Napa Valley;Robert Mondavi Winery;1997;1;15;false;150;250;130
+528;Cabernet Sauvignon Reserve;MO Napa Valley;Robert Mondavi Winery;1997;1;15;false;150;250;130
+529;Cabernet Sauvignon Reserve;MO Napa Valley;Robert Mondavi Winery;1998;6;7.5;true;420;660;350
+530;Cabernet Sauvignon Reserve;MO Napa Valley;Robert Mondavi Winery;2007;6;7.5;true;480;720;450
+531;Cabernet Sauvignon Reserve To Kalon Vineyard;MO Napa Valley;Robert Mondavi;2009;1;15;false;350;500;290
+532;Reserve Honoring 100 Years Robert Mondavi;MO Napa Valley;Robert Mondavi Winery;2010;1;15;false;300;400;350
+533;Cabernet Sauvignon Profile;MO Napa Valley;Merryvale;2008;2;15;false;400;600;290
+534;Syrah Napa Valley;MO Napa Valley;Michael Andretti Winery;2007;1;7.5;false;20;30;20
+535;Cabernet Sauvignon;MO Napa Valley;Hess Collection Winery;1997;1;7.5;false;20;30;20
+536;Cabernet Sauvignon The Lion;MO Napa Valley;Hess Collection Winery;2004;1;7.5;false;100;150;90
+537;Cabernet Sauvignon The Lion;MO Napa Valley;Hess Collection Winery;2007;6;7.5;false;480;720;500
+538;Cabernet Sauvignon Merus;MO Napa Valley;Merus Wines;2003;1;7.5;false;120;160;80
+539;Proprietary Red;MO Napa Valley;Ovid Winery;2008;2;7.5;false;300;400;250
+540;Proprietary Red;MO Napa Valley;Ovid Winery;2009;3;7.5;false;660;900;580
+541;Cabernet Sauvignon;MO Napa Valley;PlumpJack Winery;2008;5;7.5;false;350;500;300
+542;Cabernet Sauvignon;MO Napa Valley;PlumpJack Winery;2009;1;7.5;false;60;80;50
+543;Cabernet Sauvignon;MO Napa Valley;PlumpJack Winery;2010;3;7.5;false;240;300;180
+544;Cabernet Sauvignon;MO Napa Valley;PlumpJack Winery;2010;1;15;false;180;300;150
+545;Cabernet Sauvignon;MO Napa Valley;PlumpJack Winery;2012;3;7.5;false;180;240;150
+546;Proprietary red The Bard;MO Napa Valley;Realm Cellars;2011;3;7.5;false;240;360;180
+547;Merlot;MO Napa Valley;Robert Pecota Estate;1996;5;7.5;false;100;150;80
+548;Cabernet Sauvignon CCS;MO Napa Valley;Schrader Cellars;2009;2;7.5;false;100;150;400
+549;Shiraz Relentless;MO Napa Valley;Shafer Vineyards;2008;2;7.5;false;200;300;160
+550;Cabernet Sauvignon The Mascot;MO Napa Valley;Will Harlan;2009;3;7.5;true;270;450;240
+551;Cabernet Sauvignon The Mascot;MO Napa Valley;Will Harlan;2009;3;7.5;true;270;450;240
+552;Cabernet Sauvignon The Mascot;MO Napa Valley;Will Harlan;2010;3;7.5;true;270;450;240
+553;Cabernet Sauvignon The Mascot;MO Napa Valley;Will Harlan;2010;3;7.5;true;270;450;240
+554;Cabernet Sauvignon The Mascot;MO Napa Valley;Will Harlan;2010;1;15;true;200;400;200
+555;Cabernet Sauvignon Beckstoffer To Kalon Clone 6;MO Napa Valley;Tor Kenward Family;2005;1;15;false;180;300;140
+556;Proprietary Red;MO Napa Valley;Two Worlds;2005;1;15;false;200;300;160
+557;Proprietary red Viader;MO Napa Valley;Viader;1997;1;15;false;180;300;190
+558;Cabernet Sauvignon DARE;MO Napa Valley;Viader;2010;6;7.5;false;240;360;190
+559;Shafer Hillside Select Sunspot Valley;MO Napa Valley;Shafer Vineyards;2001;1;15;false;500;700;500
+560;Cabernet Sauvignon Cask 23;MO Napa Valley;Stag`s Leap Wine Cellars;2000;4;7.5;false;550;750;600
+561;Cabernet Sauvignon Le Petite Vice;MO Napa Valley;Vice Versa;2005;1;7.5;false;30;50;40
+562;Cabernet Sauvignon Le Petite Vice;MO Napa Valley;Vice Versa;2007;6;7.5;false;240;360;240
+563;Cabernet Sauvignon;MO Napa Valley;Vice Versa;2003;4;7.5;false;320;480;280
+564;Cabernet Sauvignon;MO Napa Valley;Vice Versa;2010;2;15;true;400;600;400
+565;Cabernet Sauvignon;MO Napa Valley;Vice Versa;2012;3;7.5;true;300;450;250
+566;Cabernet Sauvignon Mixed and Etched;MO Napa Valley;Vice Versa;2010;3;7.5;true;600;1200;500
+567;Cabernet Sauvignon Mixed;MO Napa Valley;Vice Versa;2012;3;7.5;true;450;900;380
+568;Cabernet Sauvignon Beckstoffer To Kalon Vineyard;MO Napa Valley;Vice Versa;2008;6;7.5;false;720;1080;600
+569;Cabernet Sauvignon Beckstoffer To Kalon Vineyard;MO Napa Valley;Vice Versa;2009;3;7.5;true;330;450;270
+570;Cabernet Sauvignon Beckstoffer To Kalon Vineyard;MO Napa Valley;Vice Versa;2009;1;15;true;300;400;250
+571;Cabernet Sauvignon Beckstoffer To Kalon Vineyard;MO Napa Valley;Vice Versa;2009;1;15;true;300;400;250
+572;Cabernet Sauvignon Beckstoffer To Kalon Vineyard;MO Napa Valley;Vice Versa;2014;3;7.5;false;420;600;450
+573;Cabernet Sauvignon Dr. Crane;MO Napa Valley;Vice Versa;2010;1;15;true;500;650;520
+574;Cabernet Sauvignon;MO Napa Valley;Shibumi Knoll Vineyards;2004;2;7.5;false;100;160;80
+575;Cabernet Sauvignon;MO Napa Valley;Shibumi Knoll Vineyards;2006;2;7.5;false;100;160;80
+576;Cabernet Sauvignon;MO Napa Valley;Shibumi Knoll Vineyards;2007;3;7.5;false;210;300;220
+577;Cabernet Sauvignon;MO Napa Valley;Shibumi Knoll Vineyards;2008;3;7.5;false;210;300;170
+578;T-Vine Red Blend;MO Napa Valley;T-Vine;1997;1;7.5;false;40;60;30
+579;Merlot;MO Napa Valley;Paradigm;2001;7;7.5;false;280;420;220
+580;Merlot;MO Napa Valley;Robert Pecota Estate;1996;5;7.5;false;100;150;75
+581;Petite Syrah Cupa Grandis;MO Paso Robles;EOS Estate Winery;2004;3;7.5;false;60;90;50
+582;Syrah Westside;MO Paso Robles;Pharao Moans;2009;6;7.5;true;300;480;240
+583;Syrah Westside;MO Paso Robles;Pharao Moans;2010;6;7.5;true;300;480;230
+589;Fontalloro;MO/IGT Toscana;Felsina;2010;2;15;true;140;180;150
+590;Flaccianello;MO/IGT Toscana;Azienda Fontodi;2000;1;60;true;400;500;400
+591;Flaccianello;MO/IGT Toscana;Azienda Fontodi;2010;1;30;true;260;270;250
+592;Chianti Classico Riserva Rancia;MO/DOCG Toscana;Fattoria Fèlsina;2010;2;15;true;120;180;150
+593;Sammarco;MO/IGT Toscana;Castello dei Rampolla;2003;6;7.5;true;210;270;180
+594;Sammarco;MO/IGT Toscana;Castello dei Rampolla;2005;6;7.5;true;180;250;180
+595;Solaia;MO/IGT Toscana;Piero Antinori;2007;1;60;true;2400;3000;2350
+596;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2014;1;30;true;210;270;215
+597;Giusto di Notri;MO/IGT Toscana;Tua Rita;2010;1;60;true;450;600;450
+598;Redigaffi;MO/IGT Toscana;Tua Rita;2010;1;30;true;500;700;460
+599;Ornellaia;MO/DOC Bolgheri;Tenuta dell’Ornellaia;2012;1;30;true;600;800;600
+600;Rocca di frassinello;MO/IGT Toscana;Rocca di frassinello;2010;1;15;true;150;200;130
+601;Rocca di frassinello;MO/IGT Toscana;Rocca di frassinello;2010;1;30;true;330;450;280
+602;Rocca di frassinello 10 Vendemmie;MO/IGT Toscana;Rocca di frassinello;2010;1;15;true;150;200;130
+603;Grattamacco Bolgheri Superiore;MO/DOCG Toscana;Grattamacco;2001;1;15;true;80;120;90
+604;Lamarein;MO Südtirol;Josephus Mayr-Erbhof Unterganzner;2008;3;7.5;false;210;300;180
+605;Lamarein;MO Südtirol;Josephus Mayr-Erbhof Unterganzner;2008;6;7.5;true;420;600;380
+606;Barolo Falletto di Serralunga d’Alba;MO/DOCG Piemonte;Bruno Giacosa;1995;4;7.5;true;480;600;500
+607;Barolo Falletto di Serralunga d’Alba;MO/DOCG Piemonte;Bruno Giacosa;1995;6;7.5;true;720;900;720
+608;Petit Verdot/Sangiovese Dofana;MO/IGT Toscana;Fattoria Cresti;2006;5;7.5;false;250;350;180
+609;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;2006;6;7.5;true;330;420;300
+610;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;2006;6;7.5;true;330;420;300
+611;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;2006;6;7.5;true;330;420;300
+612;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;2006;6;7.5;true;330;420;300
+613;Cepparello AC/IGT;null;null;1990;6;7.5;false;420;600;400
+614;Cepparello AC/IGT;null;null;1990;6;7.5;false;420;600;400
+615;Cabernet Sauvignon Collezione de Marchi;MO/IGT Toscana;Isole e Olena;1999;6;7.5;true;420;600;360
+616;Cabernet Sauvignon Collezione de Marchi;MO/IGT Toscana;Isole e Olena;1999;6;7.5;true;420;600;360
+617;Cabernet Sauvignon Collezione de Marchi;MO/IGT Toscana;Isole e Olena;1999;6;7.5;true;420;600;360
+618;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2004;6;7.5;true;420;540;380
+619;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2004;6;7.5;true;420;540;380
+620;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2004;3;15;true;450;600;400
+621;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2004;3;15;true;450;600;400
+622;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2004;1;30;true;350;500;300
+623;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2004;1;60;true;700;1000;650
+624;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2006;6;7.5;true;390;480;370
+625;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2006;6;7.5;true;390;480;370
+626;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2006;6;7.5;true;390;480;370
+627;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2006;6;7.5;true;390;480;370
+628;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2006;3;15;true;420;540;400
+629;Kurni;MO/IGT Marche;Oasi degli Angeli;2000;1;15;false;220;300;200
+630;Kurni;MO/IGT Marche;Oasi degli Angeli;2003;4;7.5;false;280;360;250
+631;Kurni;MO/IGT Marche;Oasi degli Angeli;2004;6;7.5;true;540;720;500
+632;Kurni;MO/IGT Marche;Oasi degli Angeli;2004;6;7.5;true;540;720;500
+637;Hermitage La Chapelle;AC/MO Côte du Rhône;Paul Jaboulet Aîné;2000;2;7.5;false;140;200;150
+638;Châteauneuf du Papeblanc Clos des Papes;AC/MO Rhône;Vincent Avril;2007;12;7.5;true;1200;1560;1250
+639;Pla del Rey;AC/MO Côtes du Roussillon;Domaines St. Luc;2000;5;7.5;false;100;150;70
+640;Pla del Rey;AC/MO Côtes du Roussillon;Domaines St. Luc;2000;3;15;false;90;150;80
+641;Symposium;MO/IGT Abruzzen;null;1999;4;7.5;false;140;200;140
+642;CortonCharlemagne;AC/MO Côte de Beaune;Bonneau du Martray;2006;1;15;false;200;300;210
+643;Clos de la Roche;AC/MO Côte de Nuits;Domaine Raphet;1993;2;7.5;false;150;240;120
+644;Hermitage la Chapelle;AC/MO Rhône;Paul Jaboulet Aîné;1994;1;15;false;130;180;130
+645;Pavillon Rouge de Château Margaux;AC/MC Margaux;null;1995;3;7.5;false;300;450;300
+646;Château Rauzan Segla;AC/MC Margaux;null;1994;3;15;false;270;360;230
+647;Château Pontet Canet;AC/MC Pauillac;null;1996;12;7.5;true;840;1080;800
+648;Château Pontet Canet;AC/MC Pauillac;null;1994;6;15;true;660;840;680
+649;Les Forts de Latour;AC/MC Pauillac;null;1995;12;7.5;false;1440;1800;1700
+650;Chapelle d’ Ausone;AC/MC St. Emilion;null;1997;1;7.5;false;80;150;80
+651;Chapelle d’ Ausone;AC/MC St. Emilion;null;1998;12;7.5;true;1080;1440;1250
+652;Chapelle d’ Ausone;AC/MC St. Emilion;null;1999;12;7.5;true;960;1320;880
+653;Château Canon La Gaffelière;AC/MC St. Emilion;null;1998;6;15;true;780;960;820
+654;Château Monbousquet;AC/MC St. Emilion;null;1998;3;15;true;360;450;380
+655;La Mondotte;AC/MC St. Emilion;null;1997;1;15;false;350;550;300
+656;Château Nenin ;AC/MC Pomerol;2000;1;15;false;180;250;160
+657;Château Lafleur;AC/MC Pomerol;null;1993;1;15;false;400;500;510
+658;Barbaresco Bricco Asili;MO/DOCG Piemont;Ceretto;2000;3;7.5;true;120;180;120
+659;Barolo Brunate;MO/DOCG Piemont;null;1996;2;15;true;240;360;240
+660;Barolo Brunate;MO/DOCG Piemont;null;1996;3;15;true;360;540;360
+661;Barolo Brunate;MO/DOCG Piemont;Vietti;2001;1;15;true;250;400;250
+662;Barolo riserva Granbussia;MO/DOCG Piemont;Aldo Conterno;1997;2;7.5;true;600;1000;540
+663;Barolo riserva Granbussia;MO/DOCG Piemont;Aldo Conterno;1999;3;7.5;true;600;900;560
+664;Barolo Bussia Soprana;MO/DOCG Piemont;Aldo Conterno;1981;1;7.5;true;120;180;100
+665;Barolo Abbazia dell’Annunziata;MO/DOCG Piemont;Renato Ratti;1970;1;7.5;true;50;80;40
+667;Barbaresco riserva Asili;MO/DOCG Piemont;Bruno Giacosa;2000;1;15;true;700;1000;680
+668;Barbaresco riserva Asili;MO/DOCG Piemont;Bruno Giacosa;2004;1;7.5;true;250;400;300
+669;Vigneto la Casuccia;MO/IGT Toscana;Castello di Ama;1988;3;7.5;false;210;300;210
+670;Vigna L`Apparita;MO/IGT Toscana;Castello di Ama;1988;3;7.5;false;270;360;270
+671;Flaccianello;MO/IGT Toscana;Azienda Fontodi;2004;6;7.5;true;420;600;430
+672;Flaccianello;MO/IGT Toscana;Azienda Fontodi;2007;6;7.5;true;390;480;400
+673;Flaccianello;MO/IGT Toscana;Azienda Fontodi;2009;6;7.5;true;300;420;260
+674;Percarlo;MO/IGT Toscana;San Giusto a Rentennano;2006;6;7.5;true;360;480;750
+675;Percarlo;MO/IGT Toscana;San Giusto a Rentennano;2009;6;7.5;true;270;360;270
+676;Percarlo;MO/IGT Toscana;San Giusto a Rentennano;2010;6;7.5;true;600;840;400
+677;Le Pergole Torte;MO/IGT Toscana;Montevertine;2010;6;7.5;true;480;660;460
+678;Le Pergole Torte;MO/IGT Toscana;Montevertine;2011;6;7.5;true;480;660;440
+679;Le Pergole Torte;MO/IGT Toscana;Montevertine;2012;6;7.5;true;420;600;400
+680;Cepparello;MO/IGT Toscana;Isole e Olena;2007;6;7.5;true;360;480;390
+681;Solaia;MO/IGT Toscana;Piero Antinori;2001;1;15;false;350;500;310
+682;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;1995;1;15;true;350;500;380
+683;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;1997;1;7.5;true;200;300;175
+684;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2001;1;7.5;true;150;220;150
+685;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2004;3;7.5;true;450;600;450
+686;Lupicaia;MO/DOC Toscana;Castello del Terriccio;1996;1;15;true;150;200;150
+687;Lupicaia;MO/DOC Toscana;Castello del Terriccio;1999;6;7.5;true;450;600;500
+688;Capanelle;MO/IGT Toscana;Raffaele Rossetti;1985;1;15;false;120;200;90
+689;Capanelle;MO/IGT Toscana;Raffaele Rossetti;1995;1;7.5;false;50;100;40
+690;Capanelle;MO/IGT Toscana;Raffaele Rossetti;1997;1;15;false;150;250;110
+691;Capanelle;MO/IGT Toscana;Raffaele Rossetti;2000;1;15;false;150;250;110
+692;Nemo;MO/IGT Toscana;Castello Monsanto;1996;5;7.5;false;125;200;50
+693;Trebbiano d’Abruzzo;MO/DOCG Abruzzen;Az. Agr. Valentini;2012;12;7.5;true;720;960;700
+694;Montepulciano d’Abruzzo;MO/DOCG Abruzzen;Az. Agr. Valentini;2012;3;7.5;true;360;450;360
+695;Château Gruaud Larose;AC/MC St. Julien;null;1981;10;7.5;true;700;900;600
+696;Château Faugères;AC/MC St. Emilion;null;2009;12;7.5;true;450;660;450
+697;Château Faugères;AC/MC St. Emilion;null;2009;12;7.5;true;450;660;450
+698;Château Gazin;AC/MC Pomerol;null;1982;1;7.5;false;120;200;90
+699;Riesling Ruppertsberger Reiterpfad G.C.;AC/MO Pfalz;Dr. Bürklin-Wolf;2001;4;7.5;true;140;200;140
+700;Riesling Auslese Wehlener Sonnenuhr EA/MO;null;null;2001;5;3.75;false;150;250;100
+701;Riesling Auslese Ockfner Bockstein EA/MO;null;null;2005;5;3.75;false;100;200;80
+702;Vin Santo Vin San Giusto;MO/IGT Toscana;San Giusto a Rentennano;2007;3;3.75;true;120;180;120
+703;Château Musar;MO Bekaa Valley;null;1995;4;7.5;false;200;320;310
+705;Querceto;MO/IGT Tessin;Terreni alla Maggia;2000;9;7.5;false;180;300;100
+706;Château Rauzan-Sègla;AC/MC Margaux;null;1986;4;7.5;false;480;660;410
+707;Château Palmer;AC/MC Margaux;null;1983;4;7.5;false;1200;1600;1400
+708;Château Palmer;AC/MC Margaux;null;1989;2;7.5;false;440;600;500
+709;Château Margaux;AC/MC Margaux;null;1983;3;7.5;false;1050;1500;1200
+710;Château Latour;AC/MC Pauillac;null;1978;5;7.5;false;1500;1850;1700
+711;Château Mouton Rothschild;AC/MC Pauillac;null;1990;1;7.5;false;220;300;310
+712;Château Pichon Baron;AC/MC Pauillac;null;1989;1;7.5;false;180;220;180
+713;Château Pichon Baron;AC/MC Pauillac;null;1990;1;7.5;false;180;250;220
+714;Château Pichon-Lalande;AC/MC Pauillac;null;1990;2;7.5;false;180;240;240
+715;Château Clerc Milon;AC/MC Pauillac;null;1989;1;7.5;false;75;110;60
+716;Château Gruaud Larose;AC/MC St. Julien;null;1986;2;7.5;false;200;300;220
+717;Château Léoville Las Cases;AC/MC St. Julien;null;1985;2;7.5;false;360;500;360
+718;Château Léoville Las Cases;AC/MC St. Julien;null;1990;2;7.5;false;400;600;390
+719;Château Du Beaucaillou;AC/MC St. Julien;null;1989;1;7.5;false;100;120;90
+720;Château Haut-Brion;AC/MC Pessac Léognan;null;1983;1;7.5;false;270;350;300
+721;Château Haut-Brion;AC/MC Pessac Léognan;null;1988;2;7.5;false;500;660;580
+722;Domaine de Chevalier;AC/MC Pessac Léognan;null;1986;1;7.5;false;50;80;40
+723;Domaine de Chevalier;AC/MC Pessac Léognan;null;1990;1;7.5;false;70;100;75
+724;Château Cheval Blanc;AC/MC St. Emilion;null;1983;1;7.5;false;350;500;500
+725;Château Pavie;AC/MC St. Emilion;null;1989;1;7.5;false;100;150;80
+727;Riesling Smaragd Schütt;AC/MO Wachau;Emmerich Knoll;2012;6;7.5;false;240;300;230
+728;Riesling Smaragd Schütt;AC/MO Wachau;Emmerich Knoll;2012;6;7.5;true;240;300;230
+729;Meursault Genevrières;AC/MO Côte de Beaune;null;2011;6;7.5;false;330;450;300
+730;Meursault Genevrières;AC/MO Côte de Beaune;null;2011;6;7.5;true;330;450;300
+731;Bonnes Mares;AC/MO Côte de Nuits;Comte de Vogüe;2011;6;7.5;true;1560;1800;1350
+732;Bonnes Mares;AC/MO Côte de Nuits;Comte de Vogüe;2012;6;7.5;true;1800;2400;1650
+733;Bonnes Mares;AC/MO Côte de Nuits;Comte de Vogüe;2013;6;7.5;true;1560;1800;1500
+734;Domaine de Chevalier blanc;AC/MC Pessac Léognan;null;2008;12;7.5;true;720;960;660
+735;Château Pichon Baron;AC/MC Pauillac;null;2008;12;7.5;true;900;1200;980
+736;Château Haut Brion;AC/MC Pessac Léognan;null;2006;1;7.5;false;330;500;330
+737;Château Haut Brion;AC/MC Pessac Léognan;null;2006;1;7.5;false;330;500;330
+738;Château Rol Valentin;AC/MC St. Emilion;null;2004;12;7.5;true;240;360;260
+739;Château Rol Valentin;AC/MC St. Emilion;null;2004;12;7.5;true;240;360;260
+740;Château Rol Valentin;AC/MC St. Emilion;null;2006;12;7.5;true;300;420;320
+741;Château de Valandraud;AC/MC St. Emilion;null;2006;12;7.5;true;1200;1560;1200
+742;Château Monbousquet;AC/MC St. Emilion;null;2003;12;7.5;true;420;660;500
+743;Château Faugères;AC/MC St. Emilion;null;2000;6;7.5;true;210;300;190
+744;Château Faugères;AC/MC St. Emilion;null;2000;6;7.5;true;210;300;190
+745;Château Faugères;AC/MC St. Emilion;null;2000;6;7.5;true;210;300;190
+746;Château Faugères;AC/MC St. Emilion;null;2000;6;7.5;true;210;300;190
+747;Château Clos Dubreuil;AC/MC St. Emilion;null;2010;6;7.5;true;450;600;410
+748;Château Clos Dubreuil;AC/MC St. Emilion;null;2010;6;7.5;true;450;600;400
+749;Château Bellevue;AC/MC St. Emilion;null;2008;4;7.5;true;160;220;150
+750;Château Bellevue;AC/MC St. Emilion;null;2009;12;7.5;true;720;960;700
+751;Château Figeac;AC/MC St. Emilion;null;2010;3;7.5;true;480;600;550
+752;Château Pontet Canet;AC/MC Pauillac;null;2012;1;60;true;700;1000;800
+753;Château de Chambrun AC/MC;null;Lalande de Pomerol;2006;11;7.5;true;165;220;110
+754;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2007;1;15;false;100;150;120
+755;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2011;6;7.5;true;270;360;260
+756;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2011;3;15;true;300;450;270
+757;Saffredi;MO/IGT Toscana;Fattoria Le Pupille;2011;3;15;true;300;450;270
+758;Clos d’Agon tinto;MO/DOCa Calonge;Cellers Mas Gil;2002;3;15;true;90;120;75
+759;Clos d’Agon tinto;MO/DOCa Calonge;Cellers Mas Gil;2002;3;15;true;90;120;75
+760;Clos d’Agon tinto;MO/DOCa Calonge;Cellers Mas Gil;2002;6;15;true;180;240;150
+761;Almaviva;MO Chile;null;2013;6;7.5;true;480;600;440
+762;Almaviva;MO Chile;null;2013;6;7.5;true;480;600;440
+763;Almaviva;MO Chile;null;2013;6;7.5;true;480;600;440
+764;Shiraz RWT;MO Barossa Valley;Penfolds;2010;6;7.5;true;540;720;450
+765;Shiraz RWT;MO Barossa Valley;Penfolds;2010;6;7.5;true;540;720;450
+766;Shiraz Reserve;MO Clare Valley;Pikes;1996;72;7.5;false;180;240;110
+767;Cabernet Sauvignon Mill Creek;MO Alexander Valley;Mill Creek Vineyards;1997;12;7.5;false;180;240;90
+768;Merlot Mill Creek;MO Alexander Valley;Mill Creek Vineyards;1996;9;7.5;false;120;180;60
+769;Cabernet Sauvignon Cafaro;MO Napa Valley;Cafaro Family Vineyards;1996;6;7.5;false;150;240;100
+770;Cabernet Sauvignon Napa Valley;MO Napa Valley;Mt. Veeder Winery;1996;6;7.5;false;180;240;100
+771;Haçienda Monasterio Crianza;MO/DOCa Ribera del Duero;Haçienda Monasterio;1997;6;7.5;true;120;180;90
+772;Amarone della Valpolicella Costasera;MO/DOC Valpolicella;Az. Agr. Masi;1997;5;7.5;true;200;300;120
+773;Amarone della Valpolicella Costasera;MO/DOC Valpolicella;Az. Agr. Masi;1997;6;7.5;true;240;360;140
+774;Amarone della Valpolicella Costasera;MO/DOC Valpolicella;Az. Agr. Masi;1997;6;7.5;true;240;360;140
+775;Barbaresco Sori San Lorenzo Piemont;null;Angelo Gaja;1999;1;30;true;1350;1450;1300
+776;Scrio;MO/IGT Toscana;Azienda Le Macchiole;2009;1;15;true;205;220;180
+777;Lodovico;MO/IGT Toscana;Tenuta di Biserno;2008;3;15;true;1260;1350;1200
+778;Gabbro;MO/IGT Toscana;Montepeloso;2009;6;7.5;true;350;370;360
+779;Solaia;MO/IGT Toscana;Piero Antinori;2011;1;15;true;360;380;380
+780;Solaia;MO/IGT Toscana;Piero Antinori;2012;6;7.5;true;920;970;800
+781;Bolgheri Superiore Pinea;MO/DOC Toscana;Ceralti;2010;1;60;true;200;300;200
+782;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;1999;1;15;true;150;160;120
+783;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;1999;1;30;true;280;300;250
+784;I Sodi di San Niccolò;MO/IGT Toscana;Castellare;2001;1;15;true;130;140;120
+785;Paleo;MO/DOC Bolgheri;Azienda Le Macchiole;2001;1;30;true;420;440;240
+786;Biserno;MO/IGT Toscana;Tenuta di Biserno;2012;1;30;true;260;270;280
+787;Collezione de Marchi;MO/IGT Toscana;Isole e Olena;2011;6;7.5;true;280;300;260
+788;Redigaffi;MO/IGT Toscana;Tua Rita;2009;6;7.5;true;720;960;800
+789;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2007;6;7.5;true;840;1080;880
+790;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2008;6;7.5;true;840;1080;810
+791;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2009;6;7.5;true;780;960;740
+792;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2010;6;7.5;true;840;1080;720
+793;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2011;6;7.5;true;720;900;630
+794;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2012;6;7.5;true;660;780;630
+795;Sassicaia;MO/DOC Bolgheri;Tenuta San Guido;2013;6;7.5;true;660;780;625
+796;Ornellaia AC/DOC;null;null;1993;1;15;true;220;300;200
+797;Brunello di Montalcino Pian delle Vigne;MO/DOCG Toscana;Piero Antinori;2000;1;15;true;70;100;50
+798;Château Pétrus ;AC/MC Pomerol;1979;1;7.5;false;550;800;750
+799;Château Lafleur;AC/MC Pomerol;null;1979;1;7.5;false;800;1200;1100
+800;Château Lafleur;AC/MC Pomerol;null;1979;1;7.5;false;800;1200;1100
+802;Château Gloria;AC/MC St. Julien;null;1989;12;7.5;true;480;600;400
+803;Château Léoville Barton;AC/MC St. Julien;null;2001;10;7.5;true;600;800;640
+804;Château La Louvière;AC/MC Pessac Léognan;null;1998;9;7.5;false;225;360;180
+805;Château Clinet ;AC/MC Pomerol;2007;10;7.5;true;550;700;480
+806;Château Charmail AC/MC;null;Haut-Médoc;2007;6;15;true;150;210;130
+807;Château Charmail AC/MC;null;Haut-Médoc;2007;6;15;true;150;210;130
+808;Château Les Grands Chênes;AC/MC Haut Médoc;Bernard Magrez;2006;12;7.5;true;180;300;170
+809;Château Les Grands Chênes;AC/MC Haut Médoc;Bernard Magrez;2006;12;7.5;true;180;300;170
+810;Château La Tour Carnet;AC/MC Haut Médoc;Bernard Magrez;2008;6;7.5;true;120;180;100
+811;Château La Tour Carnet;AC/MC Haut Médoc;Bernard Magrez;2008;12;7.5;true;240;360;200
+812;Château Belle-Vue AC/MC;null;Haut-Médoc;2010;6;15;true;180;300;160
+813;Château Belle-Vue AC/MC;null;Haut-Médoc;2010;3;30;true;210;300;170
+814;Château Belle-Vue AC/MC;null;Haut-Médoc;2010;1;60;true;150;220;220
+815;Château Pavie Macquin;AC/MC St. Emilion;null;2010;6;7.5;true;480;660;500
+816;Château Pavie;AC/MC St. Emilion;null;2006;5;7.5;false;1000;1250;1000
+817;Château Pavie;AC/MC St. Emilion;null;2006;6;7.5;true;1200;1500;1200
+818;Château Péby Faugères;AC/MC St. Emilion;null;1999;3;7.5;true;240;360;220
+819;Château Péby Faugères;AC/MC St. Emilion;null;1999;6;7.5;true;480;720;440
+820;Château Coutet;AC/MC Sauternes;null;1995;6;7.5;false;135;180;100
+821;Château Coutet;AC/MC Sauternes;null;1996;6;7.5;false;120;180;190
+822;Château Suduiraut;AC/MC Sauternes;null;2003;5;7.5;false;225;300;190
+823;Château Suduiraut;AC/MC Sauternes;null;2003;6;7.5;true;270;360;250
+824;Château Suduiraut;AC/MC Sauternes;null;2005;3;7.5;false;150;210;120
+825;Château Suduiraut;AC/MC Sauternes;null;2005;6;7.5;true;300;420;300
+826;Château Suduiraut;AC/MC Sauternes;null;2007;6;7.5;true;300;420;270
+827;Château Doisy-Védrines AC/MC;null;Barsac-Sauternes;2007;6;7.5;true;210;300;220
+828;Château Doisy-Védrines AC/MC;null;Barsac-Sauternes;2007;6;7.5;true;210;300;240
+829;L’Extravagant de Doisy-Daëne AC/MC;null;Barsac-Sauternes;2007;1;3.75;true;150;250;200
+830;L’Extravagant de Doisy-Daëne AC/MC;null;Barsac-Sauternes;2007;1;3.75;true;150;250;200
+831;L’Extravagant de Doisy-Daëne AC/MC;null;Barsac-Sauternes;2007;3;3.75;true;450;750;580
+832;Barolo Castelletto;MO/DOCG Piemonte;Mauro Veglio;2006;6;7.5;true;210;300;220
+833;Barolo Castelletto;MO/DOCG Piemonte;Mauro Veglio;2006;6;7.5;true;210;300;215
+834;Barolo Vigneto Rocche;MO/DOCG Piemonte;Mauro Veglio;2005;12;7.5;true;540;720;550
+835;Barolo Vigneto Rocche;MO/DOCG Piemonte;Mauro Veglio;2005;12;7.5;true;540;720;540
+836;Red blend Marangai;MO Neuseeland;null;1995;3;7.5;false;120;210;90
+837;Cuvée Salzberg;DAC/MO Burgenland;Gernot Heinrich;2012;6;7.5;true;720;960;600
+838;Cuvée G;AC/MO Burgenland;Gesellmann;2006;6;7.5;true;480;600;470
+839;Musigny;AC/MO Côte de Nuits;Domaine Jacques Prieur;2010;2;7.5;false;700;1000;700
+840;Musigny;AC/MO Côte de Nuits;Albert Brenot;1966;1;7.5;false;100;150;55
+841;Echezeaux;AC/MO Côte de Nuits;nçois Dargent;1989;5;7.5;false;250;400;300
+842;Richebourg;AC/MO Côte de Nuits;Maison Morin;1992;4;7.5;false;800;1200;700
+843;Richebourg;AC/MO Côte de Nuits;Maison Morin;1993;5;7.5;false;1000;1500;900
+844;Charmes Chambertin;AC/MO Côte de Nuits;Lèonce de Valleroy;1989;4;7.5;false;480;720;320
+845;Charmes Chambertin;AC/MO Côte de Nuits;de Bellegraves;1994;6;7.5;false;300;450;200
+846;Charmes Chambertin;AC/MO Côte de Nuits;de Bellegraves;1994;6;7.5;false;300;450;200
+847;Charmes Chambertin;AC/MO Côte de Nuits;de Bellegraves;1994;6;7.5;false;300;450;200
+848;Gevrey-Chambertin Fonteny;AC/MO Côte de Nuits;Maison de Chirolles & Cie;1994;10;7.5;false;300;500;190
+849;Gevrey-Chambertin Lavaux St. Jacques;AC/MO Côte de Nuits;Maison de Chirolles & Cie;1994;10;7.5;false;500;800;290
+850;Pommard Rugiens;AC/MO Côte de Beaune;Domaine de Obiers;1996;10;7.5;false;300;500;200
+851;Corton Bressandes;AC/MO Côte de Beaune;Domaine Antonin Guyon;2000;2;7.5;false;270;450;190
+852;Hospices de BeauneVillage;AC/MO Côte de Beaune;Nicolas Rollin;1989;11;7.5;false;550;880;300
+853;Beaune Clos des Ursules;AC/MO Côte de Beaune;Louis Jadot;1988;1;7.5;false;495;660;30
+854;Beaune 1996/Santenay 1996;AC/MO Côte de Beaune;Jean Allier;1996;12;7.5;false;120;240;65
+855;Crôzes Hermitage Les Meysonniers;AC/MO Côte du Rhône;Domaine M. Chapoutier;1995;11;7.5;false;110;220;0
+856;Syrah Côte Dorée;AC/MO Languedoc;Domaine de L’Aigueliere;2000;6;7.5;true;120;180;95
+857;Syrah Côte Dorée;AC/MO Languedoc;Domaine de L’Aigueliere;2000;6;7.5;true;120;180;95
+858;Syrah Côte Dorée;AC/MO Languedoc;Domaine de L’Aigueliere;2000;12;7.5;true;240;360;180
+859;Syrah Côte Rousse;AC/MO Languedoc;Domaine de L’Aigueliere;2000;6;7.5;true;120;180;95
+860;Syrah Côte Rousse;AC/MO Languedoc;Domaine de L’Aigueliere;2000;6;7.5;true;120;180;95
+861;Rèserve de la Comtesse;AC/MC Pauillac;null;1990;12;7.5;true;480;660;450
+862;Château Latour;AC/MC Pauillac;null;1991;1;7.5;false;300;400;250
+863;Château Mouton Rothschild;AC/MC Pauillac;null;1969;1;7.5;false;180;300;115
+864;Château Mouton Rothschild;AC/MC Pauillac;null;1972;2;7.5;false;300;450;280
+865;Champagne Cristal;AC/MO Champagne;Champagne Louis Roederer;1989;1;7.5;false;270;350;270
+866;Champagne Cristal;AC/MO Champagne;Champagne Louis Roederer;1989;1;7.5;false;270;350;270
+868;Musigny blanc;AC/MO Côte de Nuits;Comte de Vogüe;1981;1;7.5;false;500;1000;480
+869;Charmes Chambertin;AC/MO Côte de Nuits;Jean Raphet;1981;1;7.5;false;20;30;35
+870;Amarone Classico;MO/DOCG Veneto;Tenuta Lena di Mezzo;2006;6;7.5;true;180;240;140
+871;Campo Ardosa;MO/DOC Doaro;Quinta da Carvalhosa;2003;6;7.5;true;120;180;80
+873;Armagnac;AC/MO Armagnac;Sempé;1942;1;7.5;false;300;500;300
