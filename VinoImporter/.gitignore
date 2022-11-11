@@ -3,7 +3,9 @@
 /.idea/
 import/Wermuth/*
 log/**
-log/vino.log
+**/vino.log
 /target/
 /.apt_generated/
 /.apt_generated_tests/
+vinoStagingFileSteinfels.xlsx
+/validatedOutput/**
