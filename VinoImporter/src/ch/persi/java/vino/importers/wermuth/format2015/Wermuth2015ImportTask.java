@@ -96,10 +96,12 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 			WineOffering aWineOffering = processLine(aCleanedLine);			
 			
 			
-			// diese Zeilen sind auskommentiert / zu auskommentieren, weil ich nach dem Lesen der Files zuerst zur Vorbereitung 
-			// alles in eine Textdatei lese. Diese kann man mit Visual Studio Code schnell optimieren 
-			// das Resultat dieser Optimierung ist eine INput - Resultate Datei die nahezu 100% Verarbeitung gehen sollte. 
+			/* Notiz: diese Zeilen sind auskommentiert / zu auskommentieren, weil ich nach dem Lesen der Files zuerst zur Vorbereitung
+			alles in eine Textdatei lese. Diese kann man mit Visual Studio Code schnell optimieren 
+			das Resultat dieser Optimierung ist eine INput - Resultate Datei die nahezu 100% Verarbeitung gehen sollte. */
+			
 			// writing results
+			
 			if (aWineOffering != null) {
 				anOutputWriter.write(aWineOffering.toXLSString());
 				anOutputWriter.flush();
@@ -151,7 +153,9 @@ public class Wermuth2015ImportTask extends AbstractImportTask {
 	
 	
 	public final WineOffering processLine(String theWineRecordLine) 
-	{		Tuple2<Boolean, String> anOWCProcess = processOWC(theWineRecordLine);		
+	{		
+		
+		Tuple2<Boolean, String> anOWCProcess = processOWC(theWineRecordLine);		
 		String aWineRecordLineWithoutOWC = anOWCProcess.getValue();
 		
 		Tuple2<String,String> anOriginProcess = processOrigin(aWineRecordLineWithoutOWC);
