@@ -8,3 +8,4 @@ VinoImporter/.settings/org.eclipse.jdt.core.prefs
 /.apt_generated_tests/
 vinoStagingFileSteinfels.xlsx
 /validatedOutput/**
+/PersiCommons/build/libs/PersiCommons-0.0.1-SNAPSHOT.jar
