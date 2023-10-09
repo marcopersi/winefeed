@@ -20,7 +20,7 @@ jobs:
   gradle:
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
@@ -36,4 +36,4 @@ jobs:
          gradle-version: 8.3
     
     - name: Execute Gradle build
-      run: ./gradle build
+      run: ./gradlew build
