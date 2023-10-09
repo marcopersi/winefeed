@@ -8,7 +8,11 @@ plugins {
 }
 
 repositories {
+
     mavenLocal()
+
+    mavenCentral()
+
     maven {
         url = uri("https://repo.spring.io/snapshot")
     }
@@ -16,12 +20,17 @@ repositories {
     maven {
         url = uri("https://repo.maven.apache.org/maven2/")
     }
+
+    maven {
+        url = uri("https://repo.spring.io/release")
+    }
+
 }
 
 dependencies {
     implementation ("VinoDomain:VinoDomain:0.0.1-SNAPSHOT")
     api("org.apache.commons:commons-lang3:3.12.0")
-    api("org.springframework:spring-context:6.0.9")
+    api("org.springframework:spring-context:6.0.12")
     api("javax.persistence:javax.persistence-api:2.2")
     api("org.slf4j:slf4j-api:2.0.5")
     api("org.slf4j:slf4j-nop:2.0.5")
@@ -33,7 +42,7 @@ dependencies {
 group = "VinoDao"
 version = "0.0.1-SNAPSHOT"
 description = "Vino Dao"
-java.sourceCompatibility = JavaVersion.VERSION_1_8
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 publishing {
     publications.create<MavenPublication>("maven") {
