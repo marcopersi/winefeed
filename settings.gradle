@@ -2,5 +2,5 @@ rootProject.name = 'wine-app'
 
 include 'PersiCommons'
 include 'VinoDomain'
-include 'VinoDao'
+//include 'VinoDao'
 include 'VinoImporter'
