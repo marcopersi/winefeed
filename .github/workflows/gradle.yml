@@ -36,13 +36,7 @@ jobs:
          gradle-version: 8.3
          
     - name: Change wrapper permissions
-      run: chmod +x gradlew
-
-    - name: Init gradle wrapper
-      run: gradle wrapper
-
-    - name: Change wrapper permissions
-      run: chmod +x gradlew
+      run: chmod +x gradle
 
     - name: Execute Gradle build
       run: gradle build
