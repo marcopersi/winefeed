@@ -10,3 +10,9 @@ log/**
 vinoStagingFileSteinfels.xlsx
 /validatedOutput/**
 /build/libs/VinoImporter-0.0.1-SNAPSHOT.jar
+
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
