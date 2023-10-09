@@ -12,10 +12,36 @@
         </option>
       </GradleProjectSettings>
       <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/Test" />
+        <option name="gradleHome" value="" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/Test" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/VinoDao" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/VinoDao" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/VinoDomain" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/VinoDomain" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/VinoImporter" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/VinoImporter" />
+            <option value="$PROJECT_DIR$/VinoImporter/app" />
           </set>
         </option>
       </GradleProjectSettings>
