@@ -11,42 +11,40 @@ import java.util.List;
 
 public class PDFBoxUtil implements InputParser {
 
-	private static final int MINIMUM_CHARACTERS_PER_LINE = 10;
+    private static final int MINIMUM_CHARACTERS_PER_LINE = 10;
 
-	private ParserSupport parserSupport = null;
-	
-	public void setParserSupport(ParserSupport theParserSupport)
-	{
-		parserSupport = theParserSupport;
-	}
+    private ParserSupport parserSupport = null;
 
-	public ParserSupport getParserSupport()
-	{
-		return parserSupport;
-	}
-	
-	@Override
-	public List<String> parse(String theFileName) {
+    public ParserSupport getParserSupport() {
+        return parserSupport;
+    }
 
-		try (PDDocument pddDocument = PDDocument.load(new File(theFileName))) {
-			List<String> someLines = new ArrayList<>();
+    public void setParserSupport(ParserSupport theParserSupport) {
+        parserSupport = theParserSupport;
+    }
 
-			PDFTextStripper textStripper = new PDFTextStripper();
-			textStripper.setAddMoreFormatting(true);
-			String text = textStripper.getText(pddDocument);
-			String[] someStrings = parserSupport.compact(text.split("\n"));
-			if (someStrings != null && someStrings.length > 0) {
-				for (String aLine : someStrings) {
-					if (aLine.length() > MINIMUM_CHARACTERS_PER_LINE) {
-						someLines.add(aLine);
-					}
-				}
-			}
-			return someLines;
-		} catch (IOException ex) {
-			ex.printStackTrace();
-		}
-		return Collections.emptyList();
-	}
+    @Override
+    public List<String> parse(String theFileName) {
+
+        try (PDDocument pddDocument = PDDocument.load(new File(theFileName))) {
+            List<String> someLines = new ArrayList<>();
+
+            PDFTextStripper textStripper = new PDFTextStripper();
+            textStripper.setAddMoreFormatting(true);
+            String text = textStripper.getText(pddDocument);
+            String[] someStrings = parserSupport.compact(text.split("\n"));
+            if (someStrings != null && someStrings.length > 0) {
+                for (String aLine : someStrings) {
+                    if (aLine.length() > MINIMUM_CHARACTERS_PER_LINE) {
+                        someLines.add(aLine);
+                    }
+                }
+            }
+            return someLines;
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return Collections.emptyList();
+    }
 
 }
