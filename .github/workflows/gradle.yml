@@ -36,10 +36,10 @@ jobs:
          gradle-version: 8.3
 
     - name: Publish local dependency VinoDomain
-      run: ./gradlew -b VinoDomain/build.gradle.kts build --publishToMavenLocal
+      run: ./gradlew -b VinoDomain/build.gradle.kts build publishToMavenLocal
 
     - name: Publish local dependency PersiCommons
-      run: ./gradlew -b PersiCommons/build.gradle.kts build --publishToMavenLocal
+      run: ./gradlew -b PersiCommons/build.gradle.kts build publishToMavenLocal
 
     - name: Execute Gradle build
       run: ./gradlew -b VinoImporter/ci-build.gradle.kts build
