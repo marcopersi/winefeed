@@ -34,6 +34,9 @@ jobs:
       uses: gradle/gradle-build-action@v2
       with:
          gradle-version: 8.3
+
+    - name: Publish local dependencies
+      run: ./gradlew :VinoDomain:publishToMavenLocal :PersiCommons:publishToMavenLocal
          
     - name: Execute Gradle build
       run: ./gradlew -b VinoImporter/ci-build.gradle.kts build
