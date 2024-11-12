@@ -1,29 +1,29 @@
 <?xml version="1.0"?>
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
-"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <!-- Generated 24.12.2010 11:17:06 by Hibernate Tools 3.4.0.Beta1 -->
 <hibernate-mapping>
     <class name="ch.persi.java.vino.domain.Wine" table="WINE">
         <id name="id" type="long">
-            <column name="ID" />
+            <column name="ID"/>
             <generator class="sequence">
                 <param name="sequence">wine_id_seq</param>
             </generator>
         </id>
         <property name="origin" type="java.lang.String">
-            <column name="ORIGIN" />
+            <column name="ORIGIN"/>
         </property>
         <property name="year" type="java.lang.Integer">
-            <column name="YEAR" />
+            <column name="YEAR"/>
         </property>
         <property name="name" type="java.lang.String">
-            <column name="NAME" />
+            <column name="NAME"/>
         </property>
         <property name="region" type="java.lang.String">
-            <column name="REGION" />
+            <column name="REGION"/>
         </property>
         <property name="producer" type="java.lang.String">
-            <column name="PRODUCER" />
+            <column name="PRODUCER"/>
         </property>
     </class>
 </hibernate-mapping>
