@@ -140,46 +140,36 @@ public class Offering {
 	@Override
 	public String toString()
 	{
-		StringBuilder aBuilder = new StringBuilder();
-		aBuilder.append("eventIdentifier=");
-		aBuilder.append(this.eventIdentifier);
-		aBuilder.append(";");
-		
-		aBuilder.append("isOHK=");
-		aBuilder.append(this.isOHK);
-		aBuilder.append(";");
 
-		aBuilder.append("noOfBottles=");
-		aBuilder.append(this.noOfBottles);
-		aBuilder.append(";");
-
-		aBuilder.append("providerOfferingId=");
-		aBuilder.append(this.providerOfferingId);
-		aBuilder.append(";");
-
-		aBuilder.append("note=");
-		aBuilder.append(this.note);
-		aBuilder.append(";");
-
-		aBuilder.append("offeringDate=");
-		aBuilder.append(VinoConstants.vinoDateFormat.format(this.offeringDate)); 
-		aBuilder.append(";");
-
-		aBuilder.append("priceMin=");
-		aBuilder.append(this.priceMin);
-		aBuilder.append(";");
-
-		aBuilder.append("priceMax=");
-		aBuilder.append(this.priceMax);
-		aBuilder.append(";");
-
-		aBuilder.append("realizedPrice=");
-		aBuilder.append(this.realizedPrice);
-		aBuilder.append(";");
-
-		aBuilder.append("provider=");
-		aBuilder.append(this.provider);
-		return aBuilder.toString();
+        return "eventIdentifier=" +
+                this.eventIdentifier +
+                ";" +
+                "isOHK=" +
+                this.isOHK +
+                ";" +
+                "noOfBottles=" +
+                this.noOfBottles +
+                ";" +
+                "providerOfferingId=" +
+                this.providerOfferingId +
+                ";" +
+                "note=" +
+                this.note +
+                ";" +
+                "offeringDate=" +
+                VinoConstants.vinoDateFormat.format(this.offeringDate) +
+                ";" +
+                "priceMin=" +
+                this.priceMin +
+                ";" +
+                "priceMax=" +
+                this.priceMax +
+                ";" +
+                "realizedPrice=" +
+                this.realizedPrice +
+                ";" +
+                "provider=" +
+                this.provider;
 	}
 
 }

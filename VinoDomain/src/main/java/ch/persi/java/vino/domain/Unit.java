@@ -38,9 +38,7 @@ public class Unit {
 	@Override
 	public String toString()
 	{
-		StringBuilder aBuilder = new StringBuilder();
-		aBuilder.append("deciliters=");
-		aBuilder.append(this.deciliters);
-		return aBuilder.toString();		
+        return "deciliters=" +
+                this.deciliters;
 	}
 }

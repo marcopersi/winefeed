@@ -124,7 +124,7 @@ public class Wine {
 		aBuilder.append("vintage=");
 		aBuilder.append(this.vintage);
 
-		if (ratings != null && ratings.size()>0){
+		if (ratings != null && !ratings.isEmpty()){
 			aBuilder.append(";");
 
 			for(int i=0;i<=ratings.size();i++)

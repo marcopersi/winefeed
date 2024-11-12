@@ -11,7 +11,7 @@ public enum Provider {
 
   SOTHEBYS("Sothebys");
 
-  private String provider;
+  private final String provider;
 
   Provider(String theProviderCode) {
     provider = theProviderCode;

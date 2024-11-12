@@ -24,7 +24,7 @@ public enum Origin {
 	
 	MO("MO");
 	
-	private String originIdentifier;
+	private final String originIdentifier;
 	
 	Origin(String theOriginIdentifier)
 	{

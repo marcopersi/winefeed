@@ -20,9 +20,7 @@ public class WineOffering {
 
 	/**
 	 * Constructor, creates a wine offering for the wine in the specified unit (size)
-	 * @param theWine
-	 * @param theWineUnit
-	 */
+     */
 	public WineOffering(Wine theWine, Unit theWineUnit) {
 		super();
 		this.wine = theWine;
@@ -30,10 +28,7 @@ public class WineOffering {
 	}
 
 	/**
-	 * @param theWine
-	 * @param theWineUnit
-	 * @param theOffering
-	 */
+     */
 	public WineOffering(Wine theWine, Unit theWineUnit,Offering theOffering) {
 		this(theWine,theWineUnit);
 		offering=theOffering;
@@ -73,30 +68,28 @@ public class WineOffering {
 
 	public final String toXLSString() {
 
-		StringBuilder aBuilder = new StringBuilder();
-		aBuilder.append(getOffering().getProviderOfferingId());
-		aBuilder.append(";");
-		aBuilder.append(getWine().getName());
-		aBuilder.append(";");
-		aBuilder.append(getWine().getOrigin());
-		aBuilder.append(";");		
-		aBuilder.append(getWine().getProducer());
-		aBuilder.append(";");
-		aBuilder.append(getWine().getVintage());
-		aBuilder.append(";");
-		aBuilder.append(getOffering().getNoOfBottles());
-		aBuilder.append(";");
-		aBuilder.append(getWineUnit().getDeciliters().toPlainString());
-		aBuilder.append(";");
-		aBuilder.append(getOffering().isOHK());
-		aBuilder.append(";");
-		aBuilder.append(getOffering().getPriceMin());
-		aBuilder.append(";");
-		aBuilder.append(getOffering().getPriceMax());
-		aBuilder.append(";");
-		aBuilder.append(getOffering().getRealizedPrice());
-		aBuilder.append("\n");
-		return aBuilder.toString();
+        return getOffering().getProviderOfferingId() +
+                ";" +
+                getWine().getName() +
+                ";" +
+                getWine().getOrigin() +
+                ";" +
+                getWine().getProducer() +
+                ";" +
+                getWine().getVintage() +
+                ";" +
+                getOffering().getNoOfBottles() +
+                ";" +
+                getWineUnit().getDeciliters().toPlainString() +
+                ";" +
+                getOffering().isOHK() +
+                ";" +
+                getOffering().getPriceMin() +
+                ";" +
+                getOffering().getPriceMax() +
+                ";" +
+                getOffering().getRealizedPrice() +
+                "\n";
 	}
 	
 }
