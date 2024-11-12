@@ -15,23 +15,22 @@ import org.xml.sax.ContentHandler;
 
 /**
  * Parsing a PDF using the Tika library
- * @author marcopersi
  *
+ * @author marcopersi
  */
 public class TikaTestPDFParser {
 
-	/**
-	 * @param args
-	 * @throws IOException 
-	 * @throws TikaException 
-	 */
-	public static void main(String[] args) throws IOException, TikaException {
-		test1();
-	}
-	
-	private static final void test1()
-	{
-		try(BufferedInputStream is = new BufferedInputStream(new FileInputStream(new File("prototyping/resources/WZ-255_14112015_Resultate.pdf")))) {
+    /**
+     * @param args
+     * @throws IOException
+     * @throws TikaException
+     */
+    public static void main(String[] args) throws IOException, TikaException {
+        test1();
+    }
+
+    private static final void test1() {
+        try (BufferedInputStream is = new BufferedInputStream(new FileInputStream(new File("prototyping/resources/WZ-255_14112015_Resultate.pdf")))) {
             Parser parser = new AutoDetectParser();
             ContentHandler handler = new BodyContentHandler(System.out);
             Metadata metadata = new Metadata();
@@ -39,6 +38,6 @@ public class TikaTestPDFParser {
         } catch (Exception e) {
             e.printStackTrace(System.out);
         }
-	}
+    }
 
 }
