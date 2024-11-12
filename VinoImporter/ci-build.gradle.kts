@@ -1,6 +1,3 @@
-import org.gradle.plugins.ide.idea.model.IdeaLanguageLevel
-import org.gradle.plugins.ide.idea.model.IdeaModel
-
 // Versions in a centralized block
 val springContextVersion by extra("6.1.14")
 val springBeansVersion by extra("6.0.12")
