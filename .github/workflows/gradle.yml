@@ -36,4 +36,4 @@ jobs:
          gradle-version: 8.3
          
     - name: Execute Gradle build
-      run: ./gradlew build
+      run: ./gradlew -b ci-build.gradle.kts build
