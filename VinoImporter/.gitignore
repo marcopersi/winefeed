@@ -15,3 +15,13 @@ vinoStagingFileSteinfels.xlsx
 /import/Steinfels/379_05032016_Resultate.pdf
 /prototyping/resources/379_05032016_Resultate.pdf
 /QualityCheckPending/Steinfels/379_05032016_Resultate.pdf
+
+../.gradle/buildOutputCleanup/buildOutputCleanup.lock
+../.gradle/buildOutputCleanup/outputFiles.bin
+../VinoDomain/.gradle/buildOutputCleanup/cache.properties
+../.DS_Store
+../VinoDomain/.idea/
+import/.DS_Store
+lib/
+output_Steinfels_05032016.log
+skippedRowsFrom_Steinfels_05032016.log
