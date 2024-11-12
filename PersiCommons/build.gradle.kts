@@ -16,14 +16,14 @@ repositories {
 
 dependencies {
     api("org.apache.commons:commons-lang3:3.12.0")
-    api("org.apache.poi:poi:5.2.2")
-    api("org.apache.poi:poi-ooxml:5.2.2")
+    api("org.apache.poi:poi:5.3.0")
+    api("org.apache.poi:poi-ooxml:5.3.0")
 }
 
 group = "PersiCommons"
-version = "0.0.1-SNAPSHOT"
+version = "1.0.0"
 description = "Persi Commons"
-java.sourceCompatibility = JavaVersion.VERSION_1_8
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 publishing {
     publications.create<MavenPublication>("maven") {

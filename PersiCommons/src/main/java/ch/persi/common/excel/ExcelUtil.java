@@ -75,18 +75,12 @@ public class ExcelUtil {
 
     if (theCell == null) return null;
 
-    switch (theCell.getCellType()) {
-      case BLANK:
-        break;
-      case NUMERIC:
-        return evaluateNumberFormat(theCell);
-      case STRING:
-        return theCell.getStringCellValue().trim();
-      default:
-        break;
-    }
+      return switch (theCell.getCellType()) {
+          case NUMERIC -> evaluateNumberFormat(theCell);
+          case STRING -> theCell.getStringCellValue().trim();
+          default -> null;
+      };
 
-    return null;
   }
 
   public static Double getNumericCellValueUnformatted(final Cell theCell) {
@@ -103,30 +97,35 @@ public class ExcelUtil {
      * assumption is made that dataFormat = 15, when cellType is
      * HSSFCell.CELL_TYPE_NUMERIC is equal to a DATE format.
      */
-    if (dataFormat == 0) {
-      NumberFormat aFormatter = NumberFormat.getInstance();
-      aFormatter.setGroupingUsed(false); // no separators (as thousands...)
-      return aFormatter.format(theCell.getNumericCellValue()).trim();
-    } else if (dataFormat == 15 || dataFormat == 14 || dataFormat == 164) {
-      SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
-      return formatter.format(theCell.getDateCellValue()).trim();
-    } else if (dataFormat == 166) {
-      SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");
-      return formatter.format(theCell.getDateCellValue()).trim();
-    } else {
-      // check if date is feasible
-      String stringCellValue = theCell.getStringCellValue();
-      try {
-        Date parse = DateFormat.getInstance().parse(stringCellValue);
-        if (parse != null) {
-          return DateFormat.getInstance().format(parse);
-        }
-      } catch (ParseException e) {
-        System.out.println("The Cellvalue: '" + stringCellValue + " 'is definitely not a date, will be used as a number now !");
+      switch (dataFormat) {
+          case 0 -> {
+              NumberFormat aFormatter = NumberFormat.getInstance();
+              aFormatter.setGroupingUsed(false); // no separators (as thousands...)
 
+              return aFormatter.format(theCell.getNumericCellValue()).trim(); // no separators (as thousands...)
+          }
+          case 15, 14, 164 -> {
+              SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
+              return formatter.format(theCell.getDateCellValue()).trim();
+          }
+          case 166 -> {
+              SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");
+              return formatter.format(theCell.getDateCellValue()).trim();
+          }
+          default -> {
+              // check if date is feasible
+              String stringCellValue = theCell.getStringCellValue();
+              try {
+                  Date parse = DateFormat.getInstance().parse(stringCellValue);
+                  if (parse != null) {
+                      return DateFormat.getInstance().format(parse);
+                  }
+              } catch (ParseException e) {
+                  System.out.println("The Cellvalue: '" + stringCellValue + " 'is definitely not a date, will be used as a number now !");
+
+              }
+          }
       }
-
-    }
 
     // everything else
     return String.valueOf(theCell.getNumericCellValue()).trim();
