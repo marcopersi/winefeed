@@ -1,6 +1,3 @@
-import org.gradle.plugins.ide.idea.model.IdeaLanguageLevel
-import org.gradle.plugins.ide.idea.model.IdeaModel
-
 // Versions in a centralized block
 val springContextVersion by extra("6.1.14")
 val springBeansVersion by extra("6.0.12")
@@ -17,7 +14,7 @@ val groovyVersion by extra("3.0.17")
 plugins {
     `java-library`
     `maven-publish`
-    id("idea")
+    idea
 }
 repositories {
     mavenLocal()
@@ -58,27 +55,16 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
 
     // Vino Domain
-    implementation("VinoDomain:VinoDomain:1.0.0")
+    implementation(project(":VinoDomain"))
 
     // Excel Util
-    implementation("PersiCommons:PersiCommons:1.0.0")
+    implementation(project(":PersiCommons"))
 
     implementation("org.codehaus.groovy:groovy:$groovyVersion")
     implementation("org.codehaus.groovy:groovy-ant:$groovyVersion")
     implementation("org.codehaus.groovy:groovy-xml:$groovyVersion")
 
     implementation("org.ccil.cowan.tagsoup:tagsoup:1.2.1")
-}
-
-configure<IdeaModel> {
-    project {
-        jdkName = "17"
-        languageLevel = IdeaLanguageLevel("17")
-    }
-    module {
-        isDownloadJavadoc = true
-        isDownloadSources = true
-    }
 }
 
 tasks.test {
