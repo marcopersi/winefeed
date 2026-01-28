@@ -31,15 +31,13 @@ jobs:
         architecture: x64
         
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v3
-      with:
-         gradle-version: 8.3
+      uses: gradle/actions/setup-gradle@v3
 
     - name: Publish local dependency VinoDomain
-      run: ./gradlew -b VinoDomain/build.gradle.kts build publishToMavenLocal
+      run: ./gradlew --project-dir VinoDomain build publishToMavenLocal
 
     - name: Publish local dependency PersiCommons
-      run: ./gradlew -b PersiCommons/build.gradle.kts build publishToMavenLocal
+      run: ./gradlew --project-dir PersiCommons build publishToMavenLocal
 
     - name: Execute Gradle build
-      run: ./gradlew -b VinoImporter/ci-build.gradle.kts build
+      run: ./gradlew --project-dir VinoImporter --build-file ci-build.gradle.kts build
