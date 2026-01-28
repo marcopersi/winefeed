@@ -52,13 +52,14 @@ dependencies {
     implementation("com.itextpdf:itextpdf:$itextpdfVersion")
 
     // JUNIT 5
-    testImplementation("org.junit.jupiter:junit-jupiter:6.0.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    // Vino Domain
-    implementation(project(":VinoDomain"))
+    // Vino Domain - use Maven coordinates for local repo
+    implementation("VinoDomain:VinoDomain:1.0.0")
 
-    // Excel Util
-    implementation(project(":PersiCommons"))
+    // Excel Util - use Maven coordinates for local repo
+    implementation("PersiCommons:PersiCommons:1.0.0")
 
     implementation("org.codehaus.groovy:groovy:$groovyVersion")
     implementation("org.codehaus.groovy:groovy-ant:$groovyVersion")
