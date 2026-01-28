@@ -29,11 +29,11 @@ repositories {
 
 dependencies {
     implementation ("VinoDomain:VinoDomain:0.0.1-SNAPSHOT")
-    api("org.apache.commons:commons-lang3:3.12.0")
+    api("org.apache.commons:commons-lang3:3.20.0")
     api("org.springframework:spring-context:6.0.12")
     api("javax.persistence:javax.persistence-api:2.2")
-    api("org.slf4j:slf4j-api:2.0.5")
-    api("org.slf4j:slf4j-nop:2.0.5")
+    api("org.slf4j:slf4j-api:2.0.17")
+    api("org.slf4j:slf4j-nop:2.0.17")
     api("org.hibernate:hibernate-core:6.1.7.Final")
     api("org.springframework:spring-orm:6.0.6")
     api("junit:junit:4.13.2")

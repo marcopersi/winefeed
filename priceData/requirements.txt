@@ -6,7 +6,7 @@ pyarrow==21.0.0
 # Machine learning and AI
 scikit-learn==1.6.1
 scipy==1.13.1
-torch==2.7.1
+torch==2.8.0
 transformers==4.54.1
 sentence-transformers==5.0.0
 
@@ -23,7 +23,7 @@ pydeck==0.9.1
 chromadb==1.0.15
 
 # HTTP requests and API
-requests==2.32.4
+requests==2.32.5
 httpx==0.28.1
 
 # Database and Backend
@@ -40,4 +40,4 @@ tqdm==4.67.1
 python-dateutil==2.9.0.post0
 
 # Development and build tools
-build==1.2.2.post1
+build==1.4.0
