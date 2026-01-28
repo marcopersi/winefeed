@@ -1,9 +1,15 @@
 {
-  "threshold": 20,
-  "minTokens": 50,
+  "threshold": 100,
+  "minTokens": 100,
+  "minLines": 20,
+  "maxLines": 500,
+  "maxSize": "100kb",
   "ignore": [
     "**/.idea/**",
     "**/archive/**",
+    "archive/**",
+    "**/OldSourceVino/**",
+    "OldSourceVino/**",
     "**/build/**",
     "**/bin/**",
     "**/node_modules/**",
@@ -11,6 +17,13 @@
     "**/war/**",
     "**/validatedOutput/**",
     "**/prototyping/**",
-    "**/OldSourceVino/**"
-  ]
+    "**/*.min.js",
+    "**/VinoGUI/**",
+    "**/*_OLD.*",
+    "**/*_OLD.py",
+    "**/*_OLD.java"
+  ],
+  "gitignore": true,
+  "path": ["."],
+  "silent": false
 }
