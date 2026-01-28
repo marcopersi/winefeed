@@ -12,7 +12,6 @@
         <option value="$PROJECT_DIR$/PersiCommons/pom.xml" />
         <option value="$PROJECT_DIR$/priceservice/pom.xml" />
         <option value="$PROJECT_DIR$/VinoDomain/pom.xml" />
-        <option value="$PROJECT_DIR$/VinoDao/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">

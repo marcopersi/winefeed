@@ -9,7 +9,6 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/PersiCommons" />
-            <option value="$PROJECT_DIR$/VinoDao" />
             <option value="$PROJECT_DIR$/VinoDomain" />
             <option value="$PROJECT_DIR$/VinoImporter" />
           </set>
@@ -29,14 +28,6 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/Test" />
-          </set>
-        </option>
-      </GradleProjectSettings>
-      <GradleProjectSettings>
-        <option name="externalProjectPath" value="$PROJECT_DIR$/VinoDao" />
-        <option name="modules">
-          <set>
-            <option value="$PROJECT_DIR$/VinoDao" />
           </set>
         </option>
       </GradleProjectSettings>
