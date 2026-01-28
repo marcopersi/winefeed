@@ -1,0 +1,43 @@
+# Core data processing and analysis
+pandas==2.3.1
+numpy==2.0.2
+pyarrow==21.0.0
+
+# Machine learning and AI
+scikit-learn==1.6.1
+scipy==1.13.1
+torch==2.7.1
+transformers==4.54.1
+sentence-transformers==5.0.0
+
+# Data visualization
+matplotlib==3.9.4
+plotly==6.2.0
+altair==5.5.0
+
+# Web framework and UI
+streamlit==1.47.1
+pydeck==0.9.1
+
+# Vector database and search
+chromadb==1.0.15
+
+# HTTP requests and API
+requests==2.32.4
+httpx==0.28.1
+
+# Database and Backend
+supabase==2.3.4
+postgrest==0.16.8
+
+# Configuration and environment
+python-dotenv==1.1.1
+pyyaml==6.0.2
+
+# Utilities
+click==8.1.8
+tqdm==4.67.1
+python-dateutil==2.9.0.post0
+
+# Development and build tools
+build==1.2.2.post1
