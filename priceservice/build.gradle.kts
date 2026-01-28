@@ -25,7 +25,7 @@ dependencies {
     implementation("org.projectlombok:lombok:1.18.28")
     annotationProcessor("org.projectlombok:lombok:1.18.28")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa") // Für JPA
-    runtimeOnly("org.postgresql:postgresql:42.6.0") // PostgreSQL-Treiber
+    runtimeOnly("org.postgresql:postgresql:42.7.9") // PostgreSQL-Treiber
 }
 
 tasks.test {
