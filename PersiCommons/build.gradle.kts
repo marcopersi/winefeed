@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    api("org.apache.commons:commons-lang3:3.12.0")
+    api("org.apache.commons:commons-lang3:3.20.0")
     api("org.apache.poi:poi:5.5.1")
     api("org.apache.poi:poi-ooxml:5.5.1")
 }
