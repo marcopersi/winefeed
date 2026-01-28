@@ -62,17 +62,11 @@ jobs:
       - name: Build VinoDomain
         run: ./gradlew -b VinoDomain/build.gradle.kts build
 
-      - name: Build VinoDao
-        run: ./gradlew -b VinoDao/build.gradle.kts build
-
       - name: Build priceservice
         run: ./gradlew -b priceservice/build.gradle.kts build
 
       - name: Build VinoImporter
         run: ./gradlew -b VinoImporter/ci-build.gradle.kts build
-
-      - name: Build VinoGUI (Maven)
-        run: mvn -B -f VinoGUI/pom.xml verify
 
       - name: Build price-service-ui
         run: |
