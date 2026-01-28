@@ -29,8 +29,8 @@ repositories {
 
 dependencies {
     implementation ("VinoDomain:VinoDomain:0.0.1-SNAPSHOT")
+    api("org.springframework:spring-context:7.0.3")
     api("org.apache.commons:commons-lang3:3.20.0")
-    api("org.springframework:spring-context:6.0.12")
     api("javax.persistence:javax.persistence-api:2.2")
     api("org.hibernate:hibernate-core:7.2.2.Final")
     api("org.slf4j:slf4j-api:2.0.17")
