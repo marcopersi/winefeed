@@ -1,8 +1,0 @@
-2026-01-28T10:02:38.3910000Z Job is about to start running on the hosted runner: GitHub Actions 1000007438
-2026-01-28T10:02:38.3840000Z Evaluating owasp-dependency-check.if
-2026-01-28T10:02:38.3840000Z Evaluating: success()
-2026-01-28T10:02:38.3840000Z Result: true
-2026-01-28T10:02:38.3910000Z Job is waiting for a hosted runner to come online.
-2026-01-28T10:02:38.3860000Z Requested labels: ubuntu-latest
-2026-01-28T10:02:38.3860000Z Job defined at: marcopersi/winefeed/.github/workflows/ci.yml@refs/heads/master
-2026-01-28T10:02:38.3860000Z Waiting for a runner to pick up this job...
