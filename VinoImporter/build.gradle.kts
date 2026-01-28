@@ -52,7 +52,7 @@ dependencies {
     implementation("com.itextpdf:itextpdf:$itextpdfVersion")
 
     // JUNIT 5
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.0.2")
 
     // Vino Domain
     implementation(project(":VinoDomain"))
