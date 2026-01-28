@@ -4,7 +4,10 @@ Der Pre-commit Hook läuft automatisch vor jedem Commit und führt folgende Chec
 
 ## Checks
 
-1. **Code Formatting** - Formatiert Markdown, YAML und JSON mit Prettier
+1. **Code Formatting & Linting**
+   - **Prettier** - Formatiert JavaScript, JSON, Markdown, YAML
+   - **Pylint** - Lintet Python-Dateien in priceData/
+   - **ESLint** - Lintet und fixiert JavaScript in price-service-ui/
 2. **Gradle Builds** - Baut alle Gradle-Projekte (PersiCommons, VinoDomain, priceservice, VinoImporter)
 3. **NPM Build** - Baut price-service-ui
 4. **Markdown Lint** - Prüft README.md
