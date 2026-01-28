@@ -60,16 +60,16 @@ jobs:
           cache-dependency-path: price-service-ui/package-lock.json
 
       - name: Build PersiCommons
-        run: ./gradlew --project-dir PersiCommons build
+        run: ./gradlew --project-dir PersiCommons build publishToMavenLocal
 
       - name: Build VinoDomain
-        run: ./gradlew --project-dir VinoDomain build
+        run: ./gradlew --project-dir VinoDomain build publishToMavenLocal
 
       - name: Build priceservice
         run: ./gradlew --project-dir priceservice build
 
       - name: Build VinoImporter
-        run: ./gradlew --project-dir VinoImporter --build-file ci-build.gradle.kts build
+        run: cd VinoImporter && ./gradlew -b ci-build.gradle.kts build
 
       - name: Build price-service-ui
         run: |
