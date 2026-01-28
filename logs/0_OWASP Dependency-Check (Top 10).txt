@@ -1,0 +1,30 @@
+﻿2026-01-28T10:02:40.9946867Z Current runner version: '2.331.0'
+2026-01-28T10:02:40.9975063Z ##[group]Runner Image Provisioner
+2026-01-28T10:02:40.9975888Z Hosted Compute Agent
+2026-01-28T10:02:40.9976436Z Version: 20260115.477
+2026-01-28T10:02:40.9977087Z Commit: 4b342d620503cbe250a3154040964899ea7c9b00
+2026-01-28T10:02:40.9977769Z Build Date: 2026-01-15T22:32:41Z
+2026-01-28T10:02:40.9978385Z Worker ID: {cee88b3d-10a5-45a5-b5f6-8a2e06360d56}
+2026-01-28T10:02:40.9979151Z Azure Region: centralus
+2026-01-28T10:02:40.9979670Z ##[endgroup]
+2026-01-28T10:02:40.9981424Z ##[group]Operating System
+2026-01-28T10:02:40.9982092Z Ubuntu
+2026-01-28T10:02:40.9982581Z 24.04.3
+2026-01-28T10:02:40.9982995Z LTS
+2026-01-28T10:02:40.9983544Z ##[endgroup]
+2026-01-28T10:02:40.9984055Z ##[group]Runner Image
+2026-01-28T10:02:40.9984552Z Image: ubuntu-24.04
+2026-01-28T10:02:40.9985087Z Version: 20260119.4.1
+2026-01-28T10:02:40.9986235Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260119.4/images/ubuntu/Ubuntu2404-Readme.md
+2026-01-28T10:02:40.9987706Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260119.4
+2026-01-28T10:02:40.9988604Z ##[endgroup]
+2026-01-28T10:02:40.9989681Z ##[group]GITHUB_TOKEN Permissions
+2026-01-28T10:02:40.9992560Z Contents: read
+2026-01-28T10:02:40.9993082Z Metadata: read
+2026-01-28T10:02:40.9993603Z SecurityEvents: write
+2026-01-28T10:02:40.9994213Z ##[endgroup]
+2026-01-28T10:02:40.9996345Z Secret source: Actions
+2026-01-28T10:02:40.9997302Z Prepare workflow directory
+2026-01-28T10:02:41.0343221Z Prepare all required actions
+2026-01-28T10:02:41.0384628Z Getting action download info
+2026-01-28T10:02:41.4719218Z ##[error]Unable to resolve action `dependency-check/dependency-check_action@v3.1.0`, unable to find version `v3.1.0`

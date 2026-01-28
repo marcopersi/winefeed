@@ -1,0 +1,381 @@
+﻿2026-01-28T10:02:40.6128503Z Current runner version: '2.331.0'
+2026-01-28T10:02:40.6164147Z ##[group]Runner Image Provisioner
+2026-01-28T10:02:40.6165699Z Hosted Compute Agent
+2026-01-28T10:02:40.6166524Z Version: 20260115.477
+2026-01-28T10:02:40.6167800Z Commit: 4b342d620503cbe250a3154040964899ea7c9b00
+2026-01-28T10:02:40.6168929Z Build Date: 2026-01-15T22:32:41Z
+2026-01-28T10:02:40.6170073Z Worker ID: {896e90df-bda5-4b06-835c-841d4ef951ea}
+2026-01-28T10:02:40.6171545Z Azure Region: northcentralus
+2026-01-28T10:02:40.6172555Z ##[endgroup]
+2026-01-28T10:02:40.6175965Z ##[group]Operating System
+2026-01-28T10:02:40.6176972Z Ubuntu
+2026-01-28T10:02:40.6177797Z 24.04.3
+2026-01-28T10:02:40.6178527Z LTS
+2026-01-28T10:02:40.6179484Z ##[endgroup]
+2026-01-28T10:02:40.6180264Z ##[group]Runner Image
+2026-01-28T10:02:40.6181319Z Image: ubuntu-24.04
+2026-01-28T10:02:40.6182248Z Version: 20260119.4.1
+2026-01-28T10:02:40.6184252Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260119.4/images/ubuntu/Ubuntu2404-Readme.md
+2026-01-28T10:02:40.6187177Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260119.4
+2026-01-28T10:02:40.6188860Z ##[endgroup]
+2026-01-28T10:02:40.6190942Z ##[group]GITHUB_TOKEN Permissions
+2026-01-28T10:02:40.6193936Z Contents: read
+2026-01-28T10:02:40.6195130Z Metadata: read
+2026-01-28T10:02:40.6196392Z SecurityEvents: write
+2026-01-28T10:02:40.6197275Z ##[endgroup]
+2026-01-28T10:02:40.6200162Z Secret source: Actions
+2026-01-28T10:02:40.6201426Z Prepare workflow directory
+2026-01-28T10:02:40.6631394Z Prepare all required actions
+2026-01-28T10:02:40.6688049Z Getting action download info
+2026-01-28T10:02:41.0839833Z Download action repository 'actions/checkout@v6' (SHA:8e8c483db84b4bee98b60c0593521ed34d9990e8)
+2026-01-28T10:02:41.1948870Z Download action repository 'actions/setup-java@v5' (SHA:be666c2fcd27ec809703dec50e508c2fdc7f6654)
+2026-01-28T10:02:41.6656390Z Download action repository 'gradle/gradle-build-action@v3' (SHA:ac2d340dc04d9e1113182899e983b5400c17cda1)
+2026-01-28T10:02:41.9701209Z Download action repository 'actions/setup-node@v6' (SHA:6044e13b5dc448c55e2357c09f80417699197238)
+2026-01-28T10:02:42.5418885Z Getting action download info
+2026-01-28T10:02:42.7238884Z Download action repository 'gradle/actions@v3.5.0' (SHA:d9c87d481d55275bb5441eef3fe0e46805f9ef70)
+2026-01-28T10:02:43.5527235Z Complete job name: Build all subprojects
+2026-01-28T10:02:43.6180728Z ##[group]Run actions/checkout@v6
+2026-01-28T10:02:43.6181348Z with:
+2026-01-28T10:02:43.6181597Z   repository: marcopersi/winefeed
+2026-01-28T10:02:43.6182072Z   token: ***
+2026-01-28T10:02:43.6182315Z   ssh-strict: true
+2026-01-28T10:02:43.6182547Z   ssh-user: git
+2026-01-28T10:02:43.6182787Z   persist-credentials: true
+2026-01-28T10:02:43.6183043Z   clean: true
+2026-01-28T10:02:43.6183294Z   sparse-checkout-cone-mode: true
+2026-01-28T10:02:43.6183574Z   fetch-depth: 1
+2026-01-28T10:02:43.6183801Z   fetch-tags: false
+2026-01-28T10:02:43.6184028Z   show-progress: true
+2026-01-28T10:02:43.6184263Z   lfs: false
+2026-01-28T10:02:43.6184486Z   submodules: false
+2026-01-28T10:02:43.6185000Z   set-safe-directory: true
+2026-01-28T10:02:43.6260118Z ##[endgroup]
+2026-01-28T10:02:43.7266143Z Syncing repository: marcopersi/winefeed
+2026-01-28T10:02:43.7267570Z ##[group]Getting Git version info
+2026-01-28T10:02:43.7268079Z Working directory is '/home/runner/work/winefeed/winefeed'
+2026-01-28T10:02:43.7268885Z [command]/usr/bin/git version
+2026-01-28T10:02:43.7316258Z git version 2.52.0
+2026-01-28T10:02:43.7337612Z ##[endgroup]
+2026-01-28T10:02:43.7351573Z Temporarily overriding HOME='/home/runner/work/_temp/93001a1c-0349-4d3b-a763-c53249c012a4' before making global git config changes
+2026-01-28T10:02:43.7353125Z Adding repository directory to the temporary git global config as a safe directory
+2026-01-28T10:02:43.7356597Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/winefeed/winefeed
+2026-01-28T10:02:43.7396610Z Deleting the contents of '/home/runner/work/winefeed/winefeed'
+2026-01-28T10:02:43.7400012Z ##[group]Initializing the repository
+2026-01-28T10:02:43.7404252Z [command]/usr/bin/git init /home/runner/work/winefeed/winefeed
+2026-01-28T10:02:43.7505987Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-01-28T10:02:43.7506802Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-01-28T10:02:43.7507470Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-01-28T10:02:43.7507941Z hint: call:
+2026-01-28T10:02:43.7508249Z hint:
+2026-01-28T10:02:43.7509023Z hint: 	git config --global init.defaultBranch <name>
+2026-01-28T10:02:43.7509663Z hint:
+2026-01-28T10:02:43.7510059Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-01-28T10:02:43.7510867Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-01-28T10:02:43.7511730Z hint:
+2026-01-28T10:02:43.7512169Z hint: 	git branch -m <name>
+2026-01-28T10:02:43.7512734Z hint:
+2026-01-28T10:02:43.7513460Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-01-28T10:02:43.7514679Z Initialized empty Git repository in /home/runner/work/winefeed/winefeed/.git/
+2026-01-28T10:02:43.7521716Z [command]/usr/bin/git remote add origin https://github.com/marcopersi/winefeed
+2026-01-28T10:02:43.7556684Z ##[endgroup]
+2026-01-28T10:02:43.7557469Z ##[group]Disabling automatic garbage collection
+2026-01-28T10:02:43.7561353Z [command]/usr/bin/git config --local gc.auto 0
+2026-01-28T10:02:43.7589828Z ##[endgroup]
+2026-01-28T10:02:43.7590537Z ##[group]Setting up auth
+2026-01-28T10:02:43.7591528Z Removing SSH command configuration
+2026-01-28T10:02:43.7598240Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-01-28T10:02:43.7631325Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-01-28T10:02:43.8005102Z Removing HTTP extra header
+2026-01-28T10:02:43.8011375Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-01-28T10:02:43.8045896Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-01-28T10:02:43.8268844Z Removing includeIf entries pointing to credentials config files
+2026-01-28T10:02:43.8276359Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-01-28T10:02:43.8308664Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-01-28T10:02:43.8536374Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-01-28T10:02:43.8573640Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/winefeed/winefeed/.git.path /home/runner/work/_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:43.8604670Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/winefeed/winefeed/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:43.8637019Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:43.8667843Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:43.8695246Z ##[endgroup]
+2026-01-28T10:02:43.8696029Z ##[group]Fetching the repository
+2026-01-28T10:02:43.8704435Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +05ed3163be4ae7e7e9674a14eaca45643a16faf4:refs/remotes/origin/master
+2026-01-28T10:02:44.7851093Z From https://github.com/marcopersi/winefeed
+2026-01-28T10:02:44.7851894Z  * [new ref]         05ed3163be4ae7e7e9674a14eaca45643a16faf4 -> origin/master
+2026-01-28T10:02:44.7892377Z ##[endgroup]
+2026-01-28T10:02:44.7893078Z ##[group]Determining the checkout info
+2026-01-28T10:02:44.7896029Z ##[endgroup]
+2026-01-28T10:02:44.7900730Z [command]/usr/bin/git sparse-checkout disable
+2026-01-28T10:02:44.7951820Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-01-28T10:02:44.7988234Z ##[group]Checking out the ref
+2026-01-28T10:02:44.7992569Z [command]/usr/bin/git checkout --progress --force -B master refs/remotes/origin/master
+2026-01-28T10:02:45.0007449Z Reset branch 'master'
+2026-01-28T10:02:45.0008589Z branch 'master' set up to track 'origin/master'.
+2026-01-28T10:02:45.0026921Z ##[endgroup]
+2026-01-28T10:02:45.0072605Z [command]/usr/bin/git log -1 --format=%H
+2026-01-28T10:02:45.0099201Z 05ed3163be4ae7e7e9674a14eaca45643a16faf4
+2026-01-28T10:02:45.0365663Z ##[group]Run actions/setup-java@v5
+2026-01-28T10:02:45.0365978Z with:
+2026-01-28T10:02:45.0366159Z   distribution: temurin
+2026-01-28T10:02:45.0366359Z   java-version: 17
+2026-01-28T10:02:45.0366547Z   java-package: jdk
+2026-01-28T10:02:45.0366742Z   check-latest: false
+2026-01-28T10:02:45.0366930Z   server-id: github
+2026-01-28T10:02:45.0367120Z   server-username: GITHUB_ACTOR
+2026-01-28T10:02:45.0367350Z   server-password: GITHUB_TOKEN
+2026-01-28T10:02:45.0367582Z   overwrite-settings: true
+2026-01-28T10:02:45.0367790Z   job-status: success
+2026-01-28T10:02:45.0368123Z   token: ***
+2026-01-28T10:02:45.0368296Z ##[endgroup]
+2026-01-28T10:02:45.1854277Z ##[group]Installed distributions
+2026-01-28T10:02:45.1923411Z Resolved Java 17.0.17+10 from tool-cache
+2026-01-28T10:02:45.1923973Z Setting Java 17.0.17+10 as the default
+2026-01-28T10:02:45.1935261Z Creating toolchains.xml for JDK version 17 from temurin
+2026-01-28T10:02:45.2015012Z Writing to /home/runner/.m2/toolchains.xml
+2026-01-28T10:02:45.2015675Z 
+2026-01-28T10:02:45.2015847Z Java configuration:
+2026-01-28T10:02:45.2016254Z   Distribution: temurin
+2026-01-28T10:02:45.2016617Z   Version: 17.0.17+10
+2026-01-28T10:02:45.2017177Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:45.2017542Z 
+2026-01-28T10:02:45.2017873Z ##[endgroup]
+2026-01-28T10:02:45.2031607Z Creating settings.xml with server-id: github
+2026-01-28T10:02:45.2033974Z Writing to /home/runner/.m2/settings.xml
+2026-01-28T10:02:45.2382977Z ##[group]Run gradle/gradle-build-action@v3
+2026-01-28T10:02:45.2383278Z with:
+2026-01-28T10:02:45.2383459Z   gradle-version: 8.3
+2026-01-28T10:02:45.2383658Z   cache-disabled: false
+2026-01-28T10:02:45.2383862Z   cache-read-only: false
+2026-01-28T10:02:45.2384069Z   cache-write-only: false
+2026-01-28T10:02:45.2384284Z   cache-overwrite-existing: false
+2026-01-28T10:02:45.2384573Z   gradle-home-cache-includes: caches
+notifications
+
+2026-01-28T10:02:45.2385048Z   gradle-home-cache-cleanup: false
+2026-01-28T10:02:45.2385305Z   add-job-summary: always
+2026-01-28T10:02:45.2385527Z   add-job-summary-as-pr-comment: never
+2026-01-28T10:02:45.2385795Z   dependency-graph: disabled
+2026-01-28T10:02:45.2386050Z   dependency-graph-continue-on-failure: true
+2026-01-28T10:02:45.2386327Z   build-scan-publish: false
+2026-01-28T10:02:45.2386547Z   validate-wrappers: false
+2026-01-28T10:02:45.2386756Z   generate-job-summary: true
+2026-01-28T10:02:45.2386998Z   gradle-home-cache-strict-match: false
+2026-01-28T10:02:45.2387291Z   workflow-job-context: null
+2026-01-28T10:02:45.2387674Z   github-token: ***
+2026-01-28T10:02:45.2387860Z env:
+2026-01-28T10:02:45.2388135Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:45.2388590Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:45.2388944Z ##[endgroup]
+2026-01-28T10:02:45.2563651Z ##[group]Run gradle/actions/setup-gradle@v3.5.0
+2026-01-28T10:02:45.2563962Z with:
+2026-01-28T10:02:45.2564369Z   gradle-version: 8.3
+2026-01-28T10:02:45.2564571Z   cache-disabled: false
+2026-01-28T10:02:45.2564944Z   cache-read-only: false
+2026-01-28T10:02:45.2565157Z   cache-write-only: false
+2026-01-28T10:02:45.2565376Z   cache-overwrite-existing: false
+2026-01-28T10:02:45.2565664Z   gradle-home-cache-includes: caches
+notifications
+
+2026-01-28T10:02:45.2565981Z   gradle-home-cache-cleanup: false
+2026-01-28T10:02:45.2566212Z   add-job-summary: always
+2026-01-28T10:02:45.2566451Z   add-job-summary-as-pr-comment: never
+2026-01-28T10:02:45.2566704Z   dependency-graph: disabled
+2026-01-28T10:02:45.2566955Z   dependency-graph-continue-on-failure: true
+2026-01-28T10:02:45.2567224Z   build-scan-publish: false
+2026-01-28T10:02:45.2567441Z   validate-wrappers: false
+2026-01-28T10:02:45.2567649Z   generate-job-summary: true
+2026-01-28T10:02:45.2567893Z   gradle-home-cache-strict-match: false
+2026-01-28T10:02:45.2568149Z   workflow-job-context: null
+2026-01-28T10:02:45.2568552Z   github-token: ***
+2026-01-28T10:02:45.2568750Z env:
+2026-01-28T10:02:45.2569016Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:45.2569482Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:45.2569876Z   GRADLE_ACTION_ID: gradle/gradle-build-action
+2026-01-28T10:02:45.2570126Z ##[endgroup]
+2026-01-28T10:02:45.6580805Z Merged default JDK locations into /home/runner/.m2/toolchains.xml
+2026-01-28T10:02:45.6583891Z ##[group]Restore Gradle state from cache
+2026-01-28T10:02:45.7567452Z ##[warning]Failed to restore gradle-home-v1|Linux|build[b8a35c2f917259958c9abe8f2ff1b5ff]-05ed3163be4ae7e7e9674a14eaca45643a16faf4: Error: Cache service responded with 400
+2026-01-28T10:02:45.7629875Z Gradle User Home cache not found. Will initialize empty.
+2026-01-28T10:02:45.7630832Z ##[endgroup]
+2026-01-28T10:02:45.8065871Z ##[group]Provision Gradle 8.3
+2026-01-28T10:02:45.8387877Z ##[warning]Restore Gradle distribution 8.3 failed: Error: Cache service responded with 400
+2026-01-28T10:02:45.8389244Z Gradle distribution 8.3 not found in cache. Will download.
+2026-01-28T10:02:46.6848592Z Downloaded https://services.gradle.org/distributions/gradle-8.3-bin.zip to /home/runner/gradle-installations/downloads/gradle-8.3-bin.zip (size 130639305)
+2026-01-28T10:02:46.6982641Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/winefeed/winefeed --files-from manifest.txt --use-compress-program zstdmt
+2026-01-28T10:02:46.8966965Z ##[warning]Save Gradle distribution 8.3 failed: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0xt55aQAAAACncwJY2zGTQYYusiK7yCzXQ0hJMzBFREdFMDQyMgBFZGdl
+2026-01-28T10:02:46.8985666Z [command]/usr/bin/unzip -o -q /home/runner/gradle-installations/downloads/gradle-8.3-bin.zip
+2026-01-28T10:02:47.8666549Z Extracted Gradle 8.3 to /home/runner/gradle-installations/installs/gradle-8.3
+2026-01-28T10:02:47.8668974Z Provisioned Gradle executable /home/runner/gradle-installations/installs/gradle-8.3/bin/gradle
+2026-01-28T10:02:47.8671442Z ##[endgroup]
+2026-01-28T10:02:47.8874066Z ##[group]Run actions/setup-node@v6
+2026-01-28T10:02:47.8874333Z with:
+2026-01-28T10:02:47.8874498Z   node-version: 20
+2026-01-28T10:02:47.8874681Z   cache: npm
+2026-01-28T10:02:47.8875267Z   cache-dependency-path: price-service-ui/package-lock.json
+2026-01-28T10:02:47.8875597Z   check-latest: false
+2026-01-28T10:02:47.8875887Z   token: ***
+2026-01-28T10:02:47.8876084Z   package-manager-cache: true
+2026-01-28T10:02:47.8876325Z env:
+2026-01-28T10:02:47.8876597Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:47.8877064Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:47.8877438Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-01-28T10:02:47.8877712Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+2026-01-28T10:02:47.8878111Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-01-28T10:02:47.8878796Z   DEVELOCITY_AUTO_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-01-28T10:02:47.8879134Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-01-28T10:02:47.8879372Z ##[endgroup]
+2026-01-28T10:02:48.0209765Z Found in cache @ /opt/hostedtoolcache/node/20.20.0/x64
+2026-01-28T10:02:48.0213252Z ##[group]Environment details
+2026-01-28T10:02:48.3580187Z node: v20.20.0
+2026-01-28T10:02:48.3580600Z npm: 10.8.2
+2026-01-28T10:02:48.3580923Z yarn: 1.22.22
+2026-01-28T10:02:48.3581514Z ##[endgroup]
+2026-01-28T10:02:48.3600059Z [command]/opt/hostedtoolcache/node/20.20.0/x64/bin/npm config get cache
+2026-01-28T10:02:48.4762338Z /home/runner/.npm
+2026-01-28T10:02:48.6003791Z npm cache is not found
+2026-01-28T10:02:48.6116117Z ##[group]Run ./gradlew -b PersiCommons/build.gradle.kts build
+2026-01-28T10:02:48.6116624Z [36;1m./gradlew -b PersiCommons/build.gradle.kts build[0m
+2026-01-28T10:02:48.6158121Z shell: /usr/bin/bash -e {0}
+2026-01-28T10:02:48.6158360Z env:
+2026-01-28T10:02:48.6158660Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:48.6159141Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.17-10/x64
+2026-01-28T10:02:48.6159537Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-01-28T10:02:48.6159806Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+2026-01-28T10:02:48.6160233Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-01-28T10:02:48.6160711Z   DEVELOCITY_AUTO_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-01-28T10:02:48.6161020Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-01-28T10:02:48.6161254Z ##[endgroup]
+2026-01-28T10:02:48.7554463Z Downloading https://services.gradle.org/distributions/gradle-9.3.0-bin.zip
+2026-01-28T10:02:50.3262009Z .............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+2026-01-28T10:02:51.6240691Z 
+2026-01-28T10:02:51.6241296Z Welcome to Gradle 9.3.0!
+2026-01-28T10:02:51.6253490Z 
+2026-01-28T10:02:51.6255566Z Unknown command-line option '-b'.
+2026-01-28T10:02:51.6255967Z 
+2026-01-28T10:02:51.6256496Z To see more detail about a task, run gradlew help --task <task>
+2026-01-28T10:02:51.6257449Z For example, gradlew help --task PersiCommons/build.gradle.kts
+2026-01-28T10:02:51.6257916Z 
+2026-01-28T10:02:51.6258250Z To see a list of available tasks, run gradlew tasks
+2026-01-28T10:02:51.6258646Z 
+2026-01-28T10:02:51.6258906Z USAGE: gradlew [option...] [task...]
+2026-01-28T10:02:51.6259209Z 
+2026-01-28T10:02:51.6259615Z -?, -h, --help                     Shows this help message.
+2026-01-28T10:02:51.6260012Z 
+2026-01-28T10:02:51.6260688Z -a, --no-rebuild                   Do not rebuild project dependencies.
+2026-01-28T10:02:51.6261435Z Here are the highlights of this release:
+2026-01-28T10:02:51.6267911Z --build-cache                      Enables the Gradle build cache. Gradle will try to reuse outputs from previous builds.
+2026-01-28T10:02:51.6268991Z  - Test reporting improvements
+2026-01-28T10:02:51.6269513Z  - Error and warning improvements
+2026-01-28T10:02:51.6270020Z  - Build authoring improvements
+2026-01-28T10:02:51.6270326Z 
+2026-01-28T10:02:51.6270821Z For more details see https://docs.gradle.org/9.3.0/release-notes.html
+2026-01-28T10:02:51.6271327Z 
+2026-01-28T10:02:51.6272913Z --no-build-cache                   Disables the Gradle build cache.
+2026-01-28T10:02:51.6274622Z --configuration-cache              Enables the configuration cache. Gradle will try to reuse the build configuration from previous builds.
+2026-01-28T10:02:51.6276678Z --no-configuration-cache           Disables the configuration cache.
+2026-01-28T10:02:51.6278424Z --configuration-cache-problems     Configures how the configuration cache handles problems (fail or warn). Defaults to fail.
+2026-01-28T10:02:51.6281111Z --configure-on-demand              Configure necessary projects only. Gradle will attempt to reduce configuration time for large multi-project builds. [incubating]
+2026-01-28T10:02:51.6284106Z --no-configure-on-demand           Disables the use of configuration on demand. [incubating]
+2026-01-28T10:02:51.6286647Z --console                          Specifies which type of console output to generate. Values are 'plain', 'colored', 'auto' (default), 'rich' or 'verbose'.
+2026-01-28T10:02:51.6288478Z --continue                         Continue task execution after a task failure.
+2026-01-28T10:02:51.6289432Z --no-continue                      Stop task execution after a task failure.
+2026-01-28T10:02:51.6290491Z -D, --system-prop                  Set system property of the JVM (e.g. -Dmyprop=myvalue).
+2026-01-28T10:02:51.6291885Z -d, --debug                        Log in debug mode (includes normal stacktrace).
+2026-01-28T10:02:51.6293067Z --daemon                           Uses the Gradle daemon to run the build. Starts the daemon if not running.
+2026-01-28T10:02:51.6295120Z --no-daemon                        Do not use the Gradle daemon to run the build. Useful occasionally if you have configured Gradle to always run with the daemon by default.
+2026-01-28T10:02:51.6296798Z --export-keys                      Exports the public keys used for dependency verification.
+2026-01-28T10:02:51.6298329Z -F, --dependency-verification      Configures the dependency verification mode. Values are 'strict', 'lenient' or 'off'.
+2026-01-28T10:02:51.6299586Z --foreground                       Starts the Gradle daemon in the foreground.
+2026-01-28T10:02:51.6300689Z -g, --gradle-user-home             Specifies the Gradle user home directory. Defaults to ~/.gradle
+2026-01-28T10:02:51.6301766Z -I, --init-script                  Specify an initialization script.
+2026-01-28T10:02:51.6302565Z -i, --info                         Set log level to info.
+2026-01-28T10:02:51.6303452Z --include-build                    Include the specified build in the composite.
+2026-01-28T10:02:51.6305020Z -M, --write-verification-metadata  Generates checksums for dependencies used in the project (comma-separated list)
+2026-01-28T10:02:51.6306319Z -m, --dry-run                      Run the builds with all task actions disabled.
+2026-01-28T10:02:51.6307426Z --max-workers                      Configure the number of concurrent workers Gradle is allowed to use.
+2026-01-28T10:02:51.6308584Z --offline                          Execute the build without accessing network resources.
+2026-01-28T10:02:51.6309736Z -P, --project-prop                 Set project property for the build script (e.g. -Pmyprop=myvalue).
+2026-01-28T10:02:51.6311086Z -p, --project-dir                  Specifies the start directory for Gradle. Defaults to current directory.
+2026-01-28T10:02:51.6312733Z --parallel                         Build projects in parallel. Gradle will attempt to determine the optimal number of executor threads to use.
+2026-01-28T10:02:51.6314072Z --no-parallel                      Disables parallel execution to build projects.
+2026-01-28T10:02:51.6315959Z --priority                         Specifies the scheduling priority for the Gradle daemon and all processes launched by it. Values are 'normal' (default) or 'low'
+2026-01-28T10:02:51.6317507Z --problems-report                  (Experimental) enables HTML problems report
+2026-01-28T10:02:51.6318569Z --no-problems-report               (Experimental) disables HTML problems report
+2026-01-28T10:02:51.6319973Z --profile                          Profile build execution time and generates a report in the <build_dir>/reports/profile directory.
+2026-01-28T10:02:51.6321782Z --project-cache-dir                Specify the project-specific cache directory. Defaults to .gradle in the root project directory.
+2026-01-28T10:02:51.6323460Z --property-upgrade-report          (Experimental) Runs build with experimental property upgrade report.
+2026-01-28T10:02:51.6324496Z -q, --quiet                        Log errors only.
+2026-01-28T10:02:51.6325583Z --refresh-keys                     Refresh the public keys used for dependency verification.
+2026-01-28T10:02:51.6326548Z --rerun-tasks                      Ignore previously cached task results.
+2026-01-28T10:02:51.6327767Z -S, --full-stacktrace              Print out the full (very verbose) stacktrace for all exceptions.
+2026-01-28T10:02:51.6328838Z -s, --stacktrace                   Print out the stacktrace for all exceptions.
+2026-01-28T10:02:51.6329716Z --scan                             Generate a Build Scan (powered by Develocity).
+2026-01-28T10:02:51.6330645Z                                    Build Scan and Develocity are registered trademarks of Gradle, Inc.
+2026-01-28T10:02:51.6331813Z                                    For more information, please visit https://gradle.com/develocity/product/build-scan/.
+2026-01-28T10:02:51.6333129Z --no-scan                          Disables the creation of a Build Scan.
+2026-01-28T10:02:51.6334124Z --status                           Shows status of running and recently stopped Gradle daemon(s).
+2026-01-28T10:02:51.6335297Z --stop                             Stops the Gradle daemon if it is running.
+2026-01-28T10:02:51.6336684Z -t, --continuous                   Enables continuous build. Gradle does not exit and will re-execute tasks when task file inputs change.
+2026-01-28T10:02:51.6338063Z --task-graph                       (Experimental) Print task graph instead of executing tasks.
+2026-01-28T10:02:51.6340008Z -U, --refresh-dependencies         Refresh the state of dependencies.
+2026-01-28T10:02:51.6340912Z --update-locks                     Perform a partial update of the dependency lock, letting passed in module notations change version. [incubating]
+2026-01-28T10:02:51.6341643Z -V, --show-version                 Print version info and continue.
+2026-01-28T10:02:51.6342101Z -v, --version                      Print version info and exit.
+2026-01-28T10:02:51.6342602Z -w, --warn                         Set log level to warn.
+2026-01-28T10:02:51.6343327Z --warning-mode                     Specifies which mode of warnings to generate. Values are 'all', 'fail', 'summary'(default) or 'none'
+2026-01-28T10:02:51.6344312Z --watch-fs                         Enables watching the file system for changes, allowing data about the file system to be re-used for the next build.
+2026-01-28T10:02:51.6345324Z --no-watch-fs                      Disables watching the file system.
+2026-01-28T10:02:51.6346107Z --write-locks                      Persists dependency resolution for locked configurations, ignoring existing locking information if it exists
+2026-01-28T10:02:51.6346848Z -x, --exclude-task                 Specify a task to be excluded from execution.
+2026-01-28T10:02:51.6347580Z --                                 Signals the end of built-in options. Gradle parses subsequent parameters as only tasks or task options.
+2026-01-28T10:02:51.6348007Z 
+2026-01-28T10:02:51.6537083Z ##[error]Process completed with exit code 1.
+2026-01-28T10:02:51.6721700Z Post job cleanup.
+2026-01-28T10:02:51.6778495Z Post job cleanup.
+2026-01-28T10:02:51.9144206Z ##[warning]This job uses deprecated functionality from the 'gradle/gradle-build-action' action. Consult the Job Summary for more details.
+2026-01-28T10:02:51.9148275Z DEPRECATION: The action `gradle/gradle-build-action` has been replaced by `gradle/actions/setup-gradle`. See https://github.com/gradle/actions/blob/main/docs/deprecation-upgrade-guide.md#the-action-gradlegradle-build-action-has-been-replaced-by-gradleactionssetup-gradle
+2026-01-28T10:02:51.9150051Z In post-action step
+2026-01-28T10:02:51.9150787Z Stopping all Gradle daemons before saving Gradle User Home state
+2026-01-28T10:02:51.9152253Z ##[group]Caching Gradle state
+2026-01-28T10:02:51.9266338Z Caching wrapper-zips with path '/home/runner/.gradle/wrapper/dists/gradle-9.3.0-bin/79n14ral3mx1ozqr3csh2u872' and cache key: gradle-wrapper-zips-v1-eb22abb8942551216ee20b686baa980e
+2026-01-28T10:02:51.9484392Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/winefeed/winefeed --files-from manifest.txt --use-compress-program zstdmt
+2026-01-28T10:02:52.4309267Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/wrapper/dists/gradle-9.3.0-bin/79n14ral3mx1ozqr3csh2u872' and key: gradle-wrapper-zips-v1-eb22abb8942551216ee20b686baa980e: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0zN55aQAAAABVLuUpGu13T7Bs31TbNzn7Q0hHRURHRTE5MDkARWRnZQ==
+2026-01-28T10:02:52.4778481Z Caching Gradle User Home with cache key: gradle-home-v1|Linux|build[b8a35c2f917259958c9abe8f2ff1b5ff]-05ed3163be4ae7e7e9674a14eaca45643a16faf4
+2026-01-28T10:02:52.4875328Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/winefeed/winefeed --files-from manifest.txt --use-compress-program zstdmt
+2026-01-28T10:02:52.5254107Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches,/home/runner/.gradle/notifications,/home/runner/.gradle/.setup-gradle' and key: gradle-home-v1|Linux|build[b8a35c2f917259958c9abe8f2ff1b5ff]-05ed3163be4ae7e7e9674a14eaca45643a16faf4: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0zN55aQAAAACXef5y60A1ToZk5O14XHsTQ0hHRURHRTE5MTQARWRnZQ==
+2026-01-28T10:02:52.5258155Z ##[endgroup]
+2026-01-28T10:02:52.5258619Z Generating Job Summary
+2026-01-28T10:02:52.5270204Z Completed post-action step
+2026-01-28T10:02:52.5417885Z Post job cleanup.
+2026-01-28T10:02:52.6748299Z Post job cleanup.
+2026-01-28T10:02:52.7552152Z [command]/usr/bin/git version
+2026-01-28T10:02:52.7593330Z git version 2.52.0
+2026-01-28T10:02:52.7666105Z Temporarily overriding HOME='/home/runner/work/_temp/8d96984c-c203-458a-ba7a-b080c7063c7d' before making global git config changes
+2026-01-28T10:02:52.7667599Z Adding repository directory to the temporary git global config as a safe directory
+2026-01-28T10:02:52.7673733Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/winefeed/winefeed
+2026-01-28T10:02:52.7707145Z Removing SSH command configuration
+2026-01-28T10:02:52.7714145Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-01-28T10:02:52.7752165Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-01-28T10:02:52.7996683Z Removing HTTP extra header
+2026-01-28T10:02:52.8002793Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-01-28T10:02:52.8038247Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-01-28T10:02:52.8268331Z Removing includeIf entries pointing to credentials config files
+2026-01-28T10:02:52.8275479Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-01-28T10:02:52.8299820Z includeif.gitdir:/home/runner/work/winefeed/winefeed/.git.path
+2026-01-28T10:02:52.8300675Z includeif.gitdir:/home/runner/work/winefeed/winefeed/.git/worktrees/*.path
+2026-01-28T10:02:52.8301158Z includeif.gitdir:/github/workspace/.git.path
+2026-01-28T10:02:52.8301647Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-01-28T10:02:52.8309874Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/winefeed/winefeed/.git.path
+2026-01-28T10:02:52.8330705Z /home/runner/work/_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:52.8341262Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/winefeed/winefeed/.git.path /home/runner/work/_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:52.8373991Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/winefeed/winefeed/.git/worktrees/*.path
+2026-01-28T10:02:52.8395759Z /home/runner/work/_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:52.8405952Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/winefeed/winefeed/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:52.8438029Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-01-28T10:02:52.8459741Z /github/runner_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:52.8468221Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:52.8498114Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-01-28T10:02:52.8518669Z /github/runner_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:52.8528730Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config
+2026-01-28T10:02:52.8560773Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-01-28T10:02:52.8819601Z Removing credentials config '/home/runner/work/_temp/git-credentials-7bdbd435-a311-41ac-a96a-f5dcbbc50c84.config'
+2026-01-28T10:02:52.8946496Z Cleaning up orphan processes

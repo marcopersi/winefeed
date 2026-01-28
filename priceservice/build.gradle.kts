@@ -26,8 +26,10 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.42")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa") // Für JPA
     runtimeOnly("org.postgresql:postgresql:42.7.9") // PostgreSQL-Treiber
+    testRuntimeOnly("com.h2database:h2") // H2 für Tests
 }
 
 tasks.test {
     useJUnitPlatform()
+    systemProperty("spring.profiles.active", "test")
 }
