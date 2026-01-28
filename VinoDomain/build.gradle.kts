@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    api("org.apache.commons:commons-lang3:3.12.0")
+    api("org.apache.commons:commons-lang3:3.20.0")
 }
 
 group = "VinoDomain"
