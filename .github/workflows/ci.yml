@@ -32,6 +32,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_JSON: false
           VALIDATE_CSS: false
+          FILTER_REGEX_EXCLUDE: ".*archive/.*"
           DEFAULT_BRANCH: "master"
           JSCPD_CONFIG_FILE: .jscpd.json
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
