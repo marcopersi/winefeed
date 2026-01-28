@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+                                   "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 23.09.2010 22:31:58 by Hibernate Tools 3.3.0.GA -->
+<hibernate-mapping>
+ <class name="ch.persi.java.vino.domain.Offering" table="OFFERING">
+  <id name="id" type="long">
+   <column name="ID"/>
+   <generator class="sequence">
+    <param name="sequence">offering_id_seq</param>
+   </generator>
+  </id>
+  <many-to-one class="ch.persi.java.vino.domain.Provider" fetch="join" name="provider">
+   <column name="PROVIDER"/>
+  </many-to-one>
+  <property generated="never" lazy="false" name="priceMin" type="java.math.BigDecimal">
+   <column name="PRICEMIN"/>
+  </property>
+  <property generated="never" lazy="false" name="priceMax" type="java.math.BigDecimal">
+   <column name="PRICEMAX"/>
+  </property>
+  <property generated="never" lazy="false" name="offeringDate" type="java.util.Date">
+   <column name="OFFERINGDATE"/>
+  </property>
+  <property generated="never" lazy="false" name="providerOfferingId" type="java.lang.String">
+   <column name="PROVIDEROFFERINGID" not-null="true"/>
+  </property>
+  <property generated="never" lazy="false" name="realizedPrice" type="java.math.BigDecimal">
+   <column name="REALIZEDPRICE"/>
+  </property>
+  <property access="field" generated="never" lazy="false" name="isOHK" type="java.lang.Boolean">
+   <column name="ISOHK"/>
+  </property>
+  <property generated="never" lazy="false" name="eventIdentifier" type="java.lang.String">
+   <column name="EVENTIDENTIFIER"/>
+  </property>
+  <property generated="never" lazy="false" name="note" type="java.lang.String">
+   <column name="NOTE"/>
+  </property>
+ </class>
+</hibernate-mapping>

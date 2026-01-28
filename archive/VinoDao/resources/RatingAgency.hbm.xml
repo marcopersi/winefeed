@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+                                   "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 23.09.2010 22:31:58 by Hibernate Tools 3.3.0.GA -->
+<hibernate-mapping>
+ <class name="ch.persi.java.vino.domain.RatingAgency" table="RATINGAGENCY">
+  <id name="id" type="long">
+   <column name="ID"/>
+   <generator class="sequence">
+    <param name="sequence">ratingagency_id_seq</param>
+   </generator>
+  </id>
+  <property generated="never" lazy="false" name="ratingAgencyName" type="java.lang.String">
+   <column name="ratingAgencyName"/>
+  </property>
+  <property generated="never" lazy="false" name="maxPoints" type="java.math.BigDecimal">
+   <column name="MAXPOINTS"/>
+  </property>
+ </class>
+</hibernate-mapping>
