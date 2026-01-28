@@ -40,4 +40,4 @@ tqdm==4.67.1
 python-dateutil==2.9.0.post0
 
 # Development and build tools
-build==1.2.2.post1
+build==1.4.0
