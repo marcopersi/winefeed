@@ -34,10 +34,8 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_JAVASCRIPT_PRETTIER: true
           VALIDATE_PYTHON_PYLINT: true
-          VALIDATE_JSCPD: true
           FILTER_REGEX_EXCLUDE: ".*archive/.*"
           DEFAULT_BRANCH: "master"
-          JSCPD_CONFIG_FILE: .jscpd.json
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
@@ -94,9 +92,13 @@ jobs:
           project: "winefeed"
           path: "."
           format: "SARIF"
-          out: "reports"
           args: >-
             --failOnCVSS 7
+            --exclude "**/archive/**"
+            --exclude "**/build/**"
+            --exclude "**/target/**"
+            --exclude "**/*.zip"
+            --out /github/workspace/reports
 
       - name: Upload SARIF
         if: always() && !env.ACT
