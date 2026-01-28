@@ -17,3 +17,5 @@ Thumbs.db
 *.log
 priceData/venv/**/*
 priceData/__pycache__/
+
+logs/*
