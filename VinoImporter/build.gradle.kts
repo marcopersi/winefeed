@@ -1,15 +1,15 @@
 // Versions in a centralized block
 val springContextVersion by extra("6.1.14")
-val springBeansVersion by extra("6.0.12")
-val springCoreVersion by extra("6.0.12")
-val springTestVersion by extra("6.0.12")
+val springBeansVersion by extra("6.1.14")
+val springCoreVersion by extra("6.1.14")
+val springTestVersion by extra("6.1.14")
 val junitJupiterVersion by extra("5.10.0")
 val slf4jVersion by extra("2.0.9")
-val lombokVersion by extra("1.18.28")
+val lombokVersion by extra("1.18.42")
 val tikaVersion by extra("2.9.0")
 val pdfboxVersion by extra("2.0.29")
 val itextpdfVersion by extra("5.5.13.2")
-val groovyVersion by extra("3.0.17")
+val groovyVersion by extra("3.0.25")
 
 plugins {
     `java-library`
@@ -51,8 +51,6 @@ dependencies {
     // iText PDF Library (last freely available version)
     implementation("com.itextpdf:itextpdf:$itextpdfVersion")
 
-    // JUNIT 5
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     // Vino Domain - use Maven coordinates for local repo
