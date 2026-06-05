@@ -1,7 +1,7 @@
 # Core data processing and analysis
 pandas==3.0.0
 numpy==2.4.1
-pyarrow==23.0.0
+pyarrow==23.0.1
 
 # Machine learning and AI
 scikit-learn==1.8.0
