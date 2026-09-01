@@ -7,7 +7,6 @@ have local data blocks. Logs progress.
 """
 import glob
 import os
-import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 

@@ -89,7 +89,7 @@ def main():
             stats["skipped"] += 1
             continue
 
-        with open(src_path) as f:
+        with open(src_path, encoding="utf-8") as f:
             d = json.load(f)
 
         out = {
@@ -211,7 +211,7 @@ def main():
             out["adjudications"].append(rec)
 
         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-        with open(dst_path, "w") as f:
+        with open(dst_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=1)
         stats["files"] += 1
 

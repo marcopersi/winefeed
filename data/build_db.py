@@ -11,13 +11,14 @@ Every run drops and recreates the schema, so the result is fully reproducible:
     python3 build_db.py --dry-run  # no write
 """
 import argparse
-import datetime
 import glob
 import json
 import os
 import re
 import sqlite3
 import sys
+
+import openpyxl
 
 # Source of raw auction data (Google Drive archive). Override via env var:
 #   ARCHIVE_PATH=/path/to/archive python3 build_db.py
@@ -116,6 +117,11 @@ CREATE INDEX idx_lots_hammer ON lots(hammer_price);
 MONTHS = {m: i + 1 for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun",
      "jul", "aug", "sep", "oct", "nov", "dec"])}
+
+
+def load_json(path):
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
 
 
 def to_float(v):
@@ -311,7 +317,7 @@ def _json_files(house, pattern=None):
 def load_baghera(b, limit):
     n = 0
     for f in _json_files("Baghera", "**/auction-*.json"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         cur = a.get("currency") or "CHF"
@@ -335,7 +341,7 @@ def load_baghera(b, limit):
 def load_hdh(b, limit):
     n = 0
     for f in _json_files("HDH"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("sale_number"))
         a_id = b.add_auction(
@@ -373,7 +379,7 @@ def load_hdh(b, limit):
 def load_winefields(b, limit):
     n = 0
     for f in _json_files("Winefields"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("auction_id"))
         a_id = b.add_auction(
@@ -402,7 +408,7 @@ def load_winefields(b, limit):
 def load_beschcannes(b, limit):
     n = 0
     for f in _json_files("BeschCannes", "**/auction-*.json"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         cur = a.get("currency") or "EUR"
@@ -433,7 +439,7 @@ def load_beschcannes(b, limit):
 def load_langtons(b, limit):
     n = 0
     for f in _json_files("Langtons"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         a_id = b.add_auction(
@@ -459,7 +465,7 @@ def load_langtons(b, limit):
 def load_sothebys(b, limit):
     n = 0
     for f in _json_files("Sothebys"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("auction_id"))
         cur = a.get("currency")
@@ -486,7 +492,7 @@ def load_sothebys(b, limit):
 def load_christies(b, limit):
     n = 0
     for f in _json_files("Christies"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("event_id") or a.get("sale_id"))
         a_id = b.add_auction(
@@ -516,7 +522,7 @@ def load_christies(b, limit):
 def load_zacky(b, limit):
     n = 0
     for f in _json_files("Zacky", "**/auction-*.json"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         cur = a.get("currency")
@@ -545,7 +551,7 @@ def load_zacky(b, limit):
 def load_finarte(b, limit):
     n = 0
     for f in _json_files("Finarte"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("slug"))
         a_id = b.add_auction(
@@ -572,7 +578,7 @@ def load_finarte(b, limit):
 def load_dorotheum(b, limit):
     n = 0
     for f in _json_files("Dorotheum"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         a_id = b.add_auction(
@@ -598,7 +604,7 @@ def load_dorotheum(b, limit):
 def load_pandolfini(b, limit):
     n = 0
     for f in _json_files("Pandolfini"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         a_id = b.add_auction(
@@ -625,7 +631,7 @@ def load_pandolfini(b, limit):
 def load_dobiaschofsky(b, limit):
     n = 0
     for f in _json_files("Dobiaschofsky", "**/auktion-*.json"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         a_id = b.add_auction(
@@ -650,7 +656,7 @@ def load_dobiaschofsky(b, limit):
 def load_munich_wine_company(b, limit):
     n = 0
     for f in _json_files("MunichWineCompany"):
-        d = json.load(open(f))
+        d = load_json(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         cur = a.get("currency") or "EUR"
@@ -676,7 +682,7 @@ def load_munich_wine_company(b, limit):
 
 def load_winebarrel(b, limit):
     f = os.path.join(ARCHIVE, "winebarrel", "winebarrel_lots.json")
-    d = json.load(open(f))
+    d = load_json(f)
     # one virtual auction holding everything
     a_id = b.add_auction("winebarrel", "all", "winebarrel", None, None, "HAMMER")
     for i, lot in enumerate(d):
@@ -697,7 +703,7 @@ def load_winebarrel(b, limit):
 def load_idealwine(b, limit):
     n = 0
     for f in _json_files("IDealwine_normalized"):
-        d = json.load(open(f))
+        d = load_json(f)
         aid = "cote"
         a_id = b.add_auction(
             "idealwine", aid, f"iDealwine Cote {d.get('region')}",
@@ -726,7 +732,6 @@ def load_idealwine(b, limit):
 # --- Excel/CSV houses ------------------------------------------------------ #
 
 def load_wermuth(b, limit):
-    import openpyxl
     path = os.path.join(REPO, "VinoImporter", "validatedOutput",
                         "vinoStagingFile2015-2008.xlsx")
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
@@ -780,7 +785,6 @@ def _v(rec, key):
 
 
 def load_steinfels(b, limit):
-    import openpyxl
     base = os.path.join(REPO, "priceData", "import", "steinfels", "prepared")
     files = sorted(glob.glob(os.path.join(base, "**", "results_*.xlsx"),
                              recursive=True))
