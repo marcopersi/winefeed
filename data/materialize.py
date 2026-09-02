@@ -52,7 +52,7 @@ def main():
         hdir = os.path.join(ARCHIVE, house)
         if not os.path.isdir(hdir):
             continue
-        if house in ("IDealwine", "IDealwine_normalized"):
+        if house == "IDealwine":
             continue
         files.extend(glob.glob(os.path.join(hdir, "**", "*.json"),
                                recursive=True))

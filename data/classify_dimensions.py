@@ -23,33 +23,15 @@ def _load_varieties():
         return {normalize(r["name"]) for r in csv.DictReader(fh)}
 
 
+def _load_geo():
+    """Geographic names (region + appellation) from the curated regions.csv."""
+    path = os.path.join(REF, "regions.csv")
+    with open(path, encoding="utf-8") as fh:
+        return {normalize(r["name"]) for r in csv.DictReader(fh)}
+
+
 VARIETIES = _load_varieties()
-
-REGIONS = {
-    "bordeaux", "bourgogne", "burgundy", "rhone", "champagne", "alsace",
-    "loire", "languedoc", "roussillon", "provence", "jura", "savoie",
-    "tuscany", "toscana", "piemonte", "piemont", "veneto", "lombardia",
-    "lombardy", "puglia", "sicilia", "sicily", "sardegna", "sardinia",
-    "abruzzo", "trentino", "friuli", "alto adige",
-    "barossa valley", "barossa", "clare valley", "coonawarra",
-    "mclaren vale", "eden valley", "margaret river", "hunter valley",
-    "napa valley", "sonoma", "adelaide",
-    "rioja", "ribera del duero", "penedes", "priorat", "douro", "mosel",
-    "rheingau", "pfalz", "baden", "rheinhessen", "burgenland",
-    "marlborough", "central otago", "hawkes bay",
-}
-
-APPELLATIONS = {
-    "pauillac", "margaux", "saint julien", "saint estephe", "sauternes",
-    "pessac leognan", "saint emilion", "pomerol", "medoc", "haut medoc",
-    "gevrey chambertin", "chambolle musigny", "vosne romanee", "chablis",
-    "meursault", "puligny montrachet", "montrachet", "corton charlemagne",
-    "echezeaux", "richebourg", "la tache", "romanee conti",
-    "barolo", "barbaresco", "brunello di montalcino", "chianti classico",
-    "amarone", "valpolicella", "barbera d asti", "asti", "langhe",
-    "chateauneuf du pape", "hermitage", "cote rotie", "gigondas",
-    "pouilly fuisse", "sancerre", "vouvray", "muscadet",
-}
+GEO = _load_geo()
 
 _CLASSIFICATION_RE = re.compile(
     r"\b(grand cru( classe)?|premier cru|premier grand cru|cru classe|"
@@ -63,10 +45,8 @@ def classify(value):
         return "producer"
     if key in VARIETIES:
         return "variety"
-    if key in REGIONS:
+    if key in GEO:
         return "region"
-    if key in APPELLATIONS:
-        return "appellation"
     if _CLASSIFICATION_RE.search(value):
         return "classification"
     return "producer"

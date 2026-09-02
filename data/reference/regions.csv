@@ -1,0 +1,284 @@
+name,country_code
+Cafayate,AR
+Luján de Cuyo,AR
+Mendoza,AR
+Patagonia,AR
+Salta,AR
+Uco Valley,AR
+Burgenland,AT
+Carnuntum,AT
+Eisenberg,AT
+Kamptal,AT
+Kremstal,AT
+Leithaberg,AT
+Mittelburgenland,AT
+Neusiedlersee,AT
+Rosalia,AT
+Ruster Ausbruch,AT
+Steiermark,AT
+Südsteiermark,AT
+Thermenregion,AT
+Traisental,AT
+Vulkanland Steiermark,AT
+Wachau,AT
+Wagram,AT
+Weinviertel,AT
+Weststeiermark,AT
+Wien,AT
+Wiener Gemischter Satz,AT
+Adelaide Hills,AU
+Barossa Valley,AU
+Clare Valley,AU
+Coal River Valley,AU
+Coonawarra,AU
+Eden Valley,AU
+Great Southern,AU
+Heathcote,AU
+Hunter Valley,AU
+Margaret River,AU
+McLaren Vale,AU
+Mornington Peninsula,AU
+Mount Barker,AU
+Tamar Valley,AU
+Tasmania,AU
+Yarra Valley,AU
+Niagara Peninsula,CA
+Okanagan Valley,CA
+Prince Edward County,CA
+Aconcagua Valley,CL
+Casablanca Valley,CL
+Colchagua Valley,CL
+Itata Valley,CL
+Limarí Valley,CL
+Maipo Valley,CL
+Maule Valley,CL
+Aargau,CH
+Basel-Landschaft,CH
+Bielersee,CH
+Calamin,CH
+Chablais,CH
+Dézaley,CH
+Epesses,CH
+Geneva,CH
+Graubünden,CH
+La Côte,CH
+Lavaux,CH
+Neuchâtel,CH
+Schaffhausen,CH
+St. Gallen,CH
+Thurgau,CH
+Ticino,CH
+Valais,CH
+Vaud,CH
+Vully,CH
+Yvorne,CH
+Zürich,CH
+Ahr,DE
+Baden,DE
+Franken,DE
+Hessische Bergstraße,DE
+Mittelrhein,DE
+Mosel,DE
+Nahe,DE
+Pfalz,DE
+Rheingau,DE
+Rheinhessen,DE
+Saale-Unstrut,DE
+Sachsen,DE
+Württemberg,DE
+Alicante,ES
+Bierzo,ES
+Cava,ES
+Catalunya,ES
+Jerez-Xérès-Sherry,ES
+Jumilla,ES
+Montilla-Moriles,ES
+Navarra,ES
+Penedès,ES
+Priorat,ES
+Rías Baixas,ES
+Ribera del Duero,ES
+Ribeira Sacra,ES
+Rioja,ES
+Rueda,ES
+Somontano,ES
+Toro,ES
+Valdeorras,ES
+Valencia,ES
+Yecla,ES
+Alsace,FR
+Bandol,FR
+Barsac,FR
+Banyuls,FR
+Beaujolais,FR
+Bordeaux,FR
+Bourgogne,FR
+Cassis,FR
+Chablis,FR
+Champagne,FR
+Châteauneuf-du-Pape,FR
+Chinon,FR
+Collioure,FR
+Condrieu,FR
+Cornas,FR
+Corbières,FR
+Côte Chalonnaise,FR
+Côte de Beaune,FR
+Côte de Nuits,FR
+Côte-Rôtie,FR
+Côtes du Rhône,FR
+Crozes-Hermitage,FR
+Faugères,FR
+Gigondas,FR
+Graves,FR
+Haut-Médoc,FR
+Hermitage,FR
+Jura,FR
+Languedoc,FR
+Limoux,FR
+Lirac,FR
+Listrac-Médoc,FR
+Loire Valley,FR
+Mâconnais,FR
+Margaux,FR
+Maury,FR
+Médoc,FR
+Minervois-La Livinière,FR
+Moulis-en-Médoc,FR
+Muscat de Beaumes-de-Venise,FR
+Palette,FR
+Pauillac,FR
+Pessac-Léognan,FR
+Pic Saint-Loup,FR
+Pomerol,FR
+Pouilly-Fumé,FR
+Provence,FR
+Rasteau,FR
+Roussillon,FR
+Rhône Valley,FR
+Saint-Émilion,FR
+Saint-Estèphe,FR
+Saint-Joseph,FR
+Saint-Julien,FR
+Sancerre,FR
+Sauternes,FR
+Saumur,FR
+Savoie,FR
+Tavel,FR
+Terrasses du Larzac,FR
+Vacqueyras,FR
+Vouvray,FR
+Kakheti,GE
+Mantinia,GR
+Naoussa,GR
+Nemea,GR
+Santorini,GR
+Tokaj,HU
+Abruzzo,IT
+Aglianico del Vulture,IT
+Alto Adige,IT
+Amarone della Valpolicella,IT
+Asti,IT
+Barbaresco,IT
+Barolo,IT
+Basilicata,IT
+Bolgheri,IT
+Brunello di Montalcino,IT
+Campania,IT
+Cerasuolo di Vittoria,IT
+Chianti Classico,IT
+Cirò,IT
+Colli Orientali del Friuli,IT
+Collio,IT
+Conegliano Valdobbiadene,IT
+Etna,IT
+Fiano di Avellino,IT
+Franciacorta,IT
+Friuli-Venezia Giulia,IT
+Gavi,IT
+Greco di Tufo,IT
+Langhe,IT
+Lombardia,IT
+Maremma Toscana,IT
+Marche,IT
+Marsala,IT
+Moscato d'Asti,IT
+Piemonte,IT
+Prosecco,IT
+Puglia,IT
+Roero,IT
+Sagrantino di Montefalco,IT
+Sardegna,IT
+Sicilia,IT
+Soave,IT
+Taurasi,IT
+Toscana,IT
+Trentino,IT
+Umbria,IT
+Valpolicella,IT
+Valtellina,IT
+Veneto,IT
+Verdicchio dei Castelli di Jesi,IT
+Vino Nobile di Montepulciano,IT
+Bekaa Valley,LB
+Central Otago,NZ
+Hawke's Bay,NZ
+Marlborough,NZ
+Martinborough,NZ
+Nelson,NZ
+North Canterbury,NZ
+Wairarapa,NZ
+Alentejo,PT
+Bairrada,PT
+Colares,PT
+Dão,PT
+Douro,PT
+Lisboa,PT
+Madeira,PT
+Porto,PT
+Península de Setúbal,PT
+Tejo,PT
+Vinho Verde,PT
+Brda,SI
+Vipava Valley,SI
+Constantia,ZA
+Elgin,ZA
+Franschhoek,ZA
+Hemel-en-Aarde Valley,ZA
+Paarl,ZA
+Robertson,ZA
+Stellenbosch,ZA
+Swartland,ZA
+Tulbagh,ZA
+Walker Bay,ZA
+Kent,GB
+Sussex,GB
+Alexander Valley,US
+Anderson Valley,US
+California,US
+Calistoga,US
+Columbia Valley,US
+Dundee Hills,US
+Eola-Amity Hills,US
+Finger Lakes,US
+Howell Mountain,US
+Napa Valley,US
+Oakville,US
+Oregon,US
+Paso Robles,US
+Red Mountain,US
+Ribbon Ridge,US
+Russian River Valley,US
+Rutherford,US
+Santa Maria Valley,US
+Santa Rita Hills,US
+Santa Cruz Mountains,US
+Sonoma Coast,US
+Sonoma Valley,US
+Stags Leap District,US
+Walla Walla Valley,US
+Washington,US
+Willamette Valley,US
+Yakima Valley,US
+Canelones,UY
+Maldonado,UY
