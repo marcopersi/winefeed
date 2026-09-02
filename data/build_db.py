@@ -102,7 +102,9 @@ CREATE TABLE lots (
   producer            TEXT,
   vintage             INTEGER,
   region              TEXT,
+  appellation         TEXT,
   classification      TEXT,
+  color               TEXT,
   vintage_raw         TEXT,
   vintage_extracted   INTEGER,
   vintage_final       INTEGER,
@@ -407,17 +409,18 @@ class Builder:
             "INSERT INTO lots(auction_id, lot_no, lot_date, source_file,"
             " source_record_locator, raw_wine, raw_producer, raw_vintage,"
             " source_lot_key, wine, wine_ref_id, producer, vintage, region,"
-            " classification, quantity, bottle_size_dl, estimate_low,"
-            " estimate_high, hammer_price, buyer_premium, realised_price,"
-            " price_basis, currency, sold, mixed_lot, condition_text,"
-            " description, source_url, scraped_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " appellation, classification, color, quantity, bottle_size_dl,"
+            " estimate_low, estimate_high, hammer_price, buyer_premium,"
+            " realised_price, price_basis, currency, sold, mixed_lot,"
+            " condition_text, description, source_url, scraped_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (auction_id, row.get("lot_no"), row.get("lot_date"),
              source_file, source_record_locator,
              raw_wine, raw_producer, raw_vintage,
              row.get("source_lot_key"), wine, row.get("wine_ref_id"),
              producer, vintage, row.get("region"),
-             row.get("classification"), row.get("quantity"),
+             row.get("appellation"), row.get("classification"),
+             row.get("color"), row.get("quantity"),
              row.get("bottle_size_dl"), row.get("estimate_low"),
              row.get("estimate_high"), row.get("hammer_price"),
              row.get("buyer_premium"), row.get("realised_price"),
@@ -857,7 +860,9 @@ def load_idealwine(b, limit):
                 "wine": d.get("wine"), "producer": d.get("estate"),
                 "vintage": to_int(d.get("vintage")),
                 "region": d.get("region"),
+                "appellation": d.get("appellation") or None,
                 "classification": d.get("classification") or None,
+                "color": d.get("color") or None,
                 "quantity": to_int(a.get("number_of_bottles")),
                 "bottle_size_dl": parse_dl(a.get("format")),
                 "hammer_price": a.get("hammer_per_bottle_eur")
