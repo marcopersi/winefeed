@@ -1,0 +1,19 @@
+[MESSAGES CONTROL]
+# super-linter default: import errors are expected because the lint container
+# does not install project dependencies (e.g. openpyxl).
+# The scripts in data/ are ad-hoc ETL scripts; the following checks target
+# application code and are relaxed here:
+disable=
+    import-error,
+    missing-module-docstring,
+    missing-function-docstring,
+    missing-class-docstring,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    too-many-arguments,
+    too-many-return-statements,
+    too-many-positional-arguments,
+    invalid-name,
+    global-statement,
+    broad-exception-caught
