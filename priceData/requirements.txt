@@ -1,43 +1,5 @@
-# Core data processing and analysis
-pandas==3.0.0
-numpy==2.4.1
-pyarrow==23.0.0
-
-# Machine learning and AI
-scikit-learn==1.8.0
-scipy==1.17.0
-torch==2.10.0
-transformers==5.0.0
-sentence-transformers==5.2.2
-
-# Data visualization
-matplotlib==3.10.8
-plotly==6.5.2
-altair==6.0.0
-
-# Web framework and UI
-streamlit==1.53.1
-pydeck==0.9.1
-
-# Vector database and search
-chromadb==1.4.1
-
-# HTTP requests and API
-requests==2.32.5
-httpx==0.28.1
-
-# Database and Backend
+# Supabase client (used by supabase_config.py)
 supabase==2.27.2
-postgrest==2.27.2
 
-# Configuration and environment
+# Environment configuration
 python-dotenv==1.2.2
-pyyaml==6.0.3
-
-# Utilities
-click==8.3.1
-tqdm==4.67.1
-python-dateutil==2.9.0.post0
-
-# Development and build tools
-build==1.4.0
