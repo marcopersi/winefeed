@@ -37,9 +37,13 @@ DB_PATH = os.path.join(SCRIPT_DIR, "wine_auction_prices.sqlite")
 # --------------------------------------------------------------------------- #
 
 SCHEMA = """
-DROP TABLE IF EXISTS wine_aliases;
-DROP TABLE IF EXISTS wines;
+DROP TABLE IF EXISTS wine_alias_resolutions;
+DROP TABLE IF EXISTS wine_alias_observations;
+DROP TABLE IF EXISTS build_metrics;
+DROP TABLE IF EXISTS build_inputs;
+DROP TABLE IF EXISTS builds;
 DROP TABLE IF EXISTS lots;
+DROP TABLE IF EXISTS wines;
 DROP TABLE IF EXISTS auctions;
 DROP TABLE IF EXISTS providers;
 
@@ -61,53 +65,149 @@ CREATE TABLE auctions (
   UNIQUE(provider_id, auction_id)
 );
 
-CREATE TABLE lots (
-  id            INTEGER PRIMARY KEY,
-  auction_id    INTEGER NOT NULL REFERENCES auctions(id),
-  lot_no        TEXT,
-  lot_date      TEXT,
-  wine          TEXT,
-  wine_ref_id   INTEGER,
-  producer      TEXT,
-  vintage       INTEGER,
-  region        TEXT,
-  classification TEXT,
-  quantity      INTEGER,
-  bottle_size_dl REAL,
-  estimate_low  REAL,
-  estimate_high REAL,
-  hammer_price  REAL,
-  buyer_premium REAL,
-  realised_price REAL,
-  price_basis   TEXT,
-  currency      TEXT,
-  sold          INTEGER,
-  mixed_lot     INTEGER,
-  condition_text TEXT,
-  description   TEXT,
-  source_url    TEXT,
-  scraped_at    TEXT
-);
-
--- Stufe 2 (unused in Stufe 1)
 CREATE TABLE wines (
-  id             INTEGER PRIMARY KEY,
-  canonical_name TEXT NOT NULL UNIQUE,
-  producer       TEXT,
-  region         TEXT,
-  classification TEXT
+  id               INTEGER PRIMARY KEY,
+  stable_key       TEXT NOT NULL UNIQUE,
+  canonical_name   TEXT NOT NULL,
+  canonical_key    TEXT NOT NULL,
+  producer         TEXT,
+  producer_key     TEXT,
+  region           TEXT,
+  appellation      TEXT,
+  classification   TEXT,
+  canonical_source TEXT NOT NULL,
+  resolver_version TEXT NOT NULL,
+  review_status    TEXT NOT NULL,
+  CHECK (trim(canonical_name) <> ''),
+  CHECK (review_status IN (
+    'AUTO_RESOLVED', 'CURATED', 'AMBIGUOUS', 'REVIEW_REQUIRED'
+  ))
 );
 
-CREATE TABLE wine_aliases (
-  id      INTEGER PRIMARY KEY,
-  wine_id INTEGER NOT NULL REFERENCES wines(id),
-  alias   TEXT NOT NULL,
-  UNIQUE(alias)
+CREATE TABLE lots (
+  id                  INTEGER PRIMARY KEY,
+  auction_id          INTEGER NOT NULL REFERENCES auctions(id),
+  lot_no              TEXT,
+  lot_date            TEXT,
+  source_file         TEXT,
+  source_file_sha256  TEXT,
+  source_record_locator TEXT,
+  source_record_hash  TEXT,
+  raw_wine            TEXT,
+  raw_producer        TEXT,
+  raw_vintage         TEXT,
+  source_lot_key      TEXT,
+  wine                TEXT,
+  wine_ref_id         INTEGER REFERENCES wines(id),
+  producer            TEXT,
+  vintage             INTEGER,
+  region              TEXT,
+  classification      TEXT,
+  vintage_raw         TEXT,
+  vintage_extracted   INTEGER,
+  vintage_final       INTEGER,
+  vintage_status      TEXT,
+  vintage_rule_id     TEXT,
+  vintage_evidence_text TEXT,
+  lot_kind            TEXT,
+  mixed_reason        TEXT,
+  mixed_rule_id       TEXT,
+  mixed_lot           INTEGER,
+  quantity            INTEGER,
+  bottle_size_dl      REAL,
+  estimate_low        REAL,
+  estimate_high       REAL,
+  hammer_price        REAL,
+  buyer_premium       REAL,
+  realised_price      REAL,
+  price_basis         TEXT,
+  currency            TEXT,
+  sold                INTEGER,
+  condition_text      TEXT,
+  description         TEXT,
+  source_url          TEXT,
+  scraped_at          TEXT,
+  CHECK (vintage_final IS NULL OR vintage_final BETWEEN 1700 AND 2100),
+  CHECK (lot_kind IS NULL OR lot_kind IN ('SINGLE', 'MIXED', 'UNKNOWN')),
+  CHECK (lot_kind <> 'MIXED' OR wine_ref_id IS NULL),
+  CHECK (vintage_status IS NULL OR vintage_status IN (
+    'STRUCTURED', 'EXTRACTED', 'NV', 'MV', 'MISSING',
+    'AMBIGUOUS', 'CONFLICT', 'INVALID'
+  ))
+);
+
+CREATE TABLE wine_alias_observations (
+  id                 INTEGER PRIMARY KEY,
+  provider_id        INTEGER NOT NULL REFERENCES providers(id),
+  alias_raw          TEXT NOT NULL,
+  alias_key          TEXT NOT NULL,
+  producer_raw       TEXT,
+  producer_key       TEXT,
+  region_raw         TEXT,
+  region_key         TEXT,
+  source_lot_id      INTEGER REFERENCES lots(id),
+  evidence_count     INTEGER NOT NULL,
+  normalizer_version TEXT NOT NULL
+);
+
+CREATE TABLE wine_alias_resolutions (
+  id                INTEGER PRIMARY KEY,
+  scope_key         TEXT NOT NULL,
+  alias_key         TEXT NOT NULL,
+  discriminator_key TEXT NOT NULL,
+  wine_id           INTEGER REFERENCES wines(id),
+  resolution_status TEXT NOT NULL,
+  resolution_method TEXT NOT NULL,
+  confidence        REAL,
+  rule_version      TEXT NOT NULL,
+  reason            TEXT,
+  UNIQUE(scope_key, alias_key, discriminator_key),
+  CHECK (resolution_status IN (
+    'RESOLVED', 'AMBIGUOUS', 'UNRESOLVED', 'IGNORED'
+  ))
+);
+
+CREATE TABLE builds (
+  id                    TEXT PRIMARY KEY,
+  started_at            TEXT NOT NULL,
+  completed_at          TEXT,
+  input_manifest_sha256 TEXT NOT NULL,
+  loader_version        TEXT NOT NULL,
+  normalizer_version    TEXT NOT NULL,
+  resolver_version      TEXT NOT NULL,
+  python_version        TEXT NOT NULL,
+  sqlite_version        TEXT NOT NULL,
+  status                TEXT NOT NULL
+);
+
+CREATE TABLE build_inputs (
+  build_id         TEXT NOT NULL REFERENCES builds(id),
+  source_file      TEXT NOT NULL,
+  source_file_sha256 TEXT NOT NULL,
+  file_size        INTEGER NOT NULL,
+  PRIMARY KEY (build_id, source_file)
+);
+
+CREATE TABLE build_metrics (
+  build_id TEXT NOT NULL REFERENCES builds(id),
+  provider TEXT NOT NULL,
+  metric   TEXT NOT NULL,
+  value    INTEGER NOT NULL,
+  PRIMARY KEY (build_id, provider, metric)
 );
 
 CREATE INDEX idx_lots_auction ON lots(auction_id);
 CREATE INDEX idx_lots_wine ON lots(wine);
 CREATE INDEX idx_lots_hammer ON lots(hammer_price);
+CREATE INDEX idx_lots_wine_ref ON lots(wine_ref_id);
+CREATE INDEX idx_lots_lot_kind ON lots(lot_kind);
+
+CREATE VIEW single_wine_prices AS
+SELECT *
+FROM lots
+WHERE lot_kind = 'SINGLE'
+  AND wine_ref_id IS NOT NULL
+  AND vintage_status IN ('STRUCTURED', 'EXTRACTED');
 """
 
 # --------------------------------------------------------------------------- #
@@ -257,6 +357,8 @@ class Builder:
     def __init__(self, conn):
         self.conn = conn
         self.provider_ids = {}
+        self.source_file = None
+        self.source_idx = 0
 
     def provider(self, name):
         if name not in self.provider_ids:
@@ -264,6 +366,11 @@ class Builder:
                 "INSERT INTO providers(name) VALUES (?)", (name,))
             self.provider_ids[name] = cur.lastrowid
         return self.provider_ids[name]
+
+    def set_source(self, source_file):
+        """Set provenance context for the following add_lot calls."""
+        self.source_file = os.path.relpath(source_file, ARCHIVE)
+        self.source_idx = 0
 
     def add_auction(self, provider, auction_id, title=None, date=None,
                     currency=None, price_basis=None, source_url=None,
@@ -283,23 +390,42 @@ class Builder:
         return row[0]
 
     def add_lot(self, auction_id, row):
-        self.conn.execute(
-            "INSERT INTO lots(auction_id, lot_no, lot_date, wine, wine_ref_id,"
-            " producer, vintage, region, classification, quantity,"
-            " bottle_size_dl, estimate_low, estimate_high, hammer_price,"
-            " buyer_premium, realised_price, price_basis, currency, sold,"
-            " mixed_lot, condition_text, description, source_url, scraped_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        wine = row.get("wine")
+        producer = row.get("producer")
+        vintage = row.get("vintage")
+        raw_wine = row.get("raw_wine") if "raw_wine" in row else wine
+        raw_producer = row.get("raw_producer") if "raw_producer" in row else producer
+        raw_vintage = row.get("raw_vintage")
+        if raw_vintage is None and vintage is not None:
+            raw_vintage = str(vintage)
+        source_file = row.get("source_file", self.source_file)
+        source_record_locator = row.get("source_record_locator")
+        if source_record_locator is None:
+            source_record_locator = f"lots[{self.source_idx}]"
+            self.source_idx += 1
+        cur = self.conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, lot_date, source_file,"
+            " source_record_locator, raw_wine, raw_producer, raw_vintage,"
+            " source_lot_key, wine, wine_ref_id, producer, vintage, region,"
+            " classification, quantity, bottle_size_dl, estimate_low,"
+            " estimate_high, hammer_price, buyer_premium, realised_price,"
+            " price_basis, currency, sold, mixed_lot, condition_text,"
+            " description, source_url, scraped_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (auction_id, row.get("lot_no"), row.get("lot_date"),
-             row.get("wine"), row.get("wine_ref_id"), row.get("producer"),
-             row.get("vintage"), row.get("region"), row.get("classification"),
-             row.get("quantity"), row.get("bottle_size_dl"),
-             row.get("estimate_low"), row.get("estimate_high"),
-             row.get("hammer_price"), row.get("buyer_premium"),
-             row.get("realised_price"), row.get("price_basis"),
-             row.get("currency"), row.get("sold"), row.get("mixed_lot"),
-             row.get("condition_text"), row.get("description"),
-             row.get("source_url"), row.get("scraped_at")))
+             source_file, source_record_locator,
+             raw_wine, raw_producer, raw_vintage,
+             row.get("source_lot_key"), wine, row.get("wine_ref_id"),
+             producer, vintage, row.get("region"),
+             row.get("classification"), row.get("quantity"),
+             row.get("bottle_size_dl"), row.get("estimate_low"),
+             row.get("estimate_high"), row.get("hammer_price"),
+             row.get("buyer_premium"), row.get("realised_price"),
+             row.get("price_basis"), row.get("currency"), row.get("sold"),
+             row.get("mixed_lot"), row.get("condition_text"),
+             row.get("description"), row.get("source_url"),
+             row.get("scraped_at")))
+        return cur.lastrowid
 
 
 # --------------------------------------------------------------------------- #
@@ -318,6 +444,7 @@ def load_baghera(b, limit):
     n = 0
     for f in _json_files("Baghera", "**/auction-*.json"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         cur = a.get("currency") or "CHF"
@@ -342,6 +469,7 @@ def load_hdh(b, limit):
     n = 0
     for f in _json_files("HDH"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("sale_number"))
         a_id = b.add_auction(
@@ -380,6 +508,7 @@ def load_winefields(b, limit):
     n = 0
     for f in _json_files("Winefields"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("auction_id"))
         a_id = b.add_auction(
@@ -409,6 +538,7 @@ def load_beschcannes(b, limit):
     n = 0
     for f in _json_files("BeschCannes", "**/auction-*.json"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         cur = a.get("currency") or "EUR"
@@ -440,6 +570,7 @@ def load_langtons(b, limit):
     n = 0
     for f in _json_files("Langtons"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         a_id = b.add_auction(
@@ -466,6 +597,7 @@ def load_sothebys(b, limit):
     n = 0
     for f in _json_files("Sothebys"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("auction_id"))
         cur = a.get("currency")
@@ -493,6 +625,7 @@ def load_christies(b, limit):
     n = 0
     for f in _json_files("Christies"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("event_id") or a.get("sale_id"))
         a_id = b.add_auction(
@@ -523,6 +656,7 @@ def load_zacky(b, limit):
     n = 0
     for f in _json_files("Zacky", "**/auction-*.json"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         cur = a.get("currency")
@@ -552,6 +686,7 @@ def load_finarte(b, limit):
     n = 0
     for f in _json_files("Finarte"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("slug"))
         a_id = b.add_auction(
@@ -579,6 +714,7 @@ def load_dorotheum(b, limit):
     n = 0
     for f in _json_files("Dorotheum"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         a_id = b.add_auction(
@@ -605,6 +741,7 @@ def load_pandolfini(b, limit):
     n = 0
     for f in _json_files("Pandolfini"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         a_id = b.add_auction(
@@ -632,6 +769,7 @@ def load_dobiaschofsky(b, limit):
     n = 0
     for f in _json_files("Dobiaschofsky", "**/auktion-*.json"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         a_id = b.add_auction(
@@ -657,6 +795,7 @@ def load_munich_wine_company(b, limit):
     n = 0
     for f in _json_files("MunichWineCompany"):
         d = load_json(f)
+        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
         cur = a.get("currency") or "EUR"
@@ -683,6 +822,7 @@ def load_munich_wine_company(b, limit):
 def load_winebarrel(b, limit):
     f = os.path.join(ARCHIVE, "winebarrel", "winebarrel_lots.json")
     d = load_json(f)
+    b.set_source(f)
     # one virtual auction holding everything
     a_id = b.add_auction("winebarrel", "all", "winebarrel", None, None, "HAMMER")
     for i, lot in enumerate(d):
@@ -704,6 +844,7 @@ def load_idealwine(b, limit):
     n = 0
     for f in _json_files("IDealwine_normalized"):
         d = load_json(f)
+        b.set_source(f)
         aid = "cote"
         a_id = b.add_auction(
             "idealwine", aid, f"iDealwine Cote {d.get('region')}",
@@ -735,6 +876,7 @@ def load_wermuth(b, limit):
     path = os.path.join(REPO, "VinoImporter", "validatedOutput",
                         "vinoStagingFile2015-2008.xlsx")
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    b.set_source(path)
     n = 0
     for ws in wb.worksheets:
         m = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", ws.title)
@@ -791,6 +933,7 @@ def load_steinfels(b, limit):
     n = 0
     for f in files:
         wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
+        b.set_source(f)
         if "Wines" not in wb.sheetnames:
             continue
         ws = wb["Wines"]
@@ -855,14 +998,42 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--only", type=str, default=None,
                     help="comma-separated house names to include")
+    ap.add_argument("--skip-resolution", action="store_true",
+                    help="load raw lots only, skip Stufe 2 resolution")
     args = ap.parse_args()
 
     if args.dry_run:
         conn = sqlite3.connect(":memory:")
-    else:
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA foreign_keys = ON")
+        _build(conn, args)
+        return
+
+    lock_path = os.path.join(SCRIPT_DIR, ".wine-db-build.lock")
+    lock_fd = _acquire_lock(lock_path)
+    if lock_fd is None:
+        print("Build already running (lock held).", file=sys.stderr)
+        sys.exit(1)
+    tmp_path = f"{DB_PATH}.tmp.{os.getpid()}"
+    try:
+        conn = sqlite3.connect(tmp_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        _build(conn, args)
+        _validate_gates(conn)
+        conn.commit()
+        conn.close()
+        os.replace(tmp_path, DB_PATH)
+        print(f"published: {DB_PATH}")
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+    finally:
+        os.close(lock_fd)
+        if os.path.exists(lock_path):
+            os.remove(lock_path)
+
+
+def _build(conn, args):
     conn.executescript(SCHEMA)
     b = Builder(conn)
 
@@ -882,15 +1053,91 @@ def main():
         totals[name] = after - before
         print(f"  {name:22} +{after - before} lots")
 
-    conn.commit()
     na = conn.execute("SELECT count(*) FROM auctions").fetchone()[0]
     nl = conn.execute("SELECT count(*) FROM lots").fetchone()[0]
     np_ = conn.execute("SELECT count(*) FROM providers").fetchone()[0]
     print(f"\nproviders={np_} auctions={na} lots={nl}")
-    print(f"total lots summed: {sum(totals.values())}")
 
-    if not args.dry_run:
-        print(f"written: {DB_PATH}")
+    if not args.skip_resolution:
+        from build_wines import run as resolve_wines
+        resolve_wines(conn)
+
+    _record_build_metadata(conn)
+
+
+def _acquire_lock(lock_path):
+    try:
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        return fd
+    except FileExistsError:
+        return None
+
+
+def _validate_gates(conn):
+    problems = []
+    ic = conn.execute("PRAGMA integrity_check").fetchone()
+    if ic and ic[0] != "ok":
+        problems.append(f"integrity_check: {ic[0]}")
+    fk = conn.execute("PRAGMA foreign_key_check").fetchall()
+    if fk:
+        problems.append(f"foreign_key_check: {len(fk)} violations")
+    mixed_ref = conn.execute(
+        "SELECT count(*) FROM lots WHERE lot_kind='MIXED'"
+        " AND wine_ref_id IS NOT NULL").fetchone()[0]
+    if mixed_ref:
+        problems.append(f"mixed lots with wine_ref_id: {mixed_ref}")
+    conflict_final = conn.execute(
+        "SELECT count(*) FROM lots WHERE vintage_status='CONFLICT'"
+        " AND vintage_final IS NOT NULL").fetchone()[0]
+    if conflict_final:
+        problems.append(f"conflict lots with vintage_final: {conflict_final}")
+    if problems:
+        raise RuntimeError("validation gates failed: " + "; ".join(problems))
+
+
+def _record_build_metadata(conn):
+    import hashlib
+    import platform
+
+    from wine_resolution import (LOADER_VERSION, NORMALIZER_VERSION,
+                                 RESOLVER_VERSION)
+
+    files = sorted(glob.glob(os.path.join(ARCHIVE, "**", "*.json"),
+                             recursive=True))
+    files += sorted(glob.glob(os.path.join(REPO, "VinoImporter",
+                                           "validatedOutput", "*.xlsx")))
+    files += sorted(glob.glob(os.path.join(REPO, "priceData", "import",
+                                           "steinfels", "prepared", "**",
+                                           "*.xlsx"), recursive=True))
+    files = [f for f in files if "IDealwine_normalized" not in f
+             and "wines_directory" not in f and "auctions_directory" not in f]
+
+    build_id = hashlib.sha256(
+        repr(sorted(files)).encode("utf-8")).hexdigest()[:32]
+    entries = []
+    for f in files:
+        with open(f, "rb") as fh:
+            sha = hashlib.sha256(fh.read()).hexdigest()
+        size = os.path.getsize(f)
+        entries.append((os.path.relpath(f, ARCHIVE), sha, size))
+    entries.sort()
+    manifest_sha = hashlib.sha256(repr(entries).encode("utf-8")).hexdigest()
+
+    now = __import__("datetime").datetime.now().isoformat()
+    conn.execute(
+        "INSERT INTO builds(id, started_at, completed_at,"
+        " input_manifest_sha256, loader_version, normalizer_version,"
+        " resolver_version, python_version, sqlite_version, status)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (build_id, now, now, manifest_sha, LOADER_VERSION, NORMALIZER_VERSION,
+         RESOLVER_VERSION, platform.python_version(),
+         sqlite3.sqlite_version, "OK"))
+    for rel, sha, size in entries:
+        conn.execute(
+            "INSERT INTO build_inputs(build_id, source_file,"
+            " source_file_sha256, file_size) VALUES (?,?,?,?)",
+            (build_id, rel, sha, size))
 
 
 if __name__ == "__main__":

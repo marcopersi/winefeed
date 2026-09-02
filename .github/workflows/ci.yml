@@ -69,3 +69,21 @@ jobs:
           rm -f price-service-ui/package-lock.json
           npm install --prefix price-service-ui
           npm run build --prefix price-service-ui
+
+  test-data:
+    name: Test wine resolution pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install data pipeline dependencies
+        run: pip install -r data/requirements.txt
+
+      - name: Test wine resolution
+        run: python -m unittest discover -s data/tests -v

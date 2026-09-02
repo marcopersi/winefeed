@@ -19,3 +19,8 @@ priceData/venv/**/*
 priceData/__pycache__/
 
 logs/*
+
+# Data pipeline build artifacts
+data/*.tmp.*
+data/*.lock
+data/**/__pycache__/
