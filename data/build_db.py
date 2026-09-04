@@ -20,17 +20,18 @@ import sys
 
 import openpyxl
 
-# Source of raw auction data (Google Drive archive). Override via env var:
-#   ARCHIVE_PATH=/path/to/archive python3 build_db.py
+# Source of raw auction data. Override via env vars:
+#   ARCHIVE_PATH=/path/to/archive DB_PATH=/path/to/output.sqlite python3 build_db.py
 ARCHIVE = os.environ.get("ARCHIVE_PATH", os.path.expanduser(
     "~/Library/CloudStorage/GoogleDrive-persi.marco@gmail.com/"
     "Meine Ablage/Wein/WeinAuktionspreise"))
 
-# Repo root (contains the Wermuth/Steinfels Excel files) and DB output location.
-# Both are derived from this script's location (data/ inside the repo).
+# Repo root (contains the Wermuth/Steinfels Excel files). The SQLite output goes
+# to the Samsung disk by default (it is the master copy and is not committed).
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(SCRIPT_DIR)
-DB_PATH = os.path.join(SCRIPT_DIR, "wine_auction_prices.sqlite")
+DB_PATH = os.environ.get(
+    "DB_PATH", "/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite")
 
 # --------------------------------------------------------------------------- #
 # Schema
