@@ -30,8 +30,19 @@ def _load_geo():
         return {normalize(r["name"]) for r in csv.DictReader(fh)}
 
 
+def _load_appellations():
+    """Canonical appellations from the iDealwine reference data."""
+    conn = sqlite3.connect(DB)
+    out = {normalize(r[0]) for r in conn.execute(
+        "SELECT DISTINCT appellation FROM lots WHERE appellation IS NOT NULL"
+        " AND appellation != ''")}
+    conn.close()
+    return out
+
+
 VARIETIES = _load_varieties()
 GEO = _load_geo()
+APPELLATIONS = _load_appellations()
 
 _CLASSIFICATION_RE = re.compile(
     r"\b(grand cru( classe)?|premier cru|premier grand cru|cru classe|"
@@ -45,6 +56,8 @@ def classify(value):
         return "producer"
     if key in VARIETIES:
         return "variety"
+    if key in APPELLATIONS:
+        return "appellation"
     if key in GEO:
         return "region"
     if _CLASSIFICATION_RE.search(value):
@@ -88,6 +101,14 @@ def main():
             WHERE p.name='idealwine' AND l.region IS NOT NULL
             GROUP BY l.region"""):
         add("region", value, count, "idealwine")
+    # idealwine appellation (canonical base, fine-grained)
+    for value, count in conn.execute("""
+            SELECT l.appellation, count(*) FROM lots l
+            JOIN auctions a ON l.auction_id=a.id
+            JOIN providers p ON a.provider_id=p.id
+            WHERE p.name='idealwine' AND l.appellation IS NOT NULL
+            GROUP BY l.appellation"""):
+        add("appellation", value, count, "idealwine")
 
     for dim in ("region", "appellation", "classification", "variety",
                 "producer"):
