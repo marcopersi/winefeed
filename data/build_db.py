@@ -1115,7 +1115,7 @@ def _record_build_metadata(conn):
     files += sorted(glob.glob(os.path.join(REPO, "priceData", "import",
                                            "steinfels", "prepared", "**",
                                            "*.xlsx"), recursive=True))
-    files = [f for f in files if "IDealwine_normalized" not in f
+    files = [f for f in files if "/IDealwine/" not in f
              and "wines_directory" not in f and "auctions_directory" not in f]
 
     build_id = hashlib.sha256(
