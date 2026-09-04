@@ -1,0 +1,110 @@
+variety,color,wine_count,example
+Cabernet Sauvignon,red,9211,"001 Vintners, Cabernet Sauvignon, Napa Valley"
+Riesling,white,7444,1882 WINES Riesling
+Chardonnay,white,6436,00 Wines Chardonnay
+Pinot Noir,red,5691,10 MINUTES BY TRACTOR Reserve Pinot Noir
+Merlot,red,3854,"""1012"" Cabernet-Merlot, Weingut Feiler-Artinger, Burgenland, 85 Cellar Tracker-P"
+Sauvignon Blanc,white,2058,"1999, 2003, 2007 Sauvignon Blanc Zieregg, Weingut Tement, Steiermark, 3 Flaschen"
+Grenache,red,1937,1847 WINERY Church Vineyard Grenache Shiraz Mataro
+Syrah,red,1814,ABBOTTS Cumulus Old Vines Syrah
+Sémillon,white,1790,1847 WINERY Carawa Semillon
+Pinot Gris,white,1033,1838 WINES Premium Pinot Gris
+Gewürztraminer,white,826,1998 Mr. K Vin de Paille Sémillion; 1999 Mr. K Vin de Glace - Eiswein Gewurztram
+Malbec,red,786,ABBEY VALE Premium RSV Cabernet Merlot Malbec
+Viognier,white,733,1998 Mr. K Vin de Paille Sémillion; 1999 Mr. K Vin de Glace - Eiswein Gewurztram
+Cabernet Franc,red,713,ABBEY VIEW Reserve Cabernet Merlot Cabernet Franc
+Verdelho,white,588,"A.L.B. Sercial 1870 Two part moulded bottle, stencilled. Capsule missing. Origin"
+Sangiovese,red,500,"2016, 2017, 2018, 2019 Percarlo Sangiovese di Toscana IGT, San Giusto a Rentenna"
+Barbera,red,472,"A Parusso, Barolo Bussia Rocche 1988 (3) Barolo Mariondino 1988 (3) Dolcetto d'A"
+Tempranillo,red,446,919 WINES Tempranillo
+Nebbiolo,red,421,A.T.RICHARDSON WINES Hard Hill Road Nebbiolo
+Mourvèdre,red,387,A RETIEF The Alias Mourvedre
+Grüner Veltliner,white,385,"1993, 1998, 1999 Grüner Veltliner Honivogl Smaragd, Weingut Franz Hirtzberger, W"
+Sercial,white,337,A. Izidro Gonsalves Sercial Colheita
+Aligoté,white,296,A. & P. DE VILLAINE Aligote de Bouzeron
+Montepulciano,red,287,ACCOLADE Panache Premier Montepulciano
+Petit Verdot,red,265,1847 WINERY 1847 Home Block Petit Verdot
+Chenin Blanc,white,187,AA BADENHORST Dassiekop Steen Chenin Blanc
+Roussanne,white,183,"Alban, Pandora, Red 2006 (2) 2008 (1) 2009 (1) Alban, Seymour's Vineyard, Syrah "
+Durif,red,171,1838 WINES Blue Hills Premium Blend Durif Shiraz
+Marsanne,white,167,ALKIMI WINES Marsanne
+Blaufränkisch,red,165,"1983 und 1986 Zweigelt Kabinett, 1985 Blaufränkisch-Blauer Portugieser Kabniett,"
+Scheurebe,white,143,"Alois Kracher Beerenauslese Collection--Vintage Zweigelt Rosé T.B.A. ""Nouvelle V"
+Vermentino,white,129,919 WINES Vermentino
+Dolcetto,red,122,"A Parusso, Barolo Bussia Rocche 1988 (3) Barolo Mariondino 1988 (3) Dolcetto d'A"
+Nero d'Avola,red,120,ALPHA BOX & DICE Siren Nero d'Avola
+Gamay,red,115,ALEX FOILLARD Gamay
+Primitivo,red,114,A. MANO Primitivo
+Fiano,white,110,1813 WINES Single Vineyard Fiano
+Pinot Blanc,white,110,ALBERT BOXLER Pinot Blanc
+Pedro Ximénez,white,106,ALVEAR  Dulce Viejo 1927 Pedro Ximenez Pedro Ximenez
+Savagnin,white,98,ANDRE & MIREILLE TISSOT Benedicte et Stephane Tissot Vin de Paille Chardonnay Po
+Carignan,red,93,ABBOTTS & DELAUNAY Reserve Carignan Grenache Syrah
+Pinot Meunier,red,82,AMBERTON Pinot Noir Chardonnay Pinot Meunier Cuvee
+Sagrantino,red,79,ADANTI Arquata Sagrantino Di Montefalco
+Albariño,white,72,A VACA CUCA  Albarino
+Pinotage,red,64,ASHBOURNE Pinotage
+Arneis,white,63,ADELINA WINES Eternal Return Arneis
+Aglianico,red,63,AFTER FIVE WINE CO Aglianico
+Carménère,red,61,ANTIYAL Pura Fe Carmenere
+Silvaner,white,60,ALSHEIM Alsheimer Fruhmesse Silvaner & Riesling Auslese-Eiswein
+Graciano,red,55,ALLEGIANCE WINES Local Legend Graciano Mataro Shiraz
+Mencía,red,53,ADEGAS GUIMARO A Ponte Mencia
+Zweigelt,red,47,"100 DAYS Zweigelt aus der Weltrekordflasche, Weingut Keringer, Burgenland, 93 Fa"
+Trousseau,red,47,ANDRE & MIREILLE TISSOT Singulier Trousseau
+Müller-Thurgau,white,46,"Acquavite d'Uva Muller Thurgau, di Val di Cembra Distilled and bottled by Nónino"
+Touriga Nacional,red,45,ALPHA BOX & DICE Kit & Kaboodle Cabernet Shiraz Grenache Touriga Nacional
+Muscadelle,white,38,ALL SAINTS Grand Muscadelle
+Cortese,white,37,ALBINO ROCCA La Rocca Cortese
+Lagrein,red,36,ACCOLADE Panache Premier Lagrein
+Kerner,white,34,ABBAZIA DI NOVACELLA (STIFTSKELLEREI NEUSTIFT) Kerner
+Grillo,white,34,Blanchè Sicilia Grillo DOC 2019
+Tannat,red,33,A.T.RICHARDSON WINES Hard Hill Road Tannat
+Poulsard,red,32,ANDRE & MIREILLE TISSOT Benedicte et Stephane Tissot Vin de Paille Chardonnay Po
+Grenache Blanc,white,30,BODEGAS EDETARIA Edetana Grenache Blanc Macabeo
+Godello,white,29,ALGUEIRA Cortezada Godello Albarino Treixadura
+Nerello Mascalese,red,26,AZIENDA AGRICOLA CRASA SRC Alberello Nerello Mascalese
+Mondeuse,red,26,BROWN BROTHERS Aged Wine Release Shiraz Mondeuse Cabernet
+Verdejo,white,21,ANGEL RODRIGUEZ Martinsancho Verdejo
+Furmint,white,21,BIRO Grand Furmint
+Corvina,red,20,BISCARDO Neropasso Originale Cabernet Corvina Corvinone
+Saperavi,red,19,ALEX RUSSELL WINES Alejandro Saperavi
+St. Laurent,red,17,"Admiral St. Laurent, Weingut Pöckl, Burgenland, Magnum"
+Chasselas,white,16,ALBERT BOXLER Chasselas Chasselas
+Teroldego,red,16,BLUE POLES Teroldego
+Xinomavro,red,15,Alpha Estate Hedgehog Vineyard Xinomavro 2016 (750ML
+Alicante Bouschet,red,13,BOOTH'S TAMINICK CELLARS Alicante Bouschet
+Timorasso,white,13,RICCI Terre del Timorasso
+Falanghina,white,12,CANTINA DEL TABURNO Cesco Dell'Eremo Vendemmia Tardiva Falanghina
+Assyrtiko,white,11,Assyrtiko 2009
+Catarratto,white,10,ALESSANDRO DI CAMPOREALE Catarratto Vigna di Mandranova Catarratto
+Macabeo,white,10,BODEGAS BORSAO Macabeo
+Carricante,white,9,AZIENDA AGRICOLA SOFIA La Vigna di Gioacchino Carricante Inzolia
+Rondinella,red,9,BERTANI Amarone Classico Superiore Molinara Rondinella
+Ugni Blanc,white,9,CHATEAU DE PLASSAC Pineau des Charentes Colombard Ugni Blanc
+Garganega,white,9,DAL ZOTTO Garganega
+Agiorgitiko,red,8,CHALMERS WINES Col Fondo Agiorgitiko
+Schioppettino,red,7,BILLY BUTTON The Clandestine Schioppettino
+Parellada,white,7,BODEGAS CAMPO VIEJO Cava Macabeo Parellada Xarel-Lo
+Xarel·lo,white,7,BODEGAS CAMPO VIEJO Cava Macabeo Parellada Xarel-Lo
+Bobal,red,6,ALDI STORES El Toro Mucho Crianza Bobal Tempranillo
+Trincadeira,red,6,ENVINATE T. Amarela Trincadeira
+Humagne Rouge,red,6,Grand Métral Humagne Rouge  AOC Valais 2014
+Completer,white,5,Completer Malanserrebe 2012
+Gamaret,red,5,Cuvée Rouge Gamaret 2013
+Pignolo,red,5,Girolamo Dorigo Vigneto Ronc di Juri Pignolo di Buttrio (12 BT)
+Greco Bianco,white,4,AZIENDA AGRICOLA BARONE MACRI Terre di Gerace Greco bianco Inzolia
+Petit Meslier,white,4,Champagne Le Nombre d'Or Brut L'Aubry Fils Sablé Blanc des Blancs--Vintage 1993 
+Refosco dal Peduncolo Rosso,red,4,CONTE D'ATTIMIS-MANIAGO Refosco dal Peduncolo Rosso
+Cornalin,red,4,Cornalin 2015
+Colorino,red,4,GREENSTONE Colorino
+Gaglioppo,red,3,ANTONIO SCALA Rosso Classico Superiore Gaglioppo
+Counoise,red,3,BONDAR WINES Cinsault Counoise Grenache Rose
+Schiava,red,3,"Grappa dei Molini, Schiava--Vintage (8) Grappa dei Molini, Vin dei Molini--Vinta"
+Nerello Cappuccio,red,2,BENANTI Nerello Cappuccio
+Diolinoir,red,2,Diolinoir Évêché 2015
+Rkatsiteli,white,2,MCWILLIAM'S WINES Rkatsiteli
+Arbane,white,1,Champagne Le Nombre d'Or Brut L'Aubry Fils Sablé Blanc des Blancs--Vintage 1993 
+Clairette Blanche,white,1,Clairette Blanche 'Cape Winemakers Guild'
+Palomino Fino,white,1,GONZALEZ BYASS Tio Pepe Very Dry Palomino Fino
+Touriga Franca,red,1,Plansel Touriga Franca 2004
