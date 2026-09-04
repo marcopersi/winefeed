@@ -38,6 +38,7 @@ DB_PATH = os.environ.get(
 # --------------------------------------------------------------------------- #
 
 SCHEMA = """
+DROP TABLE IF EXISTS wine_varieties;
 DROP TABLE IF EXISTS wine_alias_resolutions;
 DROP TABLE IF EXISTS wine_alias_observations;
 DROP TABLE IF EXISTS build_metrics;
@@ -168,6 +169,14 @@ CREATE TABLE wine_alias_resolutions (
   CHECK (resolution_status IN (
     'RESOLVED', 'AMBIGUOUS', 'UNRESOLVED', 'IGNORED'
   ))
+);
+
+CREATE TABLE wine_varieties (
+  id           INTEGER PRIMARY KEY,
+  wine_id      INTEGER NOT NULL REFERENCES wines(id),
+  variety_name TEXT NOT NULL,
+  color        TEXT,
+  UNIQUE(wine_id, variety_name)
 );
 
 CREATE TABLE builds (

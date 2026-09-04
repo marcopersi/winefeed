@@ -40,6 +40,7 @@ def run(conn):
     idealwine_ref = _idealwine_reference(conn)
     _resolve(conn, observations, load_overrides(), idealwine_ref)
     _backfill_wine_ref(conn)
+    _match_varieties(conn)
 
 
 # --------------------------------------------------------------------------- #
@@ -300,3 +301,19 @@ def _backfill_wine_ref(conn):
         if wid is not None:
             conn.execute("UPDATE lots SET wine_ref_id=? WHERE id=?",
                          (wid, lot_id))
+
+
+def _match_varieties(conn):
+    from wine_resolution.variety import (default_varieties_path,
+                                         load_varieties, match_varieties)
+    varieties = load_varieties(default_varieties_path())
+    variety_keys = [normalize(v) for v, _ in varieties]
+    key_to_meta = {normalize(v): (v, c) for v, c in varieties}
+    conn.execute("DELETE FROM wine_varieties")
+    for wine_id, name in conn.execute(
+            "SELECT id, canonical_name FROM wines").fetchall():
+        for key in match_varieties(name, variety_keys):
+            vname, color = key_to_meta[key]
+            conn.execute(
+                "INSERT INTO wine_varieties(wine_id, variety_name, color)"
+                " VALUES (?,?,?)", (wine_id, vname, color))
