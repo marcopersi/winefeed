@@ -39,12 +39,14 @@ DB_PATH = os.environ.get(
 
 SCHEMA = """
 DROP TABLE IF EXISTS wine_varieties;
+DROP TABLE IF EXISTS wine_origin_mappings;
 DROP TABLE IF EXISTS wine_alias_resolutions;
 DROP TABLE IF EXISTS wine_alias_observations;
 DROP TABLE IF EXISTS build_metrics;
 DROP TABLE IF EXISTS build_inputs;
 DROP TABLE IF EXISTS builds;
 DROP TABLE IF EXISTS lots;
+DROP TABLE IF EXISTS wine_origins;
 DROP TABLE IF EXISTS wines;
 DROP TABLE IF EXISTS auctions;
 DROP TABLE IF EXISTS providers;
@@ -86,6 +88,46 @@ CREATE TABLE wines (
   ))
 );
 
+CREATE TABLE wine_origins (
+  origin_id              TEXT PRIMARY KEY,
+  country_code           TEXT,
+  country_de             TEXT,
+  country_fr             TEXT,
+  country_en             TEXT,
+  region_canonical       TEXT,
+  region_de              TEXT,
+  region_fr              TEXT,
+  region_en              TEXT,
+  appellation_canonical  TEXT,
+  record_level           TEXT,
+  appellation_type       TEXT,
+  legal_scheme           TEXT,
+  legal_status           TEXT,
+  source_authority       TEXT,
+  source_url             TEXT,
+  legal_basis_url        TEXT,
+  validated_on           TEXT,
+  auction_lots_observed  INTEGER,
+  notes_de               TEXT,
+  notes_fr               TEXT,
+  notes_en               TEXT
+);
+
+CREATE TABLE wine_origin_mappings (
+  id                  INTEGER PRIMARY KEY,
+  source_file         TEXT,
+  raw_value           TEXT,
+  raw_lots            INTEGER,
+  raw_source          TEXT,
+  raw_country_code    TEXT,
+  normalized_value    TEXT,
+  match_status        TEXT,
+  match_confidence    REAL,
+  target_origin_id    TEXT REFERENCES wine_origins(origin_id),
+  target_record_level TEXT,
+  match_reason        TEXT
+);
+
 CREATE TABLE lots (
   id                  INTEGER PRIMARY KEY,
   auction_id          INTEGER NOT NULL REFERENCES auctions(id),
@@ -105,6 +147,8 @@ CREATE TABLE lots (
   vintage             INTEGER,
   region              TEXT,
   appellation         TEXT,
+  origin_id           TEXT REFERENCES wine_origins(origin_id),
+  origin_status       TEXT,
   classification      TEXT,
   color               TEXT,
   vintage_raw         TEXT,

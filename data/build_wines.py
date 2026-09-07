@@ -41,6 +41,7 @@ def run(conn):
     _resolve(conn, observations, load_overrides(), idealwine_ref)
     _backfill_wine_ref(conn)
     _match_varieties(conn)
+    _link_origins(conn)
 
 
 # --------------------------------------------------------------------------- #
@@ -317,3 +318,11 @@ def _match_varieties(conn):
             conn.execute(
                 "INSERT INTO wine_varieties(wine_id, variety_name, color)"
                 " VALUES (?,?,?)", (wine_id, vname, color))
+
+
+def _link_origins(conn):
+    from wine_resolution.origin import link_origins, load_mappings, \
+        load_origins
+    load_origins(conn)
+    load_mappings(conn)
+    link_origins(conn)
