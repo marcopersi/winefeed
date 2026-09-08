@@ -13,11 +13,9 @@ val groovyVersion by extra("3.0.25")
 
 plugins {
     `java-library`
-    `maven-publish`
     idea
 }
 repositories {
-    mavenLocal()
     mavenCentral()
 }
 
@@ -53,11 +51,11 @@ dependencies {
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    // Vino Domain - use Maven coordinates for local repo
-    implementation("VinoDomain:VinoDomain:1.0.0")
+    // Vino Domain
+    implementation(project(":VinoDomain"))
 
-    // Excel Util - use Maven coordinates for local repo
-    implementation("PersiCommons:PersiCommons:1.0.0")
+    // Excel Util
+    implementation(project(":PersiCommons"))
 
     implementation("org.codehaus.groovy:groovy:$groovyVersion")
     implementation("org.codehaus.groovy:groovy-ant:$groovyVersion")
@@ -77,9 +75,3 @@ group = "VinoImporter"
 version = "1.0.0"
 description = "VinoImporter"
 java.sourceCompatibility = JavaVersion.VERSION_17
-
-publishing {
-    publications.create<MavenPublication>("maven") {
-        from(components["java"])
-    }
-}

@@ -1,1 +1,0 @@
-INSERT INTO provider(id, "name") values ((select nextval('provider_id_seq'), "Wermuth SA.")

@@ -4,14 +4,10 @@
 
 plugins {
     `java-library`
-    `maven-publish`
 }
 
 repositories {
-    mavenLocal()
-    maven {
-        url = uri("https://repo.maven.apache.org/maven2/")
-    }
+    mavenCentral()
 }
 
 dependencies {
@@ -24,9 +20,3 @@ group = "PersiCommons"
 version = "1.0.0"
 description = "Persi Commons"
 java.sourceCompatibility = JavaVersion.VERSION_17
-
-publishing {
-    publications.create<MavenPublication>("maven") {
-        from(components["java"])
-    }
-}

@@ -19,13 +19,16 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter")
-    implementation("org.apache.poi:poi-ooxml:5.5.1")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-flyway")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    implementation("org.apache.poi:poi-ooxml:5.5.1")
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa") // Für JPA
     runtimeOnly("org.postgresql:postgresql:42.7.10") // PostgreSQL-Treiber
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("com.h2database:h2") // H2 für Tests
 }
 

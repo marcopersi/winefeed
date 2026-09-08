@@ -17,7 +17,6 @@ act push
 ```bash
 act push -j lint
 act push -j build
-act push -j owasp-dependency-check
 ```
 
 ### Nur prüfen (Dry-run):
