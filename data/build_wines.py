@@ -81,9 +81,9 @@ def _separate_vintage(conn):
         "SELECT id, raw_wine, vintage, auction_id FROM lots"
         " WHERE raw_wine IS NOT NULL AND raw_wine != ''").fetchall()
     for lot_id, raw_wine, structured, aid in rows:
-        ckey = (raw_wine, structured, auction_year.get(aid))
+        ckey = (raw_wine, structured)
         if ckey not in cache:
-            cache[ckey] = resolve_vintage(raw_wine, structured, ckey[2])
+            cache[ckey] = resolve_vintage(raw_wine, structured, None)
         r = cache[ckey]
         batch.append((lot_id, r["cleaned_name"], r["final"], r["status"],
                       r["extracted"], r["rule_id"], r["evidence"]))
@@ -108,6 +108,13 @@ def _separate_vintage(conn):
           vintage_evidence_text = (SELECT evidence FROM vintage_map vm
                                    WHERE vm.lot_id = lots.id)
     """)
+    # Year-after-auction check (separate pass over distinct extraction).
+    for aid, ayear in auction_year.items():
+        conn.execute(
+            "UPDATE lots SET vintage_status='INVALID', vintage_final=NULL,"
+            " vintage_rule_id='year-after-auction'"
+            " WHERE vintage_status='EXTRACTED' AND vintage_extracted > ?"
+            " AND auction_id = ?", (ayear, aid))
     conn.execute("DROP TABLE vintage_map")
 
 
@@ -295,13 +302,19 @@ def _resolve(conn, observations, overrides, idealwine_ref):
 def _backfill_wine_ref(conn):
     key_to_wine = dict(conn.execute(
         "SELECT canonical_key, id FROM wines").fetchall())
+    cache = {}
+    updates = []
     for lot_id, wine in conn.execute(
             "SELECT id, wine FROM lots WHERE wine_ref_id IS NULL"
             " AND wine IS NOT NULL AND wine != '' AND lot_kind = 'SINGLE'"):
-        wid = key_to_wine.get(normalize(wine))
+        key = cache.get(wine)
+        if key is None:
+            key = normalize(wine)
+            cache[wine] = key
+        wid = key_to_wine.get(key)
         if wid is not None:
-            conn.execute("UPDATE lots SET wine_ref_id=? WHERE id=?",
-                         (wid, lot_id))
+            updates.append((wid, lot_id))
+    conn.executemany("UPDATE lots SET wine_ref_id=? WHERE id=?", updates)
 
 
 def _match_varieties(conn):

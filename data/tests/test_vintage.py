@@ -59,6 +59,21 @@ class TestVintage(unittest.TestCase):
         self.assertEqual(r["final"], 1968)
         self.assertEqual(r["cleaned_name"], "Petrus")
 
+    def test_mixed_lot_year_not_negative(self):
+        r = v.resolve_vintage("Mixed Lot 2005")
+        self.assertEqual(r["status"], v.STATUS_EXTRACTED)
+        self.assertEqual(r["final"], 2005)
+
+    def test_word_end_year(self):
+        r = v.resolve_vintage("Château Smith Haut Lafitte1952")
+        self.assertEqual(r["status"], v.STATUS_EXTRACTED)
+        self.assertEqual(r["final"], 1952)
+        self.assertIn("Lafitte", r["cleaned_name"])
+
+    def test_decade_is_mv(self):
+        r = v.resolve_vintage("Mixed Lot Italy 2000s")
+        self.assertEqual(r["status"], v.STATUS_MV)
+
     def test_structured_valid(self):
         r = v.resolve_vintage("Château Margaux 2005", structured_vintage=2005)
         self.assertEqual(r["status"], v.STATUS_STRUCTURED)

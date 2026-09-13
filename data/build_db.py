@@ -257,6 +257,7 @@ CREATE INDEX idx_lots_wine ON lots(wine);
 CREATE INDEX idx_lots_hammer ON lots(hammer_price);
 CREATE INDEX idx_lots_wine_ref ON lots(wine_ref_id);
 CREATE INDEX idx_lots_lot_kind ON lots(lot_kind);
+CREATE INDEX idx_lots_source_lot_key ON lots(source_lot_key);
 
 CREATE VIEW single_wine_prices AS
 SELECT *

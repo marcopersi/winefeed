@@ -13,10 +13,14 @@ _YEAR = r"(?:1[7-9]\d{2}|20\d{2})"
 _LEADING = re.compile(rf"^\s*({_YEAR})\b")
 _TRAILING = re.compile(rf"\b({_YEAR})\s*(?:\([^)]*\))?\s*$")
 _VINTAGE_WORD = re.compile(rf"\bVintage\s+({_YEAR})\b", re.IGNORECASE)
+# Year glued to the end of a word without a space: "Lafitte1952", "Gué2011".
+_WORD_END_YEAR = re.compile(rf"[a-z\u00e0-\u00ff]({_YEAR})\b", re.IGNORECASE)
+# Decade hints like "1970s", "1980'ties" — multi-vintage, not a single year.
+_DECADE = re.compile(rf"\b({_YEAR})(?:s|'?ties)\b", re.IGNORECASE)
 
 # Words that make a neighbouring year part of the product name, not a vintage.
 _NEG_AFTER_YEAR = {"disgorgement", "established", "founded", "bottled", "made"}
-_NEG_BEFORE_YEAR = {"cuvee", "cuvée", "bin", "ad", "lot", "n", "no", "numéro"}
+_NEG_BEFORE_YEAR = {"cuvee", "cuvée", "bin", "ad", "numéro", "numero"}
 
 _NV = re.compile(r"\b(nv|n\.v\.|non[\s-]vintage|sans[\s-]ann[ée]e)\b", re.IGNORECASE)
 _MV = re.compile(r"\b(mv|multi[\s-]vintage|vertical|assortment)\b", re.IGNORECASE)
@@ -62,6 +66,13 @@ def resolve_vintage(raw_name, structured_vintage=None, auction_year=None):
             "rule_id": "nv-keyword", "evidence": name, "cleaned_name": name,
         }
 
+    # Decade hints ("1970s", "1980'ties") are multi-vintage, not a single year.
+    if _DECADE.search(name):
+        return {
+            "status": STATUS_MV, "final": None, "extracted": None,
+            "rule_id": "decade-hint", "evidence": name, "cleaned_name": name,
+        }
+
     # Multiple distinct years are inherently ambiguous (e.g. verticals).
     if len(distinct_years) > 1:
         return {
@@ -98,6 +109,12 @@ def resolve_vintage(raw_name, structured_vintage=None, auction_year=None):
                 extracted = int(m.group(1))
                 rule_id = "vintage-keyword"
                 evidence = name
+            else:
+                m = _WORD_END_YEAR.search(name)
+                if m:
+                    extracted = int(m.group(1))
+                    rule_id = "word-end-year"
+                    evidence = name
 
     # Reject a year that is part of the product name (negative context).
     if extracted is not None and _is_negative_context(name):
@@ -174,5 +191,7 @@ def _remove_token(name, year):
     """Remove the accepted vintage token and a trailing quantity bracket."""
     token = str(year)
     name = re.sub(rf"\b{token}\b", " ", name)
+    name = re.sub(rf"([a-z\u00e0-\u00ff]){token}\b", r"\1", name,
+                  flags=re.IGNORECASE)
     name = _QTY_BRACKET.sub(" ", name)
     return re.sub(r"\s+", " ", name).strip()

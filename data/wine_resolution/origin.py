@@ -96,14 +96,23 @@ def link_origins(conn):
             else:
                 resolved[norm] = origin_id
 
+    cache = {}
+
+    def cached_lookup(appellation, region):
+        key = (appellation, region)
+        if key not in cache:
+            cache[key] = _lookup(resolved, status_by_norm,
+                                 appellation, region)
+        return cache[key]
+
     conn.execute("UPDATE lots SET origin_id = NULL, origin_status = NULL")
-    rows = conn.execute(
-        "SELECT id, appellation, region FROM lots").fetchall()
-    for lot_id, appellation, region in rows:
-        origin_id, status = _lookup(resolved, status_by_norm,
-                                    appellation, region)
-        conn.execute("UPDATE lots SET origin_id=?, origin_status=?"
-                     " WHERE id=?", (origin_id, status, lot_id))
+    for lot_id, appellation, region in conn.execute(
+            "SELECT id, appellation, region FROM lots"):
+        origin_id, status = cached_lookup(appellation, region)
+        if origin_id is not None or status is not None:
+            conn.execute(
+                "UPDATE lots SET origin_id=?, origin_status=? WHERE id=?",
+                (origin_id, status, lot_id))
 
 
 def _lookup(resolved, status_by_norm, appellation, region):
