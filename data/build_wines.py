@@ -35,6 +35,7 @@ def load_overrides():
 def run(conn):
     _set_source_lot_key(conn)
     _separate_vintage(conn)
+    _parse_bottle_formats(conn)
     _classify_lots(conn)
     observations = _build_observations(conn)
     idealwine_ref = _idealwine_reference(conn)
@@ -116,6 +117,20 @@ def _separate_vintage(conn):
             " WHERE vintage_status='EXTRACTED' AND vintage_extracted > ?"
             " AND auction_id = ?", (ayear, aid))
     conn.execute("DROP TABLE vintage_map")
+
+
+def _parse_bottle_formats(conn):
+    """Derive quantity + bottle_size_dl from '(6 BT)'-style name hints."""
+    from wine_resolution.bottle import parse_bottle_format
+    updates = []
+    for lot_id, raw_wine in conn.execute(
+            "SELECT id, raw_wine FROM lots WHERE quantity IS NULL"
+            " AND raw_wine IS NOT NULL AND raw_wine != ''"):
+        qty, dl = parse_bottle_format(raw_wine)
+        if qty is not None:
+            updates.append((qty, dl, lot_id))
+    conn.executemany(
+        "UPDATE lots SET quantity=?, bottle_size_dl=? WHERE id=?", updates)
 
 
 # --------------------------------------------------------------------------- #
