@@ -87,3 +87,6 @@ jobs:
 
       - name: Test wine resolution
         run: python -m unittest discover -s data/tests -v
+
+      - name: Test ingest fetchers
+        run: python -m unittest discover -s ingest/tests -v
