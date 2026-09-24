@@ -57,8 +57,7 @@ externen Disk** (Steinfels, Weinboerse, Munich Wine Company, Koppe — enthalten
 die exakten Request-URLs), die **iDealwine-/sylvies-Endpoints im Repo** und die
 **Quell-URLs in den gespeicherten JSONs** (`source_url`/`snapshot_url`/
 `landing_url`/`results_pdf`). Für die restlichen Häuser (Sotheby's, Besch Cannes,
-Dorotheum, Pandolfini, Dobiaschofsky, Finarte, winebarrel) fehlen die exakten
-Endpoints noch.
+Dorotheum, Pandolfini, Dobiaschofsky, Finarte) fehlen die exakten Endpoints noch.
 
 ### Quelltyp-Muster (für die Fetcher-Generalisierung)
 
@@ -93,7 +92,7 @@ Die Häuser lassen sich auf vier Fetch-Muster reduzieren:
 | Pandolfini | pandolfini.it | Scrape | `sold_price` (inkl. Aufgeld) |
 | Dobiaschofsky | dobiashofsky.ch | Scrape | `hammer_chf` |
 | Finarte | finarte.it | Scrape | `hammer_price` |
-| winebarrel | (unbekannt, flache Lot-Liste) | Scrape | `hammer_price` |
+| winebarrel | winebarrel.ch (Joomla, server-side gerendert) | HTML-Scrape | Einstieg `https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv` (listet Auktionen); Auktion `…/auktionsarchiv/auction/{id}` (Lots im HTML, **kein XHR**). Lot-Felder: Titel, Land, Region, Weingut, Bewertungen (RP/WS/CT), Flaschengrösse, Anzahl, Auktionsnummer, Startpreis, Zuschlagspreis (inkl. MwSt.) |
 | weinauktionator | weinauktionator.de | HTML-Scrape → XLSX (bevorzugt) | Einstieg `https://www.weinauktionator.de/de/info/results` (listet Auktionen + Datum); Excel `…/de/info/results/xlsx/{n}/weinauktionator_results_{n}.xlsx`, PDF `…/de/info/results/pdf/{n}/weinauktionator_results_{n}.pdf` |
 | Wermuth | Excel bereitgestellt/extrahiert | via `VinoImporter` | `VinoImporter/validatedOutput/vinoStagingFile2015-2008.xlsx` + `output_WermuthSA_*.csv` |
 | Steinfels | auktionen.steinfelsweine.ch | JSON-API | Auktionsliste `…/api/auctions` (→ `catalog.id`); Lots `…/api/lots?cat_id={catalogId}&my=false&s=&consignments_only=false&$sortby=lot_number&$sortdir=asc&$page={i}&$maxpagesize=50`; Header `x-api-version: 1.14`. Alt-Bestand (2002–03) als Excel `priceData/import/steinfels/prepared/*/results_*.xlsx` |
