@@ -56,9 +56,25 @@ Aufräumen entfernt. Erhalten bzw. rekonstruiert sind: die **curl-Skripte auf de
 externen Disk** (Steinfels, Weinboerse, Munich Wine Company, Koppe — enthalten
 die exakten Request-URLs), die **iDealwine-/sylvies-Endpoints im Repo** und die
 **Quell-URLs in den gespeicherten JSONs** (`source_url`/`snapshot_url`/
-`landing_url`/`results_pdf`). Für die restlichen Häuser (Sotheby's, Langtons,
-Winefields, Besch Cannes, Dorotheum, Pandolfini, Dobiaschofsky, Finarte,
-winebarrel) fehlen die exakten Endpoints noch.
+`landing_url`/`results_pdf`). Für die restlichen Häuser (Sotheby's, Besch Cannes,
+Dorotheum, Pandolfini, Dobiaschofsky, Finarte, winebarrel) fehlen die exakten
+Endpoints noch.
+
+### Quelltyp-Muster (für die Fetcher-Generalisierung)
+
+Die Häuser lassen sich auf vier Fetch-Muster reduzieren:
+
+1. **JSON-API, Paginierung über `$page`/`$maxpagesize`** — Steinfels, Weinboerse
+   (gleiche Plattform `…weinauktion.ch`), iDealwine. Fetcher: Auktionsliste →
+   neue `cat_id` dedupen → Lots paginiert ziehen.
+2. **HTML-Einstieg → Datei-Links (XLSX/PDF)** — weinauktionator (XLSX bevorzugt),
+   HDH (Results-PDF), Koppe (HTML-Pagination). Fetcher: Liste parsen → neueste
+   Nummer/`{YYMM}` dedupen → Datei laden.
+3. **React/SPA (JS-rendered), Daten über XHR/API** — Winefields, Langtons,
+   Sotheby's u. a. Fetcher: Browser-/Netzwerk-Log nötig, um den Daten-Endpoint
+   zu rekonstruieren; dann wie Typ 1.
+4. **Nur bereitgestellte Dateien (kein Online-Fetch)** — Wermuth/Steinfels-Alt
+   (Excel), Denz/FranzWermuth (PDF). Kein Fetcher; manuelle Ablage.
 
 | Haus | Quelle | Methode | Bekannte URLs/Endpoints |
 |------|--------|---------|-------------------------|
@@ -69,8 +85,8 @@ winebarrel) fehlen die exakten Endpoints noch.
 | Zacky | auction.zachys.com via **Wayback** | Wayback-Snapshot | `https://auction.zachys.com/catalog.aspx?auctionid={id}`; nur Seite 1 (25 Lots) archiviert, Postback-Paginierung fehlt |
 | Baghera | bagherawines.auction | Scrape | `results_pdf`: `https://www.bagherawines.auction/assets/uploads/bilan/catalogues/{id}/…_Sale_Results.pdf` |
 | HDH | hdhauctions.com | HTML-Scrape → PDF | Einstieg `https://hdhauctions.com/auction-archives/` (listet Auktionen + Datum); Results-PDF `https://hdhauctions.com/wp-content/uploads/{YYMM}/{YYMM}_AuctionResults.pdf` (z. B. `2608_…` = Aug 2026); Kataloge `{YYMM}_catalog.pdf`. Alt-Bestand als JSON (`hammer` + `aggregate`) |
-| Langtons | langtons.com.au | API | `winning_bid` (AUD) |
-| Winefields | winefields.com | API (Auction-Mobility) | `hammer` |
+| Langtons | langtons.com.au (Salesforce/demandware) | HTML/API | Einstieg `…/Auction-ClosedAuction?cgid=cat-auctions-auction-results-and-reports&auctionStatus=Closed` (listet geschlossene Auktionen). `winning_bid` (AUD); exakter Daten-Endpoint via JS/Netzwerk zu rekonstruieren (curl → 302-Redirect-Loop) |
+| Winefields | winefields.com | HTML/API (Auction-Mobility) | Einstieg `https://www.winefields.com/auctions/` → Auktions-Links → `https://auctions.winefields.com/auctions/{auctionId}/{slug}` (React-SPA); `hammer`; Daten-Endpoint via JS/Netzwerk zu rekonstruieren |
 | Besch Cannes | besch-cannes.com | Scrape | `adjuge` |
 | Munich Wine Company | munichwinecompany.com | HTML-Scrape | `https://www.munichwinecompany.com/de/{id}/live-wineauction-p{i}.html` (Seiten-Pagination `p{i}`) |
 | Dorotheum | dorotheum.com | API | `realized_price` |
