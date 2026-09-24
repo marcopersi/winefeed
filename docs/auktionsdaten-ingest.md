@@ -56,9 +56,9 @@ Aufräumen entfernt. Erhalten bzw. rekonstruiert sind: die **curl-Skripte auf de
 externen Disk** (Steinfels, Weinboerse, Munich Wine Company, Koppe — enthalten
 die exakten Request-URLs), die **iDealwine-/sylvies-Endpoints im Repo** und die
 **Quell-URLs in den gespeicherten JSONs** (`source_url`/`snapshot_url`/
-`landing_url`/`results_pdf`). Für die restlichen Häuser (Sotheby's, HDH,
-Langtons, Winefields, Besch Cannes, Dorotheum, Pandolfini, Dobiaschofsky,
-Finarte, winebarrel, weinauktionator) fehlen die exakten Endpoints noch.
+`landing_url`/`results_pdf`). Für die restlichen Häuser (Sotheby's, Langtons,
+Winefields, Besch Cannes, Dorotheum, Pandolfini, Dobiaschofsky, Finarte,
+winebarrel) fehlen die exakten Endpoints noch.
 
 | Haus | Quelle | Methode | Bekannte URLs/Endpoints |
 |------|--------|---------|-------------------------|
@@ -68,7 +68,7 @@ Finarte, winebarrel, weinauktionator) fehlen die exakten Endpoints noch.
 | Christies | christies.com | Scrape | Auktions-`landing_url`: `https://www.christies.com/en/auction/{slug}-{saleId}/`; Lot-URL: `https://www.christies.com/en/lot/lot-{lotId}` |
 | Zacky | auction.zachys.com via **Wayback** | Wayback-Snapshot | `https://auction.zachys.com/catalog.aspx?auctionid={id}`; nur Seite 1 (25 Lots) archiviert, Postback-Paginierung fehlt |
 | Baghera | bagherawines.auction | Scrape | `results_pdf`: `https://www.bagherawines.auction/assets/uploads/bilan/catalogues/{id}/…_Sale_Results.pdf` |
-| HDH | hdhwine.com | Scrape | `hammer` + `aggregate` |
+| HDH | hdhauctions.com | HTML-Scrape → PDF | Einstieg `https://hdhauctions.com/auction-archives/` (listet Auktionen + Datum); Results-PDF `https://hdhauctions.com/wp-content/uploads/{YYMM}/{YYMM}_AuctionResults.pdf` (z. B. `2608_…` = Aug 2026); Kataloge `{YYMM}_catalog.pdf`. Alt-Bestand als JSON (`hammer` + `aggregate`) |
 | Langtons | langtons.com.au | API | `winning_bid` (AUD) |
 | Winefields | winefields.com | API (Auction-Mobility) | `hammer` |
 | Besch Cannes | besch-cannes.com | Scrape | `adjuge` |
@@ -78,7 +78,7 @@ Finarte, winebarrel, weinauktionator) fehlen die exakten Endpoints noch.
 | Dobiaschofsky | dobiashofsky.ch | Scrape | `hammer_chf` |
 | Finarte | finarte.it | Scrape | `hammer_price` |
 | winebarrel | (unbekannt, flache Lot-Liste) | Scrape | `hammer_price` |
-| weinauktionator | weinauktionator (?) | XLSX/PDF | — |
+| weinauktionator | weinauktionator.de | HTML-Scrape → XLSX (bevorzugt) | Einstieg `https://www.weinauktionator.de/de/info/results` (listet Auktionen + Datum); Excel `…/de/info/results/xlsx/{n}/weinauktionator_results_{n}.xlsx`, PDF `…/de/info/results/pdf/{n}/weinauktionator_results_{n}.pdf` |
 | Wermuth | Excel bereitgestellt/extrahiert | via `VinoImporter` | `VinoImporter/validatedOutput/vinoStagingFile2015-2008.xlsx` + `output_WermuthSA_*.csv` |
 | Steinfels | auktionen.steinfelsweine.ch | JSON-API | Auktionsliste `…/api/auctions` (→ `catalog.id`); Lots `…/api/lots?cat_id={catalogId}&my=false&s=&consignments_only=false&$sortby=lot_number&$sortdir=asc&$page={i}&$maxpagesize=50`; Header `x-api-version: 1.14`. Alt-Bestand (2002–03) als Excel `priceData/import/steinfels/prepared/*/results_*.xlsx` |
 | Denz | denz.ch | PDF (noch nicht extrahiert) | — |
