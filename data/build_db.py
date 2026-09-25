@@ -62,6 +62,7 @@ CREATE TABLE auctions (
   auction_id  TEXT,
   title       TEXT,
   auction_date TEXT,
+  location    TEXT,
   currency    TEXT,
   price_basis TEXT,
   source_url  TEXT,
@@ -431,13 +432,14 @@ class Builder:
 
     def add_auction(self, provider, auction_id, title=None, date=None,
                     currency=None, price_basis=None, source_url=None,
-                    scraped_at=None):
+                    scraped_at=None, location=None):
         pid = self.provider(provider)
         cur = self.conn.execute(
             "INSERT OR IGNORE INTO auctions(provider_id, auction_id, title,"
-            " auction_date, currency, price_basis, source_url, scraped_at)"
-            " VALUES (?,?,?,?,?,?,?,?)",
-            (pid, auction_id, title, date, currency, price_basis,
+            " auction_date, location, currency, price_basis, source_url,"
+            " scraped_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (pid, auction_id, title, date, location, currency, price_basis,
              source_url, scraped_at))
         if cur.rowcount == 1:
             return cur.lastrowid
@@ -661,7 +663,7 @@ def load_sothebys(b, limit):
         cur = a.get("currency")
         a_id = b.add_auction(
             "sothebys", aid, a.get("title"), parse_date(a.get("dates")),
-            cur, "HAMMER")
+            cur, "HAMMER", location=a.get("location"))
         for lot in d.get("lots", []):
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_number")),
@@ -689,7 +691,7 @@ def load_christies(b, limit):
         a_id = b.add_auction(
             "christies", aid, a.get("title"),
             ym_date(a.get("year"), a.get("month")), None, "HAMMER",
-            a.get("landing_url"))
+            a.get("landing_url"), location=a.get("location"))
         for lot in d.get("lots", []):
             sold = 1 if (lot.get("price_realised") and
                          not lot.get("lot_withdrawn")) else 0
