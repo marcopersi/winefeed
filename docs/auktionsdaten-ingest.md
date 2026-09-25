@@ -56,8 +56,8 @@ Aufräumen entfernt. Erhalten bzw. rekonstruiert sind: die **curl-Skripte auf de
 externen Disk** (Steinfels, Weinboerse, Munich Wine Company, Koppe — enthalten
 die exakten Request-URLs), die **iDealwine-/sylvies-Endpoints im Repo** und die
 **Quell-URLs in den gespeicherten JSONs** (`source_url`/`snapshot_url`/
-`landing_url`/`results_pdf`). Für die restlichen Häuser (Sotheby's, Besch Cannes,
-Dorotheum, Pandolfini, Dobiaschofsky) fehlen die exakten Endpoints noch.
+`landing_url`/`results_pdf`). Für die restlichen Häuser (Besch Cannes, Dorotheum,
+Pandolfini, Dobiaschofsky) fehlen die exakten Endpoints noch.
 
 ### Quelltyp-Muster (für die Fetcher-Generalisierung)
 
@@ -79,7 +79,7 @@ Die Häuser lassen sich auf vier Fetch-Muster reduzieren:
 |------|--------|---------|-------------------------|
 | iDealwine | idealwine.com | öffentl. JSON-API (kein Login) | `/api/v2/shop/vintage-ratings-by-product-for-region-d-t-os/by-region/{region}` (Enumeration, paginiert); `/api/v2/shop/product-vintage-rating-info/{pid}-{vintage}` (Preis-Historie). Regionen: `bordeaux`, `bourgogne`, `rhone` |
 | sylvies | sylvies.be | HTML-Scrape | `/en/auction/{id}?sort=lotnr_asc&page={n}` |
-| Sothebys | sothebys.com | API | JSON mit `auction_id` (UUID), `sale_number`, `hammer_price` + `final_price` |
+| Sothebys | sothebys.com | HTML (Login nötig), 3 Ebenen | Einstieg `…/en/results?from=&to=&f2={categoryId}&q=` (Wein-Kategorie); Auktion `…/en/buy/auction/{year}/{slug}?locale=en`; Lot `…/en/buy/auction/{year}/{slug}/{lot-slug}?locale=en` (Preis „Lot Sold"). **Buyer's Premium 24 % + Overhead Premium 1 %** auf Hammer (VAT/GST zusätzlich). Alt-Bestand als JSON (`auction_id` UUID, `hammer_price` + `final_price`) |
 | Christies | christies.com | Scrape | Auktions-`landing_url`: `https://www.christies.com/en/auction/{slug}-{saleId}/`; Lot-URL: `https://www.christies.com/en/lot/lot-{lotId}` |
 | Zacky | auction.zachys.com via **Wayback** | Wayback-Snapshot | `https://auction.zachys.com/catalog.aspx?auctionid={id}`; nur Seite 1 (25 Lots) archiviert, Postback-Paginierung fehlt |
 | Baghera | bagherawines.auction | Scrape | `results_pdf`: `https://www.bagherawines.auction/assets/uploads/bilan/catalogues/{id}/…_Sale_Results.pdf` |
