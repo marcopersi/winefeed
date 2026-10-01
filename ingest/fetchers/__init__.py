@@ -1,4 +1,5 @@
 """Fetcher registry."""
+from .idealwine import IdealwineFetcher
 from .weinauktion import WeinauktionFetcher
 
 FETCHERS = {
@@ -6,6 +7,7 @@ FETCHERS = {
         provider="steinfels", base_url="https://auktionen.steinfelsweine.ch"),
     "weinboerse": WeinauktionFetcher(
         provider="weinboerse", base_url="https://auktion.weinauktion.ch"),
+    "idealwine": IdealwineFetcher(),
 }
 
 
