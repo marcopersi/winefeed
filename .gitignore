@@ -25,3 +25,8 @@ data/*.tmp.*
 data/*.lock
 data/**/__pycache__/
 data/wine_auction_prices.sqlite
+
+# Local secrets
+.env
+.env.local
+.env_local
