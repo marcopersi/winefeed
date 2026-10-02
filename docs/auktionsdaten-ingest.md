@@ -77,7 +77,7 @@ Die Häuser lassen sich auf vier Fetch-Muster reduzieren:
 
 | Haus | Quelle | Methode | Bekannte URLs/Endpoints |
 |------|--------|---------|-------------------------|
-| iDealwine | idealwine.com | öffentl. JSON-API (kein Login) | `/api/v2/shop/vintage-ratings-by-product-for-region-d-t-os/by-region/{region}` (Enumeration, paginiert); `/api/v2/shop/product-vintage-rating-info/{pid}-{vintage}` (Preis-Historie). Regionen: `bordeaux`, `bourgogne`, `rhone` |
+| iDealwine | idealwine.com | **Anti-Scraping + Session-Cookie** (Next.js) | Alte API `/api/v2/shop/…` ist geblockt (`robots.txt: Disallow: /api/`, 403). Daten kommen über Next.js-SSR: `/_next/data/{buildId}/{locale}/kaufen-ein-wein/{slug}.json` mit Header `x-nextjs-data: 1` + Cookie (`cf_clearance`). `buildId` build-abhängig (aus `__NEXT_DATA__` lesen). Cote-Daten in `pageProps.productVintageRatings`. Listen-Route (Wein-Enumeration) noch zu ermitteln |
 | sylvies | sylvies.be | HTML-Scrape | `/en/auction/{id}?sort=lotnr_asc&page={n}` |
 | Sothebys | sothebys.com | HTML (Login nötig), 3 Ebenen | Einstieg `…/en/results?from=&to=&f2={categoryId}&q=` (Wein-Kategorie); Auktion `…/en/buy/auction/{year}/{slug}?locale=en`; Lot `…/en/buy/auction/{year}/{slug}/{lot-slug}?locale=en` (Preis „Lot Sold"). **Buyer's Premium 24 % + Overhead Premium 1 %** auf Hammer (VAT/GST zusätzlich). Alt-Bestand als JSON (`auction_id` UUID, `hammer_price` + `final_price`) |
 | Christies | christies.com | Scrape | Auktions-`landing_url`: `https://www.christies.com/en/auction/{slug}-{saleId}/`; Lot-URL: `https://www.christies.com/en/lot/lot-{lotId}` |
