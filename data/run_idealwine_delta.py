@@ -12,11 +12,11 @@ Usage:
 Credentials are read from the repo root ``.env_local`` (``IDEALWINE_CF_CLEARANCE``).
 """
 import argparse
-import json
 import os
 import sqlite3
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
@@ -61,14 +61,13 @@ def main():
         print("IDEALWINE_CF_CLEARANCE missing in .env_local", file=sys.stderr)
         return 2
 
-    session = requests.Session()
-    session.headers["User-Agent"] = (
+    fetcher = IdealwineFetcher()
+    discover_session = requests.Session()
+    discover_session.headers["User-Agent"] = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/605.1.15")
-    session.cookies.set("cf_clearance", cf, domain=".idealwine.com")
-
-    fetcher = IdealwineFetcher()
-    refs = fetcher.discover(session)
+    discover_session.cookies.set("cf_clearance", cf, domain=".idealwine.com")
+    refs = fetcher.discover(discover_session)
     if args.limit:
         refs = refs[: args.limit]
     print(f"refs: {len(refs)}", flush=True)
@@ -78,18 +77,38 @@ def main():
     print(f"last_sold_at: {last_sold_at}", flush=True)
     cutoff = f"{last_sold_at}T00:00:00+00:00" if last_sold_at else None
 
+    def _make_session():
+        s = requests.Session()
+        s.headers["User-Agent"] = (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/605.1.15")
+        s.cookies.set("cf_clearance", cf, domain=".idealwine.com")
+        return s
+
+    def _fetch_ref(item):
+        ref, session = item
+        return ref, fetcher.fetch(session, ref).data
+
     cotes = []
     failed = 0
     t0 = time.time()
-    for i, ref in enumerate(refs, 1):
-        try:
-            cotes.append(fetcher.fetch(session, ref).data)
-        except Exception as exc:  # noqa: BLE001
-            failed += 1
-            print(f"  [{i}] fetch failed {ref.auction_id}: {exc}", flush=True)
-        if i % 500 == 0:
-            dt = time.time() - t0
-            print(f"  {i}/{len(refs)} ({dt:.0f}s, {failed} failed)", flush=True)
+    workers = int(os.environ.get("IDEALWINE_WORKERS", "8"))
+    done = 0
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futures = [ex.submit(_fetch_ref, (r, _make_session()))
+                   for r in refs]
+        for fut in as_completed(futures):
+            done += 1
+            try:
+                ref, data = fut.result()
+                cotes.append(data)
+            except Exception as exc:  # noqa: BLE001
+                failed += 1
+                print(f"  fetch failed: {exc}", flush=True)
+            if done % 500 == 0:
+                dt = time.time() - t0
+                print(f"  {done}/{len(refs)} ({dt:.0f}s, {failed} failed)",
+                      flush=True)
 
     print(f"fetched {len(cotes)} cotes, {failed} failed "
           f"({time.time() - t0:.0f}s)", flush=True)
