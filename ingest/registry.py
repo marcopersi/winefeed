@@ -36,6 +36,19 @@ def mark_fetched(manifest, ref, etag=None):
     }
 
 
+LAST_RUN_KEY = "__last_run_at__"
+
+
+def get_last_run(manifest, provider):
+    """Return the last successful run timestamp for ``provider`` or ``None``."""
+    return manifest.get(provider, {}).get(LAST_RUN_KEY)
+
+
+def set_last_run(manifest, provider, timestamp=None):
+    """Record the current time as the last successful run for ``provider``."""
+    manifest.setdefault(provider, {})[LAST_RUN_KEY] = timestamp or _now()
+
+
 def _now():
     import datetime
     return datetime.datetime.now(datetime.timezone.utc).isoformat()

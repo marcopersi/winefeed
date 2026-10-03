@@ -1,52 +1,75 @@
 import unittest
 
 from ingest.fetchers.idealwine import IdealwineFetcher
+from ingest.models import AuctionRef
 
-REGION_PAGE = {
-    "hydra:member": [
-        {"productId": 100, "year": 2020, "wineName": "Château Canon"},
-        {"productId": 100, "year": 2019, "wineName": "Château Canon"},
+ALGOLIA_PAGE = {
+    "hits": [
+        {"id": 2802611, "name": "Morgon Côte du Py", "vintage": 2023},
+        {"id": 2814578, "name": "La Tâche", "vintage": 2002},
     ],
-    "hydra:totalItems": 2,
 }
 
-RATING_INFO = {"productVintageCode": "100-2020", "lastAdjudications": []}
-
-
-class FakeSession:
-    def __init__(self):
-        self.requests = []
-
-    def get(self, url, headers=None):
-        self.requests.append(url)
-        if "by-region" in url:
-            return FakeResponse(REGION_PAGE)
-        return FakeResponse(RATING_INFO)
+COTE = {
+    "productVintageCode": "112168-2023",
+    "lastAdjudications": [
+        {"soldAt": "2026-09-02T09:12:58+00:00", "price": 2500},
+    ],
+}
 
 
 class FakeResponse:
     def __init__(self, payload):
         self._payload = payload
+        self.text = ""
 
     def json(self):
         return self._payload
 
 
-class TestIdealwine(unittest.TestCase):
-    def test_discover_all_regions(self):
-        f = IdealwineFetcher()
-        refs = f.discover(FakeSession())
-        # 3 regions x 2 members = 6 refs
-        self.assertEqual(len(refs), 6)
-        self.assertEqual(refs[0].auction_id, "100-2020")
+class FakeSession:
+    def __init__(self):
+        self.gets = []
+        self.posts = []
 
-    def test_fetch(self):
-        f = IdealwineFetcher()
-        from ingest.models import AuctionRef
-        ref = AuctionRef(provider="idealwine", auction_id="100-2020",
-                         url="https://www.idealwine.com/api/v2/shop/product-vintage-rating-info/100-2020")
-        result = f.fetch(FakeSession(), ref)
-        self.assertEqual(result.data["productVintageCode"], "100-2020")
+    def get(self, url, headers=None):
+        self.gets.append(url)
+        if "morgon-cote-du-py" in url:
+            return FakeResponse(
+                {"pageProps": {
+                    "__N_REDIRECT":
+                        "/de/kaufen-ein-wein/2802611-1-Magnum-Morgon-2023-Rot",
+                }})
+        return FakeResponse({"pageProps": {"productVintageRatings": COTE}})
+
+    def post(self, url, headers=None, json=None):
+        self.posts.append(url)
+        return FakeResponse(ALGOLIA_PAGE)
+
+
+class TestIdealwine(unittest.TestCase):
+    def test_discover_builds_refs_from_algolia(self):
+        f = IdealwineFetcher(build_id="b1")
+        refs = f.discover(FakeSession())
+        self.assertEqual(len(refs), 2)
+        self.assertEqual(refs[0].auction_id, "2802611")
+        self.assertEqual(refs[0].date, "2023")
+        self.assertTrue(refs[0].url.startswith(
+            "https://www.idealwine.com/_next/data/b1/de/"
+            "kaufen-ein-wein/2802611-morgon-cote-du-py.json"))
+
+    def test_fetch_follows_redirect_to_cote(self):
+        f = IdealwineFetcher(build_id="b1")
+        session = FakeSession()
+        ref = AuctionRef(
+            provider="idealwine", auction_id="2802611",
+            url="https://www.idealwine.com/_next/data/b1/de/"
+                "kaufen-ein-wein/2802611-morgon-cote-du-py.json",
+            title="Morgon Côte du Py", date="2023")
+        result = f.fetch(session, ref)
+        self.assertEqual(result.data["productVintageCode"], "112168-2023")
+        self.assertEqual(result.data["lastAdjudications"][0]["price"], 2500)
+        self.assertEqual(len(session.gets), 2)
 
 
 if __name__ == "__main__":

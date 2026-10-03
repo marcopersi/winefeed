@@ -3,7 +3,8 @@ import tempfile
 import unittest
 
 from ingest.models import AuctionRef
-from ingest.registry import dedup, load_manifest, mark_fetched, save_manifest
+from ingest.registry import (dedup, get_last_run, load_manifest, mark_fetched,
+                             save_manifest, set_last_run)
 
 
 class TestRegistry(unittest.TestCase):
@@ -27,6 +28,18 @@ class TestRegistry(unittest.TestCase):
         mark_fetched(manifest, AuctionRef("steinfels", "627", url="u"))
         self.assertIn("627", manifest["steinfels"])
         self.assertEqual(manifest["steinfels"]["627"]["url"], "u")
+
+    def test_last_run_roundtrip(self):
+        manifest = {}
+        self.assertIsNone(get_last_run(manifest, "steinfels"))
+        set_last_run(manifest, "steinfels", "2026-10-03T00:00:00+00:00")
+        self.assertEqual(get_last_run(manifest, "steinfels"),
+                         "2026-10-03T00:00:00+00:00")
+        # last-run marker must not break dedup
+        refs = [AuctionRef("steinfels", "627"),
+                AuctionRef("steinfels", "628")]
+        self.assertEqual([r.auction_id for r in dedup(refs, manifest, "steinfels")],
+                         ["627", "628"])
 
 
 if __name__ == "__main__":
