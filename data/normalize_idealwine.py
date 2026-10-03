@@ -20,27 +20,14 @@ import json
 import os
 import shutil
 
+from idealwine_normalize import DUCLOT_PIDS, normalize_adjudication
+
 SRC_DIR = os.path.join(os.path.expanduser(
     "~/Library/CloudStorage/GoogleDrive-persi.marco@gmail.com/"
     "Meine Ablage/Wein/WeinAuktionspreise"), "IDealwine")
 DST_DIR = os.path.join(os.path.expanduser(
     "~/Library/CloudStorage/GoogleDrive-persi.marco@gmail.com/"
     "Meine Ablage/Wein/WeinAuktionspreise"), "IDealwine_normalized")
-
-# "Caisse Duclot" / "Caisse Prestige Duclot" mixed cases: `numberOfBottles`
-# reflects a crate count, not a bottle count. The per-bottle derivation is
-# therefore meaningless for these products.
-DUCLOT_PIDS = {
-    125289, 125290, 125293, 125294, 125295, 125296, 125297, 125298, 125299,
-    126789, 134409, 136369, 158149, 182389, 187452, 199789, 199790, 213689,
-    504627,
-}
-
-EPS = 0.02  # EUR tolerance for "value equals a rating" checks
-
-
-def round2(x):
-    return round(x, 2)
 
 
 def main():
@@ -114,100 +101,14 @@ def main():
 
         for a in d.get("adjudications") or []:
             stats["adjs"] += 1
-            sold_at = a.get("sold_at")
-            bottles = a.get("bottles")
-            hammer = a.get("hammer_eur")      # price/100  (lot total)
-            total = a.get("total_eur")        # historicPrice/100 (per-bottle incl.)
-
-            rec = {
-                "sold_at": sold_at,
-                "format": a.get("format"),
-                "number_of_bottles": bottles,
-                "hammer_lot_eur": hammer,
-                "hammer_per_bottle_eur": None,
-                "total_per_bottle_eur": total,
-                "price_basis": None,
-                "buyer_premium_rate": None,
-                "buyer_premium_vat": None,
-                "anomaly_type": None,
-                "hammer_per_bottle_eur_derived": None,
-                "derived_rate_assumed": None,
-                "code": a.get("code"),
-            }
-
-            if hammer is None:
+            rec, class_code = normalize_adjudication(a, is_duclot, cote, annual)
+            if class_code == "price_null":
                 stats["price_null"] += 1
-                rec["price_basis"] = "HAMMER_PLUS_BUYERS_PREMIUM"
-
-                if sold_at:
-                    if sold_at >= "2026-04-01":
-                        rate, vat = 0.258, "TTC"
-                    elif sold_at >= "2024-01-01":
-                        rate, vat = 0.252, "TTC"
-                    else:
-                        rate, vat = None, None
-                else:
-                    rate, vat = None, None
-
-                if rate is not None and total is not None:
-                    rec["hammer_per_bottle_eur_derived"] = round2(
-                        total / (1 + rate))
-                    rec["derived_rate_assumed"] = True
+                if rec.get("derived_rate_assumed"):
                     stats["derived"] += 1
-                rec["buyer_premium_rate"] = rate
-                rec["buyer_premium_vat"] = vat
-                out["adjudications"].append(rec)
-                continue
-
-            # ---- hammer present ----
-            stats["price_ok"] += 1
-            rec["price_basis"] = "HAMMER"
-
-            if is_duclot:
-                rec["anomaly_type"] = "MIXED_CASE"
-                stats["mixed_case"] += 1
-                out["adjudications"].append(rec)
-                continue
-
-            factor = round(total * bottles / hammer, 4)
-
-            is_cote = False
-            if factor < 1.10 and total is not None:
-                yr = int(sold_at[:4]) if sold_at and sold_at[:4].isdigit() else 0
-                if cote is not None and abs(total - cote) < EPS:
-                    is_cote = True
-                for check_yr in (yr, yr - 1, yr + 1):
-                    if check_yr in annual and abs(total - annual[check_yr]) < EPS:
-                        is_cote = True
-
-            if is_cote:
-                rec["anomaly_type"] = "COTE_AS_HISTORIC"
-                stats["cote_as_historic"] += 1
-            elif 1.2510 <= factor <= 1.2530:
-                rec["buyer_premium_rate"] = 0.252
-                rec["buyer_premium_vat"] = "TTC"
-                stats["rate_252"] += 1
-            elif 1.2570 <= factor <= 1.2590:
-                rec["buyer_premium_rate"] = 0.258
-                rec["buyer_premium_vat"] = "TTC"
-                stats["rate_258"] += 1
-            elif 1.2140 <= factor <= 1.2160:
-                rec["buyer_premium_rate"] = 0.215
-                rec["buyer_premium_vat"] = "HT"
-                stats["rate_215_ht"] += 1
-            elif 1.2090 <= factor <= 1.2110:
-                rec["buyer_premium_rate"] = 0.21
-                rec["buyer_premium_vat"] = "HT"
-                stats["rate_21_ht"] += 1
-            elif 1.1990 <= factor <= 1.2010:
-                rec["buyer_premium_rate"] = 0.20
-                rec["buyer_premium_vat"] = "HT"
-                stats["rate_20_ht"] += 1
             else:
-                rec["anomaly_type"] = "RATE_UNDETERMINED"
-                stats["rate_undetermined"] += 1
-
-            rec["hammer_per_bottle_eur"] = round2(hammer / bottles)
+                stats["price_ok"] += 1
+            stats[class_code] += 1
             out["adjudications"].append(rec)
 
         os.makedirs(os.path.dirname(dst_path), exist_ok=True)

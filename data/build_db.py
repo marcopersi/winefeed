@@ -421,8 +421,14 @@ class Builder:
     def provider(self, name):
         if name not in self.provider_ids:
             cur = self.conn.execute(
-                "INSERT INTO providers(name) VALUES (?)", (name,))
-            self.provider_ids[name] = cur.lastrowid
+                "INSERT OR IGNORE INTO providers(name) VALUES (?)", (name,))
+            if cur.rowcount == 1:
+                self.provider_ids[name] = cur.lastrowid
+            else:
+                row = self.conn.execute(
+                    "SELECT id FROM providers WHERE name = ?",
+                    (name,)).fetchone()
+                self.provider_ids[name] = row[0]
         return self.provider_ids[name]
 
     def set_source(self, source_file):
