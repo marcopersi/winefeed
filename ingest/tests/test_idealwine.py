@@ -18,6 +18,7 @@ COTE = {
 }
 
 
+# pylint: disable=too-few-public-methods
 class FakeResponse:
     def __init__(self, payload):
         self._payload = payload
@@ -32,7 +33,7 @@ class FakeSession:
         self.gets = []
         self.posts = []
 
-    def get(self, url, headers=None):
+    def get(self, url, **kwargs):
         self.gets.append(url)
         if "morgon-cote-du-py" in url:
             return FakeResponse(
@@ -42,7 +43,7 @@ class FakeSession:
                 }})
         return FakeResponse({"pageProps": {"productVintageRatings": COTE}})
 
-    def post(self, url, headers=None, json=None):
+    def post(self, url, **kwargs):
         self.posts.append(url)
         return FakeResponse(ALGOLIA_PAGE)
 
