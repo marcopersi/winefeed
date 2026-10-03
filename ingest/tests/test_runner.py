@@ -11,13 +11,13 @@ from ingest.runner import run_provider
 class FakeFetcher:
     provider = "steinfels"
 
-    def discover(self, session):
+    def discover(self, _session):
         return [
             AuctionRef("steinfels", "627", url="u627"),
             AuctionRef("steinfels", "628", url="u628"),
         ]
 
-    def fetch(self, session, ref):
+    def fetch(self, _session, ref):
         return FetchResult(provider=ref.provider, auction_id=ref.auction_id,
                            data={"auction_id": ref.auction_id})
 
