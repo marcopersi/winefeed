@@ -87,10 +87,12 @@ def _product_id(cote):
     return product.get("id")
 
 
-def _lot_exists(conn, source_lot_key):
+def _lot_exists(conn, code):
     row = conn.execute(
-        "SELECT 1 FROM lots WHERE source_lot_key = ? LIMIT 1",
-        (source_lot_key,)).fetchone()
+        "SELECT 1 FROM lots WHERE lot_no = ? AND auction_id IN "
+        "(SELECT id FROM auctions WHERE provider_id = "
+        "(SELECT id FROM providers WHERE name = 'idealwine')) LIMIT 1",
+        (code,)).fetchone()
     return row is not None
 
 
@@ -101,13 +103,12 @@ def insert_new_lots(conn, new_lots, auction_id="cote", title="iDealwine Cote"):
     inserted = 0
     for rec in new_lots:
         code = rec.get("code")
-        source_lot_key = f"idealwine:{code}" if code else None
-        if source_lot_key and _lot_exists(conn, source_lot_key):
+        if code and _lot_exists(conn, code):
             continue
         b.add_lot(a_id, {
             "lot_no": code,
             "lot_date": parse_date(rec.get("sold_at")),
-            "source_lot_key": source_lot_key,
+            "source_lot_key": f"idealwine:{code}" if code else None,
             "source_file": "IDealwine/delta",
             "wine": rec.get("wine"),
             "producer": rec.get("estate"),

@@ -5,8 +5,9 @@ from ingest.models import AuctionRef
 
 ALGOLIA_PAGE = {
     "hits": [
-        {"id": 2802611, "name": "Morgon Côte du Py", "vintage": 2023},
-        {"id": 2814578, "name": "La Tâche", "vintage": 2002},
+        {"id": 2802611, "name": "Morgon Côte du Py", "vintage": 2023,
+         "product": 112168},
+        {"id": 2814578, "name": "La Tâche", "vintage": 2002, "product": 882},
     ],
 }
 
@@ -52,7 +53,7 @@ class TestIdealwine(unittest.TestCase):
         f = IdealwineFetcher(build_id="b1")
         refs = f.discover(FakeSession())
         self.assertEqual(len(refs), 2)
-        self.assertEqual(refs[0].auction_id, "2802611")
+        self.assertEqual(refs[0].auction_id, "112168-2023")
         self.assertEqual(refs[0].date, "2023")
         self.assertTrue(refs[0].url.startswith(
             "https://www.idealwine.com/_next/data/b1/de/"

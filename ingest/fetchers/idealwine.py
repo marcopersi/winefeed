@@ -81,19 +81,25 @@ class IdealwineFetcher:
     def discover(self, session):
         self._ensure_build_id(session)
         refs = []
+        seen = set()
         page = 0
         while True:
             body = self._algolia_page(session, page)
             hits = body.get("hits") or []
             for hit in hits:
                 pid = hit.get("id")
-                name = hit.get("name") or ""
+                product = hit.get("product")
                 vintage = hit.get("vintage")
-                if pid is None:
+                name = hit.get("name") or ""
+                if pid is None or product is None:
                     continue
+                key = (product, vintage)
+                if key in seen:
+                    continue
+                seen.add(key)
                 refs.append(AuctionRef(
                     provider=self.provider,
-                    auction_id=str(pid),
+                    auction_id=f"{product}-{vintage}",
                     url=self._next_data_url(f"{pid}-{slugify(name)}"),
                     title=name,
                     date=str(vintage) if vintage is not None else "",
@@ -113,7 +119,7 @@ class IdealwineFetcher:
                 "facetFilters": [["saleType:AUCTION"]],
                 "hitsPerPage": ALGOLIA_PAGE_SIZE,
                 "page": page,
-                "attributesToRetrieve": ["id", "name", "vintage"],
+                "attributesToRetrieve": ["id", "name", "vintage", "product"],
             },
         )
         return resp.json()
