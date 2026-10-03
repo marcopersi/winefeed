@@ -15,7 +15,13 @@ class AuctionRef:
 
 @dataclass
 class FetchResult:
-    """Result of fetching one auction: the raw data plus provenance."""
+    """Result of fetching one auction: the raw data plus provenance.
+
+    ``data`` holds JSON-serializable content; ``content``/``filename`` hold a
+    raw binary download (XLSX/PDF) when the house exposes results as files.
+    """
     provider: str
     auction_id: str
     data: dict = field(default_factory=dict)
+    content: bytes = b""
+    filename: str = ""

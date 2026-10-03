@@ -36,6 +36,12 @@ def run_provider(provider, session, manifest_path, archive_dir):
 
 def _save_result(archive_dir, result):
     os.makedirs(archive_dir, exist_ok=True)
+    if result.content:
+        name = result.filename or f"{result.auction_id}.bin"
+        path = os.path.join(archive_dir, name)
+        with open(path, "wb") as fh:
+            fh.write(result.content)
+        return
     filename = f"{result.provider}__{result.auction_id}.json"
     with open(os.path.join(archive_dir, filename), "w",
               encoding="utf-8") as fh:
