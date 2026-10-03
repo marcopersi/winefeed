@@ -1,6 +1,7 @@
 """Fetcher registry."""
 from .hdh import HdhFetcher
 from .idealwine import IdealwineFetcher
+from .koppe import KoppeFetcher
 from .weinauktion import WeinauktionFetcher
 from .weinauktionator import WeinauktionatorFetcher
 
@@ -12,6 +13,7 @@ FETCHERS = {
     "idealwine": IdealwineFetcher(),
     "weinauktionator": WeinauktionatorFetcher(),
     "hdh": HdhFetcher(),
+    "koppe": KoppeFetcher(),
 }
 
 
