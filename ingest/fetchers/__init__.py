@@ -2,6 +2,7 @@
 from .hdh import HdhFetcher
 from .idealwine import IdealwineFetcher
 from .koppe import KoppeFetcher
+from .langtons import LangtonsFetcher
 from .weinauktion import WeinauktionFetcher
 from .weinauktionator import WeinauktionatorFetcher
 
@@ -14,6 +15,7 @@ FETCHERS = {
     "weinauktionator": WeinauktionatorFetcher(),
     "hdh": HdhFetcher(),
     "koppe": KoppeFetcher(),
+    "langtons": LangtonsFetcher(),
 }
 
 
