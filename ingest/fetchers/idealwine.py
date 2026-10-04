@@ -10,8 +10,7 @@ clients.
   index (fixed search-only key). Each lot yields a product-variant id used to
   build the SSR page slug.
 - fetch: load ``/_next/data/{buildId}/{locale}/kaufen-ein-wein/{slug}.json``
-  with ``x-nextjs-data: 1`` (the session must carry the ``cf_clearance``
-  cookie) and return ``productVintageRatings``.
+  with ``x-nextjs-data: 1`` and return ``productVintageRatings``.
 
 The ``build_id`` is deployment-specific and changes with every release; it is
 read from ``__NEXT_DATA__`` in the site HTML.

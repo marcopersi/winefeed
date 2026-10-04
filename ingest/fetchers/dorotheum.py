@@ -1,7 +1,8 @@
 """Fetcher for Dorotheum auction results.
 
 Dorotheum is server-side rendered behind a Cloudflare challenge; the session
-must carry a valid ``cf_clearance`` cookie plus matching ``sec-ch-ua`` headers.
+must use browser impersonation (``curl_cffi``) so the challenge is solved
+automatically.
 
 - discover: parse ``/de/auktionsergebnisse/`` for ``/de/a/{id}/`` links.
 - fetch: load the auction page and extract the inline ``var lots = {...}``

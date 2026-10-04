@@ -8,8 +8,6 @@ Next.js SSR route, selects only adjudications newer than the latest recorded
 
 Usage:
     python3 run_idealwine_delta.py [--limit N] [--dry-run]
-
-Credentials are read from the repo root ``.env_local`` (``IDEALWINE_CF_CLEARANCE``).
 """
 import argparse
 import os
@@ -18,31 +16,14 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import requests
+from curl_cffi import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from ingest.fetchers.idealwine import IdealwineFetcher  # noqa: E402
 from idealwine_diff import insert_new_lots, new_adjudications  # noqa: E402
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.environ.get(
     "DB_PATH", "/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite")
-
-
-def _env():
-    env = {}
-    path = os.path.join(REPO, ".env_local")
-    if os.path.exists(path):
-        with open(path, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if "=" in line and not line.startswith("#"):
-                    k, v = line.split("=", 1)
-                    env[k.strip()] = v.strip()
-    # CI secrets are exported as env vars and take precedence over .env_local.
-    env.update({k: v for k, v in os.environ.items()
-                if k.startswith("IDEALWINE_")})
-    return env
 
 
 def _last_sold_at(conn):
@@ -59,18 +40,8 @@ def main():
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    env = _env()
-    cf = env.get("IDEALWINE_CF_CLEARANCE")
-    if not cf:
-        print("IDEALWINE_CF_CLEARANCE missing in .env_local", file=sys.stderr)
-        return 2
-
     fetcher = IdealwineFetcher()
-    discover_session = requests.Session()
-    discover_session.headers["User-Agent"] = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/605.1.15")
-    discover_session.cookies.set("cf_clearance", cf, domain=".idealwine.com")
+    discover_session = requests.Session(impersonate="chrome")
     refs = fetcher.discover(discover_session)
     if args.limit:
         refs = refs[: args.limit]
@@ -82,12 +53,7 @@ def main():
     cutoff = f"{last_sold_at}T00:00:00+00:00" if last_sold_at else None
 
     def _make_session():
-        s = requests.Session()
-        s.headers["User-Agent"] = (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/605.1.15")
-        s.cookies.set("cf_clearance", cf, domain=".idealwine.com")
-        return s
+        return requests.Session(impersonate="chrome")
 
     def _fetch_ref(item):
         ref, session = item

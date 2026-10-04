@@ -2,14 +2,16 @@
 """Run the monthly ingest for all (or selected) houses.
 
 Fetches new auctions, parses file-based results, and archives them into the
-``ARCHIVE_PATH`` tree that ``build_db.py`` reads. Credentials are read from
-``.env_local`` / env vars (``IDEALWINE_CF_CLEARANCE`` for iDealwine).
+``ARCHIVE_PATH`` tree that ``build_db.py`` reads. Login credentials are read
+from ``.env_local`` / env vars; HTTP uses ``curl_cffi`` with browser
+impersonation so Cloudflare challenges are solved automatically (no cookie
+secrets needed).
 """
 import argparse
 import os
 import sys
 
-import requests
+from curl_cffi import requests
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
@@ -25,6 +27,7 @@ MANIFEST_PATH = os.environ.get("MANIFEST_PATH",
 
 PROVIDERS = [
     "steinfels", "weinboerse", "weinauktionator", "hdh", "koppe", "idealwine",
+    "langtons", "winefields", "dorotheum", "pandolfini",
 ]
 
 
@@ -38,8 +41,9 @@ def _env():
                 if "=" in line and not line.startswith("#"):
                     k, v = line.split("=", 1)
                     env[k.strip()] = v.strip()
+    prefixes = ("IDEALWINE_", "PANDOLFINI_", "SOTHEBYS_", "FINARTE_")
     env.update({k: v for k, v in os.environ.items()
-                if k.startswith("IDEALWINE_")})
+                if k.startswith(prefixes)})
     return env
 
 
@@ -52,14 +56,7 @@ def main():
     providers = [p for p in (args.only.split(",") if args.only else PROVIDERS)
                  if p]
 
-    env = _env()
-    session = requests.Session()
-    session.headers["User-Agent"] = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/605.1.15")
-    if env.get("IDEALWINE_CF_CLEARANCE"):
-        session.cookies.set("cf_clearance", env["IDEALWINE_CF_CLEARANCE"],
-                            domain=".idealwine.com")
+    session = requests.Session(impersonate="chrome")
 
     results = {}
     for provider in providers:
