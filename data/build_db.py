@@ -570,6 +570,45 @@ def load_hdh(b, limit):
             break
 
 
+def load_weinauktionator(b, limit):
+    n = 0
+    for f in _json_files("weinauktionator"):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        m = re.search(r"results_(\d+)", os.path.basename(f))
+        aid = m.group(1) if m else (a.get("id") or a.get("date") or "")
+        a_id = b.add_auction(
+            "weinauktionator", aid, a.get("name"),
+            parse_date(a.get("date")), "EUR", "HAMMER")
+        for lot in d.get("lots", []):
+            qty, size = _winauktionator_qty_size(lot.get("format"))
+            hammer = to_float(lot.get("hammer_price"))
+            b.add_lot(a_id, {
+                "lot_no": str(lot.get("lot_no")),
+                "wine": lot.get("wine"),
+                "region": lot.get("region"),
+                "quantity": qty,
+                "bottle_size_dl": size,
+                "hammer_price": hammer,
+                "price_basis": "HAMMER" if hammer is not None else "UNKNOWN",
+                "currency": "EUR",
+                "sold": 1 if hammer is not None else 0,
+                "description": lot.get("format"),
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+
+def _winauktionator_qty_size(fmt):
+    """'3 x 0.750 ...' -> (3, 7.5)."""
+    m = re.match(r"(\d+)\s*x\s*(\d+(?:\.\d+)?)", fmt or "")
+    if m:
+        return int(m.group(1)), round(float(m.group(2)) * 10, 2)
+    return None, None
+
+
 def load_winefields(b, limit):
     n = 0
     for f in _json_files("Winefields"):
@@ -1055,6 +1094,7 @@ HOUSES = [
     ("munich-wine-company", load_munich_wine_company),
     ("winebarrel", load_winebarrel),
     ("idealwine", load_idealwine),
+    ("weinauktionator", load_weinauktionator),
     ("wermuth-sa", load_wermuth),
     ("steinfels", load_steinfels),
 ]

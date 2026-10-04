@@ -1,4 +1,6 @@
+import json
 import os
+import sqlite3
 import tempfile
 import unittest
 
@@ -31,6 +33,55 @@ class TestWeinauktionatorXlsx(unittest.TestCase):
             self.assertIsNone(result["lots"][0]["hammer_price"])
             self.assertEqual(result["lots"][1]["hammer_price"], 240.0)
             self.assertEqual(result["lots"][1]["region"], "Armagnac")
+
+
+class TestWeinauktionatorLoader(unittest.TestCase):
+    def test_loads_parsed_json(self):
+        import build_db
+        from parse_results import parse_weinauktionator_xlsx
+
+        import openpyxl
+        with tempfile.TemporaryDirectory() as d:
+            xlsx = os.path.join(d, "results_39.xlsx")
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.append(["Auktionsergebnisse: Sommerauktion 2026"])
+            ws.append(["11.07.2026"])
+            ws.append([])
+            ws.append([])
+            ws.append(["Lot", "Anbauregion", "Titel", "Versteigert für",
+                       "Weine"])
+            ws.append(["09967", "Alsace", "Trimbach, Clos Sainte Hune 2011",
+                       "---   ", "3 x 0.750 Trimbach"])
+            ws.append(["09925", "Armagnac", "Laubade, Bas Armagnac 1936",
+                       240.0, "1 x 0.700 Laubade"])
+            wb.save(xlsx)
+
+            result = parse_weinauktionator_xlsx(xlsx)
+            os.makedirs(os.path.join(d, "weinauktionator"), exist_ok=True)
+            with open(os.path.join(d, "weinauktionator",
+                                   "weinauktionator_results_39.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(result, fh, ensure_ascii=False)
+
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_weinauktionator(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            conn.commit()
+
+            count = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+            self.assertEqual(count, 2)
+            hammer = conn.execute(
+                "SELECT hammer_price FROM lots WHERE lot_no='09925'"
+            ).fetchone()[0]
+            self.assertEqual(hammer, 240.0)
+            conn.close()
 
 
 class TestHdhHelpers(unittest.TestCase):
