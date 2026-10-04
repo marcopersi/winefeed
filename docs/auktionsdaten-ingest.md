@@ -101,6 +101,16 @@ Die Häuser lassen sich auf vier Fetch-Muster reduzieren:
 | Koppe | weinauktion.de | HTML-Scrape | `https://www.weinauktion.de/index.php?site=auktion&section=cat&cat={catId}&p={i}` |
 | Weinboerse | auktion.weinauktion.ch | JSON-API | `https://auktion.weinauktion.ch/api/lots?cat_id={catalogId}&…&$page={i}&$maxpagesize=20` (gleiche API-Struktur wie Steinfels) |
 
+### Secrets (GitHub Actions)
+
+| Secret | Zweck | Rotation |
+|---|---|---|
+| `IDEALWINE_CF_CLEARANCE` | Cloudflare-`cf_clearance`-Cookie für die iDealwine-`_next/data`-Route (Cote) | Cloudflare erneuert ihn bei jeder Challenge; nominell 1 Jahr gültig, faktisch rotierend. Ein **403** auf der Cote-Route = abgelaufen → neu aus dem Browser kopieren (DevTools → Application → Cookies → `cf_clearance`) und als Secret ersetzen. |
+| `IDEALWINE_USERID` / `IDEALWINE_PWD` | iDealwine-Login (nur für Konto-Endpoints; für die Cote nicht nötig) | bei Passwortänderung |
+| `{HAUS}_USERNAME` / `{HAUS}_PASSWORD` (bzw. `{HAUS}_EMAIL`) | Login-Häuser (Sothebys, Finarte, …) | bei Credential-Änderung |
+
+Regeln: Secrets nur aus `${{ secrets.* }}`; niemals in Logs/Commits; `cf_clearance` ist kein Passwort, sondern ein Session-Cookie — der Fetcher meldet bei 403 explizit „bitte erneuern".
+
 ## 3. Scope
 
 ### 3.1 In Scope

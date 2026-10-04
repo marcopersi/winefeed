@@ -38,6 +38,9 @@ def _env():
             if "=" in line and not line.startswith("#"):
                 k, v = line.split("=", 1)
                 env[k.strip()] = v.strip()
+    # CI secrets are exported as env vars and take precedence over .env_local.
+    env.update({k: v for k, v in os.environ.items()
+                if k.startswith("IDEALWINE_")})
     return env
 
 
