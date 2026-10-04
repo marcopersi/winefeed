@@ -5,6 +5,7 @@ from .koppe import KoppeFetcher
 from .langtons import LangtonsFetcher
 from .weinauktion import WeinauktionFetcher
 from .weinauktionator import WeinauktionatorFetcher
+from .winefields import WinefieldsFetcher
 
 FETCHERS = {
     "steinfels": WeinauktionFetcher(
@@ -16,6 +17,7 @@ FETCHERS = {
     "hdh": HdhFetcher(),
     "koppe": KoppeFetcher(),
     "langtons": LangtonsFetcher(),
+    "winefields": WinefieldsFetcher(),
 }
 
 
