@@ -4,6 +4,7 @@ from .hdh import HdhFetcher
 from .idealwine import IdealwineFetcher
 from .koppe import KoppeFetcher
 from .langtons import LangtonsFetcher
+from .pandolfini import PandolfiniFetcher
 from .weinauktion import WeinauktionFetcher
 from .weinauktionator import WeinauktionatorFetcher
 from .winefields import WinefieldsFetcher
@@ -20,6 +21,7 @@ FETCHERS = {
     "langtons": LangtonsFetcher(),
     "winefields": WinefieldsFetcher(),
     "dorotheum": DorotheumFetcher(),
+    "pandolfini": PandolfiniFetcher(),
 }
 
 
