@@ -1,4 +1,5 @@
 """Fetcher registry."""
+from .dorotheum import DorotheumFetcher
 from .hdh import HdhFetcher
 from .idealwine import IdealwineFetcher
 from .koppe import KoppeFetcher
@@ -18,6 +19,7 @@ FETCHERS = {
     "koppe": KoppeFetcher(),
     "langtons": LangtonsFetcher(),
     "winefields": WinefieldsFetcher(),
+    "dorotheum": DorotheumFetcher(),
 }
 
 
