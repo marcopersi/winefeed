@@ -55,7 +55,7 @@ class TestKoppe(unittest.TestCase):
         f = KoppeFetcher()
         refs = f.discover(FakeSession({
             "https://www.weinauktion.de/de/auktionen": LIST_HTML}))
-        self.assertEqual([r.auction_id for r in refs], ["13", "12", "10"])
+        self.assertEqual([r.auction_id for r in refs], ["12", "10"])
 
     def test_fetch_parses_lots(self):
         f = KoppeFetcher()

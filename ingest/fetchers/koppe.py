@@ -36,6 +36,9 @@ class KoppeFetcher:
             match = re.match(r"/de/auktionen/(\d+)$", a.get("href", ""))
             if not match:
                 continue
+            # Only past auctions expose results; live ones say "zur Auktion".
+            if "Ergebnisse ansehen" not in a.get_text():
+                continue
             aid = match.group(1)
             if aid in seen:
                 continue
