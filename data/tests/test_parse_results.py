@@ -4,7 +4,7 @@ import sqlite3
 import tempfile
 import unittest
 
-from parse_results import (parse_hdh_pdf, parse_weinauktionator_xlsx)
+from parse_results import parse_weinauktionator_xlsx
 
 
 class TestWeinauktionatorXlsx(unittest.TestCase):
@@ -38,7 +38,6 @@ class TestWeinauktionatorXlsx(unittest.TestCase):
 class TestWeinauktionatorLoader(unittest.TestCase):
     def test_loads_parsed_json(self):
         import build_db
-        from parse_results import parse_weinauktionator_xlsx
 
         import openpyxl
         with tempfile.TemporaryDirectory() as d:

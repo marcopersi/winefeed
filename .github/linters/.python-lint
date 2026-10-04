@@ -17,6 +17,9 @@ disable=
     too-many-lines,
     import-outside-toplevel,
     wrong-import-position,
+    wrong-import-order,
     invalid-name,
     global-statement,
-    broad-exception-caught
+    broad-exception-caught,
+    duplicate-code,
+    too-few-public-methods

@@ -7,8 +7,6 @@ Both houses run the same auction software:
 - fetch: ``GET /api/lots?cat_id={id}&...&$page={i}&$maxpagesize=50``, paginated
   until ``$totalPages`` is reached.
 """
-import re
-
 from ..models import AuctionRef, FetchResult
 
 API_VERSION = "1.14"

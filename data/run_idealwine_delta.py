@@ -33,11 +33,12 @@ def _env():
     env = {}
     path = os.path.join(REPO, ".env_local")
     if os.path.exists(path):
-        for line in open(path, encoding="utf-8"):
-            line = line.strip()
-            if "=" in line and not line.startswith("#"):
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip()
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.split("=", 1)
+                    env[k.strip()] = v.strip()
     # CI secrets are exported as env vars and take precedence over .env_local.
     env.update({k: v for k, v in os.environ.items()
                 if k.startswith("IDEALWINE_")})
@@ -103,7 +104,7 @@ def main():
         for fut in as_completed(futures):
             done += 1
             try:
-                ref, data = fut.result()
+                _, data = fut.result()
                 cotes.append(data)
             except Exception as exc:  # noqa: BLE001
                 failed += 1
