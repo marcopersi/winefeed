@@ -18,10 +18,11 @@ FILE_PARSERS = {
 }
 
 
-def run_provider(provider, session, manifest_path, archive_path):
+def run_provider(provider, session, manifest_path, archive_path, env=None):
     """Fetch, parse and archive all new auctions of ``provider``.
 
-    Returns the number of newly fetched auctions.
+    Returns the number of newly fetched auctions. ``env`` is a dict of login
+    credentials; fetchers with an ``auth`` method are logged in first.
     """
     # Lazy import: ingest lives at the repo root, not under data/.
     from ingest.fetchers import get as get_fetcher
@@ -30,6 +31,8 @@ def run_provider(provider, session, manifest_path, archive_path):
 
     manifest = load_manifest(manifest_path)
     fetcher = get_fetcher(provider)
+    if env and hasattr(fetcher, "auth"):
+        fetcher.auth(session, env)
     new_refs = dedup(fetcher.discover(session), manifest, provider)
 
     fetched = 0

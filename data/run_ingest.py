@@ -56,12 +56,13 @@ def main():
     providers = [p for p in (args.only.split(",") if args.only else PROVIDERS)
                  if p]
 
+    env = _env()
     session = requests.Session(impersonate="chrome")
 
     results = {}
     for provider in providers:
         try:
-            n = run_provider(provider, session, MANIFEST_PATH, ARCHIVE)
+            n = run_provider(provider, session, MANIFEST_PATH, ARCHIVE, env)
             results[provider] = ("ok", n)
             print(f"{provider}: {n} neu", flush=True)
         except Exception as exc:  # noqa: BLE001

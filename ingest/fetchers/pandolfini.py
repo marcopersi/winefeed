@@ -16,6 +16,8 @@ import re
 from ..models import AuctionRef, FetchResult
 
 BASE_URL = "https://www.pandolfini.it"
+LOGIN_PAGE = f"{BASE_URL}/uk/my-panel/index.asp"
+LOGIN_URL = f"{BASE_URL}/uk/controller.asp?action=community-login"
 
 
 class PandolfiniFetcher:
@@ -23,6 +25,26 @@ class PandolfiniFetcher:
 
     def __init__(self, base_url=BASE_URL):
         self.base_url = base_url.rstrip("/")
+
+    def auth(self, session, env):
+        """Log in with ``PANDOLFINI_USER``/``PANDOLFINI_PWD``.
+
+        Sets the ``codiceutente_pandolfini`` session cookie. Returns True on
+        success.
+        """
+        user = env.get("PANDOLFINI_USER")
+        password = env.get("PANDOLFINI_PWD")
+        if not user or not password:
+            return False
+        session.get(LOGIN_PAGE)
+        session.post(
+            LOGIN_URL,
+            data={"usr": user, "psw": password, "remember": "checked",
+                  "formName": "userPanel",
+                  "_success": f"{self.base_url}/uk/my-panel/index.asp"},
+            headers={"Referer": LOGIN_PAGE, "Origin": self.base_url},
+        )
+        return bool(session.cookies.get("codiceutente_pandolfini"))
 
     def discover(self, session):
         html = session.get(
