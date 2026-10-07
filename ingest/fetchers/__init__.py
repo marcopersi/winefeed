@@ -1,4 +1,6 @@
 """Fetcher registry."""
+from .beschcannes import BeschCannesFetcher
+from .dobiaschofsky import DobiaschofskyFetcher
 from .dorotheum import DorotheumFetcher
 from .finarte import FinarteFetcher
 from .hdh import HdhFetcher
@@ -24,6 +26,8 @@ FETCHERS = {
     "dorotheum": DorotheumFetcher(),
     "pandolfini": PandolfiniFetcher(),
     "finarte": FinarteFetcher(),
+    "besch-cannes": BeschCannesFetcher(),
+    "dobiaschofsky": DobiaschofskyFetcher(),
 }
 
 
