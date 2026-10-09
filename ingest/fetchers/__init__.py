@@ -2,6 +2,7 @@
 from .beschcannes import BeschCannesFetcher
 from .dobiaschofsky import DobiaschofskyFetcher
 from .dorotheum import DorotheumFetcher
+from .sothebys import SothebysFetcher
 from .finarte import FinarteFetcher
 from .hdh import HdhFetcher
 from .idealwine import IdealwineFetcher
@@ -28,6 +29,7 @@ FETCHERS = {
     "finarte": FinarteFetcher(),
     "besch-cannes": BeschCannesFetcher(),
     "dobiaschofsky": DobiaschofskyFetcher(),
+    "sothebys": SothebysFetcher(),
 }
 
 
