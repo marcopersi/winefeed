@@ -8,10 +8,13 @@ Auth0 universal-login page resolves automatically.
 Returns the ``globid`` cookie value (a JWT, ~10h lifetime) for use with the
 regular ``curl_cffi`` session.
 """
+import os
 import time
 
 AUTH_URL = ("https://www.sothebys.com/api/auth0login"
             "?lang=en&fromHeader=Y&locale=en")
+
+PASSWORD_TIMEOUT_MS = 120000
 
 
 def login(user, password, headless=True):
@@ -22,12 +25,18 @@ def login(user, password, headless=True):
     with Camoufox(headless=headless, humanize=True) as browser:
         page = browser.new_page()
         page.goto(AUTH_URL, timeout=60000)
-        time.sleep(6)
+        page.wait_for_selector('input[name="username"]', timeout=30000)
         page.fill('input[name="username"]', user)
         page.locator('button[type="submit"]').first.click()
         # The invisible Turnstile resolves automatically, then the password
-        # field appears. Wait for it (up to 60s) instead of a fixed sleep.
-        page.wait_for_selector('input[name="password"]', timeout=60000)
+        # field appears. On a datacenter IP Cloudflare may present a visible
+        # challenge, which can take longer (or fail).
+        try:
+            page.wait_for_selector('input[name="password"]',
+                                   timeout=PASSWORD_TIMEOUT_MS)
+        except Exception as exc:
+            _dump_debug(page)
+            raise exc
         page.fill('input[name="password"]', password)
         page.locator('button[type="submit"]').first.click()
         for _ in range(20):
@@ -37,3 +46,20 @@ def login(user, password, headless=True):
             if globid:
                 return globid["value"]
         return None
+
+
+def _dump_debug(page):
+    path = os.environ.get("SOTHEBYS_DEBUG_DIR")
+    if not path:
+        return
+    os.makedirs(path, exist_ok=True)
+    try:
+        page.screenshot(path=os.path.join(path, "login.png"))
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        with open(os.path.join(path, "login.html"), "w",
+                  encoding="utf-8") as fh:
+            fh.write(page.content())
+    except Exception:  # noqa: BLE001
+        pass

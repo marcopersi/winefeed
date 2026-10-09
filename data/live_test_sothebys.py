@@ -24,6 +24,7 @@ def main():
     env = {
         "SOTHEBYS_USER": os.environ.get("SOTHEBYS_USER", ""),
         "SOTHEBYS_PWD": os.environ.get("SOTHEBYS_PWD", ""),
+        "SOTHEBYS_HEADLESS": os.environ.get("SOTHEBYS_HEADLESS", "1"),
     }
     session = requests.Session(impersonate="chrome", timeout=30)
 

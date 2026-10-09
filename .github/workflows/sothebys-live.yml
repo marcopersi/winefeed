@@ -37,11 +37,21 @@ jobs:
             libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 \
             libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
             libpango-1.0-0 libpangocairo-1.0-0 libxkbcommon0 libxshmfence1 \
-            libegl1 libgl1-mesa-dri fonts-liberation fontconfig ca-certificates
+            libegl1 libgl1-mesa-dri fonts-liberation fontconfig ca-certificates \
+            xvfb
           python -m camoufox fetch
 
       - name: Run Sothebys live test
         env:
           SOTHEBYS_USER: ${{ secrets.SOTHEBYS_USER }}
           SOTHEBYS_PWD: ${{ secrets.SOTHEBYS_PWD }}
-        run: python data/live_test_sothebys.py
+          SOTHEBYS_HEADLESS: "0"
+          SOTHEBYS_DEBUG_DIR: /tmp/sothebys-debug
+        run: xvfb-run -a python data/live_test_sothebys.py
+
+      - name: Upload login debug artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sothebys-login-debug
+          path: /tmp/sothebys-debug

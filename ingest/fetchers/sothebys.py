@@ -49,7 +49,8 @@ class SothebysFetcher:
         password = env.get("SOTHEBYS_PWD")
         if not user or not password:
             return False
-        globid = sothebys_login(user, password)
+        headless = env.get("SOTHEBYS_HEADLESS", "1") != "0"
+        globid = sothebys_login(user, password, headless=headless)
         if not globid:
             return False
         session.cookies.set("globid", globid, domain=".sothebys.com")
