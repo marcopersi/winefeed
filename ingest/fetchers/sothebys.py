@@ -78,23 +78,28 @@ class SothebysFetcher:
 
     def fetch(self, session, ref):
         html = session.get(ref.url).text
-        auction_id = self._extract_auction_id(html)
-        lots = self._graphql_lots(session, auction_id)
+        auction = self._extract_auction(html)
+        lots = self._graphql_lots(session, auction.get("auction_id"))
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
-            data={"provider": self.provider,
-                  "auction_id": ref.auction_id,
-                  "lots": lots},
+            data={"auction": auction, "lots": lots},
         )
 
     @staticmethod
-    def _extract_auction_id(html):
+    def _extract_auction(html):
         apollo = _apollo_cache(html)
         for key, value in apollo.items():
             if key.startswith("Auction:") and value.get("auctionId"):
-                return value["auctionId"]
-        return None
+                dates = value.get("dates") or {}
+                return {
+                    "auction_id": value.get("auctionId"),
+                    "title": value.get("title"),
+                    "dates": dates.get("closed") or dates.get("acceptsBids"),
+                    "currency": value.get("currencyV2"),
+                    "location": (value.get("locationV2") or {}).get("name"),
+                }
+        return {}
 
     @staticmethod
     def _graphql_lots(session, auction_id):
@@ -118,24 +123,34 @@ class SothebysFetcher:
                 low = (estimate.get("lowEstimate") or {}).get("amount")
                 high = (estimate.get("highEstimate") or {}).get("amount")
                 bid_state = lot.get("bidState") or {}
+                bid_ask = bid_state.get("bidAsk")
                 auction = lot.get("auction") or {}
                 lots.append({
-                    "title": lot.get("title"),
-                    "lot_no": (lot.get("lotNumber") or {})
+                    "lot_number": (lot.get("lotNumber") or {})
                     .get("lotDisplayNumber"),
-                    "hammer": bid_state.get("bidAsk"),
+                    "title": lot.get("title"),
                     "estimate_low": low,
                     "estimate_high": high,
+                    "hammer_price": bid_ask,
+                    "final_price": _final_price(bid_ask),
+                    "sold": 1 if bid_ask else 0,
                     "currency": auction.get("currency"),
-                    "location": (auction.get("locationV2") or {}).get("name"),
-                    "sale_number": auction.get("sapSaleNumber"),
-                    "state": auction.get("state"),
                 })
             offset += len(page_lots)
             total = connection.get("totalCount") or 0
             if not page_lots or offset >= total:
                 break
         return lots
+
+
+def _final_price(hammer):
+    """Sothebys buyer's premium 24% + overhead 1% on top of the hammer."""
+    if hammer is None:
+        return None
+    try:
+        return round(float(hammer) * 1.25, 2)
+    except (ValueError, TypeError):
+        return None
 
 
 def _apollo_cache(html):

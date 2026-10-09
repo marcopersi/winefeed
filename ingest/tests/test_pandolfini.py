@@ -13,11 +13,13 @@ LOT_PAGE = (
     '{"@type":"SaleEvent","name":"Smartwine 2.0","startDate":"2026-04-08",'
     '"location":{"@type":"Place","name":"Pandolfini Casa d\'Aste"}},'
     '{"@type":"ItemList","itemListElement":['
-    '{"item":{"@type":"Product","name":"Ruinart R de Ruinart","offers":'
-    '{"@type":"Offer","price":20,"priceCurrency":"EUR",'
+    '{"@type":"ListItem","position":1,"item":{"@type":"Product",'
+    '"name":"Ruinart R de Ruinart","description":"Champagne 1 bt",'
+    '"offers":{"@type":"Offer","price":20,"priceCurrency":"EUR",'
     '"availability":"https://schema.org/SoldOut","url":"https://x/lot"}}},'
-    '{"item":{"@type":"Product","name":"Charmes-Chambertin","offers":'
-    '{"@type":"Offer","price":300,"priceCurrency":"EUR",'
+    '{"@type":"ListItem","position":2,"item":{"@type":"Product",'
+    '"name":"Charmes-Chambertin","description":"Bourgogne 2 bt",'
+    '"offers":{"@type":"Offer","price":300,"priceCurrency":"EUR",'
     '"availability":"https://schema.org/InStock","url":"https://x/lot2"}}}'
     ']}]}</script>')
 
@@ -55,12 +57,16 @@ class TestPandolfini(unittest.TestCase):
         ref = AuctionRef("pandolfini", "1448",
                          url="https://www.pandolfini.it/uk/auction-1448/x.asp")
         result = f.fetch(FakeSession({"auction-1448": LOT_PAGE}), ref)
+        self.assertEqual(result.data["auction"]["id"], "1448")
         self.assertEqual(result.data["auction"]["name"], "Smartwine 2.0")
         self.assertEqual(len(result.data["lots"]), 2)
         lot = result.data["lots"][0]
         self.assertEqual(lot["name"], "Ruinart R de Ruinart")
-        self.assertEqual(lot["price"], 20)
-        self.assertTrue(lot["sold"])
+        self.assertEqual(lot["lot_nr"], 1)
+        self.assertEqual(lot["sold_price"]["class"], "venduto")
+        self.assertEqual(lot["sold_price"]["value"], 20)
+        self.assertEqual(lot["description"], "Champagne 1 bt")
+        self.assertEqual(result.data["lots"][1]["sold_price"]["class"], "")
 
 
 if __name__ == "__main__":

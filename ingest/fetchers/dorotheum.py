@@ -43,12 +43,13 @@ class DorotheumFetcher:
 
     def fetch(self, session, ref):
         html = session.get(ref.url).text
+        raw = self._extract_lots(html)
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
-            data={"provider": self.provider,
-                  "auction_id": ref.auction_id,
-                  "lots": self._extract_lots(html)},
+            data={"auction": {"id": ref.auction_id, "name": None,
+                              "date": None},
+                  "lots": [self._map_lot(lot) for lot in raw.values()]},
         )
 
     @staticmethod
@@ -58,3 +59,23 @@ class DorotheumFetcher:
             return {}
         start = html.find("{", marker)
         return JSONDecoder().raw_decode(html[start:])[0]
+
+    @staticmethod
+    def _map_lot(lot):
+        price = lot.get("preisFloat")
+        return {
+            "lot_nr": lot.get("postennummer"),
+            "name": lot.get("titel"),
+            "estimate": _parse_price(lot.get("preis2")),
+            "realized_price": price,
+            "sold": 1 if price else 0,
+            "currency": "EUR",
+            "description": lot.get("beschreibung"),
+        }
+
+
+def _parse_price(text):
+    if not text:
+        return None
+    digits = re.sub(r"[^\d.]", "", text)
+    return float(digits) if digits else None

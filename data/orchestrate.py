@@ -17,6 +17,22 @@ FILE_PARSERS = {
     "hdh": (".pdf", parse_hdh_pdf),
 }
 
+# Provider -> archive directory name. Fetchers use lowercase provider names,
+# but the loaders in build_db.py read from CamelCase directories. Without this
+# mapping, freshly fetched JSONs would land in a directory the loader never
+# reads.
+ARCHIVE_DIRS = {
+    "hdh": "HDH",
+    "langtons": "Langtons",
+    "winefields": "Winefields",
+    "dorotheum": "Dorotheum",
+    "pandolfini": "Pandolfini",
+    "finarte": "Finarte",
+    "besch-cannes": "BeschCannes",
+    "dobiaschofsky": "Dobiaschofsky",
+    "sothebys": "Sothebys",
+}
+
 
 def run_provider(provider, session, manifest_path, archive_path, env=None):
     """Fetch, parse and archive all new auctions of ``provider``.
@@ -70,9 +86,9 @@ def _store_json(provider, result, archive_path):
 
 
 def _store_binary(provider, result, archive_path):
-    os.makedirs(os.path.join(archive_path, provider), exist_ok=True)
-    with open(os.path.join(archive_path, provider,
-                           result.filename or result.auction_id),
+    directory = os.path.join(archive_path, _archive_dir(provider))
+    os.makedirs(directory, exist_ok=True)
+    with open(os.path.join(directory, result.filename or result.auction_id),
               "wb") as fh:
         fh.write(result.content)
 
@@ -88,7 +104,11 @@ def _filename(result, parsed):
 
 
 def _write_json(archive_path, provider, filename, data):
-    directory = os.path.join(archive_path, provider)
+    directory = os.path.join(archive_path, _archive_dir(provider))
     os.makedirs(directory, exist_ok=True)
     with open(os.path.join(directory, filename), "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, default=str)
+
+
+def _archive_dir(provider):
+    return ARCHIVE_DIRS.get(provider, provider)

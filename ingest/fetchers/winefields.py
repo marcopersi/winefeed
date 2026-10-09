@@ -17,9 +17,9 @@ OVERVIEW_URL = "https://www.winefields.com/auctions/"
 LOT_ANCHOR = '"lots":{"result_page":['
 
 META_FIELDS = (
-    "location_name", "currency_code", "default_buyers_premium",
-    "minimum_buyers_premium", "percentage_bidding", "lot_count",
-    "sold_lot_count", "auction_code",
+    "title", "time_start", "location_name", "currency_code",
+    "default_buyers_premium", "minimum_buyers_premium", "percentage_bidding",
+    "lot_count", "sold_lot_count", "auction_code",
 )
 
 
@@ -61,11 +61,28 @@ class WinefieldsFetcher:
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
-            data={"provider": self.provider,
-                  "auction_id": ref.auction_id,
-                  "auction": meta,
-                  "lots": lots},
+            data={"auction": {"auction_id": ref.auction_id,
+                              "title": meta.get("title"),
+                              "time_start": meta.get("time_start")},
+                  "lots": [self._map_lot(lot) for lot in lots]},
         )
+
+    @staticmethod
+    def _map_lot(lot):
+        return {
+            "lot_no": lot.get("lot_number"),
+            "title": lot.get("title"),
+            "producer": None,
+            "quantity": lot.get("quantity"),
+            "size": None,
+            "estimate_low": lot.get("estimate_low"),
+            "estimate_high": lot.get("estimate_high"),
+            "hammer": lot.get("sold_price"),
+            "status": lot.get("status"),
+            "is_mixed_lot": lot.get("is_mixed_lot"),
+            "condition": lot.get("condition"),
+            "currency": lot.get("currency_code"),
+        }
 
     @staticmethod
     def _extract_lots(html):
@@ -79,7 +96,18 @@ class WinefieldsFetcher:
     @staticmethod
     def _extract_meta(html):
         meta = {}
+        # Auction title and start time live together in a dedicated object
+        # (after the lots block); "title" also appears per-lot, so match them
+        # as a pair to avoid grabbing a lot title.
+        pair = re.search(
+            r'"title":"((?:[^"\\]|\\.)*)"\s*,\s*"time_start":'
+            r'"((?:[^"\\]|\\.)*)"', html)
+        if pair:
+            meta["title"] = json.loads('"' + pair.group(1) + '"')
+            meta["time_start"] = json.loads('"' + pair.group(2) + '"')
         for field in META_FIELDS:
+            if field in ("title", "time_start"):
+                continue
             match = re.search(r'"' + field + r'":("[^"]*"|null|[0-9.]+)',
                               html)
             if match:

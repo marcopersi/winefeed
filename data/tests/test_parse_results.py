@@ -102,6 +102,13 @@ class TestHdhHelpers(unittest.TestCase):
         self.assertEqual(match.group(3).strip(), "2005 Château Le Pin")
         self.assertEqual(match.group(6), "8,500")
 
+    def test_split_vintage(self):
+        from parse_results import _split_vintage
+        self.assertEqual(_split_vintage("2005 Château Le Pin"),
+                         (2005, "Château Le Pin"))
+        self.assertEqual(_split_vintage("Château Le Pin"), (None, "Château Le Pin"))
+        self.assertEqual(_split_vintage("1999 Vintage Port"), (1999, "Vintage Port"))
+
 
 if __name__ == "__main__":
     unittest.main()

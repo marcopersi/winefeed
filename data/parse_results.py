@@ -59,6 +59,8 @@ _LOT_LINE = re.compile(
     r"^(\d+)\s+(\d+)\s+(.+?)\s+([\d,]{3,})\s*-\s*([\d,]{3,})\s+"
     r"([\d,]{3,})\s+([\d,]+\.\d{2})$")
 
+_YEAR = re.compile(r"\b(19|20)\d{2}\b")
+
 
 def parse_hdh_pdf(path):
     with pdfplumber.open(path) as pdf:
@@ -73,11 +75,17 @@ def parse_hdh_pdf(path):
         match = _LOT_LINE.match(line.strip())
         if not match:
             continue
+        description = match.group(3).strip()
+        vintage, wine = _split_vintage(description)
         lots.append({
             "lot_no": int(match.group(1)),
             "qty": int(match.group(2)),
-            "description": match.group(3).strip(),
+            "description": description,
+            "vintage": vintage,
+            "wine": wine,
             "estimate": f"{match.group(4)} - {match.group(5)}",
+            "estimate_low": _us_number(match.group(4)),
+            "estimate_high": _us_number(match.group(5)),
             "hammer": _us_number(match.group(6)),
             "aggregate": _us_number(match.group(7)),
         })
@@ -93,6 +101,15 @@ def parse_hdh_pdf(path):
         },
         "lots": lots,
     }
+
+
+def _split_vintage(description):
+    """'2005 Château Le Pin' -> (2005, 'Château Le Pin')."""
+    match = _YEAR.search(description or "")
+    if match:
+        wine = _YEAR.sub("", description, count=1).strip(" ,-") or None
+        return int(match.group(0)), wine
+    return None, description or None
 
 
 def _hdh_title(lines):

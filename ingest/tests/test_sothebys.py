@@ -12,7 +12,11 @@ NEXT_DATA = (
     '<script id="__NEXT_DATA__" type="application/json">'
     '{"props":{"pageProps":{"apolloCache":{'
     '"Auction:QXVjdGlvbl9kMTliYmI4ZS03MWM0LTQyYjktYWJhNS0zNjZkMzExODA2YTk=":'
-    '{"auctionId":"d19bbb8e-71c4-42b9-aba5-366d311806a9"}}}}}'
+    '{"auctionId":"d19bbb8e-71c4-42b9-aba5-366d311806a9",'
+    '"title":"Live from The Macallan Estate",'
+    '"currencyV2":"GBP",'
+    '"locationV2":{"name":"London"},'
+    '"dates":{"closed":"2026-10-09T14:57:00Z"}}}}}}'
     '</script>')
 
 GRAPHQL_RESPONSE = {
@@ -94,12 +98,20 @@ class TestSothebys(unittest.TestCase):
                          url="https://x/auction/x")
         session = FakeSession({"auction/x": NEXT_DATA}, GRAPHQL_RESPONSE)
         result = f.fetch(session, ref)
+        auction = result.data["auction"]
+        self.assertEqual(auction["auction_id"],
+                         "d19bbb8e-71c4-42b9-aba5-366d311806a9")
+        self.assertEqual(auction["title"], "Live from The Macallan Estate")
+        self.assertEqual(auction["currency"], "GBP")
+        self.assertEqual(auction["location"], "London")
         lot = result.data["lots"][0]
         self.assertEqual(lot["title"], "The Macallan 42.6")
-        self.assertEqual(lot["hammer"], "140000")
+        self.assertEqual(lot["lot_number"], "1")
+        self.assertEqual(lot["hammer_price"], "140000")
+        self.assertEqual(lot["final_price"], 175000.0)
         self.assertEqual(lot["estimate_low"], "60000")
+        self.assertEqual(lot["sold"], 1)
         self.assertEqual(lot["currency"], "GBP")
-        self.assertEqual(lot["location"], "London")
 
 
 if __name__ == "__main__":

@@ -72,9 +72,9 @@ class PandolfiniFetcher:
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
-            data={"provider": self.provider,
-                  "auction_id": ref.auction_id,
-                  "auction": meta,
+            data={"auction": {"id": ref.auction_id,
+                              "name": meta.get("name"),
+                              "date": meta.get("start_date")},
                   "lots": lots},
         )
 
@@ -103,12 +103,18 @@ class PandolfiniFetcher:
                     for item in entry.get("itemListElement", []):
                         product = item.get("item", {})
                         offers = product.get("offers", {})
+                        sold = str(offers.get("availability", "")) \
+                            .endswith("SoldOut")
                         lots.append({
+                            "lot_nr": item.get("position"),
                             "name": (product.get("name") or "").strip(),
-                            "price": offers.get("price"),
-                            "currency": offers.get("priceCurrency"),
-                            "sold": str(offers.get("availability", ""))
-                            .endswith("SoldOut"),
-                            "url": offers.get("url") or item.get("url"),
+                            "estimate_low": None,
+                            "estimate_high": None,
+                            "sold_price": {
+                                "class": "venduto" if sold else "",
+                                "value": offers.get("price"),
+                            },
+                            "description": (product.get("description")
+                                            or "").strip() or None,
                         })
         return meta, lots

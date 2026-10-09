@@ -70,9 +70,8 @@ class LangtonsFetcher:
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
-            data={"provider": self.provider,
-                  "auction_id": ref.auction_id,
-                  "title": ref.title,
+            data={"auction": {"id": ref.auction_id, "name": ref.title,
+                              "date": None},
                   "lots": lots},
         )
 
@@ -87,7 +86,7 @@ class LangtonsFetcher:
             for td in tbody.select("td[data-label]"):
                 fields[td.get("data-label")] = td.get_text(strip=True)
             lots.append({
-                "lot_no": fields.get("Lot #"),
+                "lot": fields.get("Lot #"),
                 "wine": name_el.get_text(strip=True) if name_el else None,
                 "region": desc_el.get_text(strip=True) if desc_el else None,
                 "classification": fields.get("Classification"),
@@ -95,5 +94,6 @@ class LangtonsFetcher:
                 "notes": fields.get("Notes"),
                 "quantity": fields.get("Quantity"),
                 "winning_bid": _money(fields.get("Winning bid per item")),
+                "currency": "AUD",
             })
         return lots

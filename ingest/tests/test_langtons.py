@@ -61,14 +61,19 @@ class TestLangtons(unittest.TestCase):
         from ingest.models import AuctionRef
         ref = AuctionRef("langtons", "8212",
                          url="https://x/Auction-ShowDetails?id=8212"
-                             "&name=F27UR014&clearSearch=true&isAjax=true")
+                             "&name=F27UR014&clearSearch=true&isAjax=true",
+                         title="04 SUN: Unreserved")
         session = FakeSession({"isAjax=true": LOT_HTML})
         result = f.fetch(session, ref)
+        self.assertEqual(result.data["auction"]["id"], "8212")
+        self.assertEqual(result.data["auction"]["name"], "04 SUN: Unreserved")
         lot = result.data["lots"][0]
+        self.assertEqual(lot["lot"], "1")
         self.assertEqual(lot["wine"], "919 WINES Ella Semmler Tempranillo")
         self.assertEqual(lot["region"], "South Australia")
         self.assertEqual(lot["vintage"], "2019")
         self.assertEqual(lot["winning_bid"], 3.0)
+        self.assertEqual(lot["currency"], "AUD")
 
 
 if __name__ == "__main__":

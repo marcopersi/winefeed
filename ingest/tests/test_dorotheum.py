@@ -46,11 +46,16 @@ class TestDorotheum(unittest.TestCase):
         ref = AuctionRef("dorotheum", "127195",
                          url="https://www.dorotheum.com/de/a/127195/")
         result = f.fetch(FakeSession({"/de/a/127195/": LOT_PAGE}), ref)
+        self.assertEqual(result.data["auction"]["id"], "127195")
         lots = result.data["lots"]
         self.assertEqual(len(lots), 1)
-        lot = lots["9515777"]
-        self.assertEqual(lot["titel"], "Château Mouton Rothschild")
-        self.assertEqual(lot["preisFloat"], 400)
+        lot = lots[0]
+        self.assertEqual(lot["name"], "Château Mouton Rothschild")
+        self.assertEqual(lot["lot_nr"], "139-131145/0001")
+        self.assertEqual(lot["realized_price"], 400)
+        self.assertEqual(lot["estimate"], 800)
+        self.assertEqual(lot["currency"], "EUR")
+        self.assertEqual(lot["sold"], 1)
 
 
 if __name__ == "__main__":
