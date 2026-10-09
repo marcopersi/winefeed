@@ -16,6 +16,11 @@ from ..sothebys_auth import login as sothebys_login
 BASE_URL = "https://www.sothebys.com"
 GRAPHQL_URL = "https://clientapi.prod.sothelabs.com/graphql"
 
+CATEGORY_IDS = [
+    "00000164-609a-d1db-a5e6-e9fffcc80000",  # Wine
+    "0000017e-b9db-d1d4-a9fe-bdfb5bbc0000",  # Whisky & Spirits
+]
+
 LOTS_QUERY = (
     '{ auction(id: "%s") {'
     ' lotCardsConnection(filter: "ALL", limit: 1000, offset: %d) {'
@@ -51,20 +56,23 @@ class SothebysFetcher:
         return True
 
     def discover(self, session):
-        html = session.get(f"{self.base_url}/en/results").text
         refs = []
         seen = set()
-        for match in re.finditer(r'/en/buy/auction/(\d{4})/([a-z0-9\-]+)',
-                                 html):
-            year, slug = match.group(1), match.group(2)
-            if slug in seen:
-                continue
-            seen.add(slug)
-            refs.append(AuctionRef(
-                provider=self.provider,
-                auction_id=slug,
-                url=f"{self.base_url}/en/buy/auction/{year}/{slug}",
-            ))
+        for category_id in CATEGORY_IDS:
+            url = (f"{self.base_url}/en/results"
+                   f"?from=&to=&f2={category_id}&q=")
+            html = session.get(url).text
+            for match in re.finditer(r'/en/buy/auction/(\d{4})/([a-z0-9\-]+)',
+                                     html):
+                year, slug = match.group(1), match.group(2)
+                if slug in seen:
+                    continue
+                seen.add(slug)
+                refs.append(AuctionRef(
+                    provider=self.provider,
+                    auction_id=slug,
+                    url=f"{self.base_url}/en/buy/auction/{year}/{slug}",
+                ))
         return refs
 
     def fetch(self, session, ref):
