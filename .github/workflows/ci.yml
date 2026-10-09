@@ -7,7 +7,6 @@ on:
     branches: ["master"]
   pull_request:
     branches: ["master"]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -91,35 +90,3 @@ jobs:
 
       - name: Test ingest fetchers
         run: python -m unittest discover -s ingest/tests -v
-
-  test-sothebys:
-    name: Sothebys live fetch (camoufox + Turnstile)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Install camoufox + Firefox system deps
-        run: |
-          pip install -r data/requirements.txt camoufox
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libgtk-3-0 libdbus-glib-1-2 libxt6 libx11-xcb1 libasound2 \
-            libdrm2 libgbm1 libxcomposite1 libxcursor1 libxdamage1 \
-            libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 \
-            libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
-            libpango-1.0-0 libpangocairo-1.0-0 libxkbcommon0 libxshmfence1 \
-            libegl1 libgl1-mesa-dri fonts-liberation fontconfig ca-certificates
-          python -m camoufox fetch
-
-      - name: Run Sothebys live test
-        env:
-          SOTHEBYS_USER: ${{ secrets.SOTHEBYS_USER }}
-          SOTHEBYS_PWD: ${{ secrets.SOTHEBYS_PWD }}
-        run: python data/live_test_sothebys.py
