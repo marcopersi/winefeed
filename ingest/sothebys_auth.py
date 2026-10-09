@@ -22,13 +22,18 @@ def login(user, password, headless=True):
     with Camoufox(headless=headless, humanize=True) as browser:
         page = browser.new_page()
         page.goto(AUTH_URL, timeout=60000)
-        time.sleep(5)
+        time.sleep(6)
         page.fill('input[name="username"]', user)
         page.locator('button[type="submit"]').first.click()
-        time.sleep(8)
+        # The invisible Turnstile resolves automatically, then the password
+        # field appears. Wait for it (up to 60s) instead of a fixed sleep.
+        page.wait_for_selector('input[name="password"]', timeout=60000)
         page.fill('input[name="password"]', password)
         page.locator('button[type="submit"]').first.click()
-        time.sleep(10)
-        cookies = page.context.cookies()
-        globid = next((c for c in cookies if c["name"] == "globid"), None)
-        return globid["value"] if globid else None
+        for _ in range(20):
+            time.sleep(2)
+            globid = next((c for c in page.context.cookies()
+                           if c["name"] == "globid"), None)
+            if globid:
+                return globid["value"]
+        return None
