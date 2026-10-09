@@ -77,6 +77,9 @@ class SothebysFetcher:
             if not key.startswith("LotCard:"):
                 continue
             auction = lot.get("auction") or {}
+            lot_slug = (lot.get("slug") or {}).get("lotSlug")
+            auction_slug = (auction.get("slug") or {}).get("name")
+            year = (auction.get("slug") or {}).get("year")
             lots.append({
                 "title": lot.get("title"),
                 "lot_no": (lot.get("lotNumber") or {}).get("lotDisplayNumber"),
@@ -85,5 +88,7 @@ class SothebysFetcher:
                 "sale_number": auction.get("sapSaleNumber"),
                 "state": auction.get("state"),
                 "estimate": lot.get("estimateV2"),
+                "url": (f"{BASE_URL}/en/buy/auction/{year}/{auction_slug}/"
+                        f"{lot_slug}" if lot_slug and auction_slug else None),
             })
         return lots
