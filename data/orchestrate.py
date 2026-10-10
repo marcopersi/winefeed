@@ -34,6 +34,9 @@ ARCHIVE_DIRS = {
     "dorotheum": "Dorotheum",
     "pandolfini": "Pandolfini",
     "sothebys": "Sothebys",
+    "finarte": "Finarte",
+    "besch-cannes": "BeschCannes",
+    "dobiaschofsky": "Dobiaschofsky",
 }
 
 
@@ -85,7 +88,7 @@ def _store_parsed(provider, result, archive_path):
 
 def _store_json(provider, result, archive_path):
     _write_json(archive_path, provider,
-                f"{result.auction_id}.json", result.data)
+                _json_filename(provider, result), result.data)
 
 
 def _store_binary(provider, result, archive_path):
@@ -115,3 +118,16 @@ def _write_json(archive_path, provider, filename, data):
 
 def _archive_dir(provider):
     return ARCHIVE_DIRS.get(provider, provider)
+
+
+# Providers whose loaders look for a specific file-name pattern rather than
+# ``{auction_id}.json``.
+_JSON_FILENAMES = {
+    "besch-cannes": lambda ref: f"auction-{ref.auction_id}.json",
+    "dobiaschofsky": lambda ref: f"auktion-{ref.auction_id}.json",
+}
+
+
+def _json_filename(provider, result):
+    formatter = _JSON_FILENAMES.get(provider)
+    return formatter(result) if formatter else f"{result.auction_id}.json"

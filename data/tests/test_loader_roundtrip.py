@@ -99,6 +99,39 @@ class TestLoaderRoundtrip(unittest.TestCase):
             "Sothebys", "l26722.json", data, "load_sothebys")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
 
+    def test_finarte(self):
+        data = {"auction": {"slug": "fine-wines-16", "name": None,
+                            "date": None},
+                "lots": [{"lot_nr": "1", "name": "Gaja (1 BT)",
+                          "region": "Barbaresco", "vintage": "1981",
+                          "estimate_min": "180", "estimate_max": "220",
+                          "hammer_price": 221.4, "sold": 1,
+                          "currency": "EUR", "vat_regime": "RF15"}]}
+        count, hammer, wine = _run_loader(
+            "Finarte", "16.json", data, "load_finarte")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_beschcannes(self):
+        data = {"auction": {"id": "408", "slug": "408-x", "date": None,
+                            "currency": "EUR", "price_basis": "HAMMER"},
+                "lots": [{"lot_no": "401", "appellation": "Dom Perignon",
+                          "vintage": "1973", "estimate": [1000.0, 1500.0],
+                          "adjuge": 2650.0, "description": "1 Bouteille",
+                          "remarks": None}]}
+        count, hammer, wine = _run_loader(
+            "BeschCannes", "auction-408.json", data, "load_beschcannes")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_dobiaschofsky(self):
+        data = {"auction": {"id": "wein", "name": None, "date": None},
+                "lots": [{"lot_nr": "12550", "name": "Domaine de la Romanee",
+                          "vintage": "1986", "estimate_chf": None,
+                          "hammer_chf": 10000.0,
+                          "description": "Romanee Conti"}]}
+        count, hammer, wine = _run_loader(
+            "Dobiaschofsky", "auktion-wein.json", data, "load_dobiaschofsky")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
 
 if __name__ == "__main__":
     unittest.main()

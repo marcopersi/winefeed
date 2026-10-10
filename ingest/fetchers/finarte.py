@@ -56,12 +56,14 @@ class FinarteFetcher:
 
     def fetch(self, session, ref):
         html = session.get(ref.url).text
+        slug = re.search(r"/auction/([a-z0-9\-]+)", ref.url)
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
-            data={"provider": self.provider,
-                  "auction_id": ref.auction_id,
-                  "lots": self._extract_lots(html)},
+            data={"auction": {"slug": slug.group(1) if slug else None,
+                              "name": None, "date": None},
+                  "lots": [self._map_lot(lot)
+                           for lot in self._extract_lots(html)]},
         )
 
     @staticmethod
@@ -75,3 +77,20 @@ class FinarteFetcher:
             return json.loads(html[start:end])
         except (ValueError, TypeError):
             return []
+
+    @staticmethod
+    def _map_lot(lot):
+        sold = lot.get("opera_venduta") == "True" \
+            or lot.get("stato") == "VENDUTO"
+        return {
+            "lot_nr": lot.get("numero_lotto"),
+            "name": lot.get("stringa_filtro_autore_lotto"),
+            "region": lot.get("stringa_categoria_lotto"),
+            "vintage": lot.get("anno"),
+            "estimate_min": lot.get("valore_min"),
+            "estimate_max": lot.get("valore_max"),
+            "hammer_price": lot.get("prezzo_aggiudicazione"),
+            "sold": 1 if sold else 0,
+            "currency": "EUR",
+            "vat_regime": lot.get("regime_vendita"),
+        }

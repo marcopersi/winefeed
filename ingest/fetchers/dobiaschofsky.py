@@ -7,6 +7,8 @@ the hammer ("Zuschlag: CHF …"), the wine name and the auction reference.
 - fetch: scrape the lots (``<li>`` cards) for name, hammer, lot number and
   auction reference.
 """
+import re
+
 from bs4 import BeautifulSoup
 
 from ..models import AuctionRef, FetchResult
@@ -33,8 +35,8 @@ class DobiaschofskyFetcher:
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
-            data={"provider": self.provider,
-                  "auction_id": ref.auction_id,
+            data={"auction": {"id": ref.auction_id, "name": None,
+                              "date": None},
                   "lots": self._extract_lots(html)},
         )
 
@@ -43,14 +45,35 @@ class DobiaschofskyFetcher:
         soup = BeautifulSoup(html, "html.parser")
         lots = []
         for form in soup.select("form[action*='d346-']"):
+            action = form.get("action") or ""
             h3 = form.select_one("h3")
-            zuschlag = form.select_one('span[style*="color:#004e6c"]')
-            auction_ref = form.select_one('span[style*="font-size:11px"]')
+            description = form.select_one("p")
+            zuschlag = form.select_one("div.gridtextheight2Highlights")
             lots.append({
+                "lot_nr": _lot_id(action),
                 "name": h3.get_text(strip=True) if h3 else None,
-                "hammer": zuschlag.get_text(strip=True) if zuschlag else None,
-                "auction": auction_ref.get_text(strip=True)
-                if auction_ref else None,
-                "url": form.get("action"),
+                "vintage": _year(action),
+                "estimate_chf": None,
+                "hammer_chf": _swiss_number(
+                    zuschlag.get_text(strip=True) if zuschlag else None),
+                "description": (description.get_text(strip=True)
+                                if description else None),
             })
         return lots
+
+
+def _lot_id(action):
+    match = re.search(r"-(\d+)-", action)
+    return match.group(1) if match else None
+
+
+def _year(action):
+    match = re.search(r"-(19|20)\d{2}", action)
+    return match.group(0)[1:] if match else None
+
+
+def _swiss_number(text):
+    if not text:
+        return None
+    digits = re.sub(r"[^\d.]", "", text.replace("'", ""))
+    return float(digits) if digits else None

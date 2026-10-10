@@ -14,11 +14,17 @@ BESCH_PAGE = (
     '<div class="shop-item-summary"><h2 class="title-product">Lot : n° 401</h2>'
     '<div class="shop-item-price">1 000 € / 1 500 €</div></div></div>')
 
+BESCH_DETAIL = (
+    '<p> 1 Bouteille CHAMPAGNE BRUT "DOM PERIGNON RESERVE DE L\'ABBAYE" '
+    'Année : 1973 Appellation : Moët et Chandon</p>')
+
 DOBIAS_PAGE = (
-    '<form action="/d346-A129-12550-x.html">'
-    '<h3>DOMAINE DE LA ROMANEE</h3>'
-    '<span style="color:#004e6c">Zuschlag: CHF 10\'000</span>'
-    '<span style="font-size:11px">A-129: November 2019</span></form>')
+    '<form action="/d346-A129-12550-DOMAINE-DE-LA-ROMANEE-Romanee-Conti-'
+    'Grand-Cru-1986.html">'
+    '<div class="DIV7114treffereiner2 gridtextheightHighlights">'
+    '<h3>DOMAINE DE LA ROMANEE</h3><p>Romanee Conti, Grand Cru</p></div>'
+    '<div class="DIV7114treffereiner2 gridtextheight2Highlights">'
+    'Zuschlag CHF 10\'000</div></form>')
 
 
 class FakeResponse:
@@ -50,11 +56,17 @@ class TestBeschCannes(unittest.TestCase):
     def test_fetch_extracts_lots(self):
         f = BeschCannesFetcher()
         from ingest.models import AuctionRef
-        ref = AuctionRef("besch-cannes", "408", url="https://x/auctions/408")
-        result = f.fetch(FakeSession({"auctions/408": BESCH_PAGE}), ref)
+        ref = AuctionRef("besch-cannes", "408",
+                         url="https://www.cannesauction.com/auctions/408-x")
+        result = f.fetch(FakeSession({"auctions/408": BESCH_PAGE,
+                                      "en-lots/88069": BESCH_DETAIL}), ref)
+        self.assertEqual(result.data["auction"]["id"], "408")
         lot = result.data["lots"][0]
-        self.assertEqual(lot["hammer"], "Sold 2 650 €")
-        self.assertEqual(lot["url"], "/en-lots/88069")
+        self.assertEqual(lot["lot_no"], "401")
+        self.assertEqual(lot["adjuge"], 2650.0)
+        self.assertEqual(lot["estimate"], [1000.0, 1500.0])
+        self.assertEqual(lot["appellation"], "DOM PERIGNON RESERVE DE L'ABBAYE")
+        self.assertEqual(lot["vintage"], "1973")
 
 
 class TestDobiaschofsky(unittest.TestCase):
@@ -64,10 +76,13 @@ class TestDobiaschofsky(unittest.TestCase):
         ref = AuctionRef("dobiaschofsky", "wein",
                          url="https://www.dobiaschofsky.com/d346.html")
         result = f.fetch(FakeSession({"d346.html": DOBIAS_PAGE}), ref)
+        self.assertEqual(result.data["auction"]["id"], "wein")
         lot = result.data["lots"][0]
+        self.assertEqual(lot["lot_nr"], "12550")
         self.assertEqual(lot["name"], "DOMAINE DE LA ROMANEE")
-        self.assertEqual(lot["hammer"], "Zuschlag: CHF 10'000")
-        self.assertEqual(lot["auction"], "A-129: November 2019")
+        self.assertEqual(lot["vintage"], "1986")
+        self.assertEqual(lot["hammer_chf"], 10000.0)
+        self.assertEqual(lot["description"], "Romanee Conti, Grand Cru")
 
 
 if __name__ == "__main__":
