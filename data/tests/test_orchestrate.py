@@ -95,6 +95,8 @@ class TestOrchestrate(unittest.TestCase):
                     "weinauktionator", session, manifest, archive)
             self.assertEqual(first, 1)
             self.assertEqual(second, 0)
+            files = os.listdir(os.path.join(archive, "weinauktionator"))
+            self.assertEqual(files, ["weinauktionator_results_39.json"])
 
 
 if __name__ == "__main__":
