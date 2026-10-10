@@ -1132,7 +1132,11 @@ def load_steinfels(b, limit):
         n += 1
         if limit and n >= limit:
             break
-    _load_weinauktion_json(b, "steinfels", limit)
+    # The Alt-XLSX (2002-03) and API-JSON (current catalogs) are disjunct
+    # auction-id namespaces, so both are loaded into the same "steinfels"
+    # provider without collision.
+    remaining = None if limit is None else limit - n
+    _load_weinauktion_json(b, "steinfels", remaining)
 
 
 # --------------------------------------------------------------------------- #

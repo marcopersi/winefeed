@@ -50,6 +50,7 @@ class TestOrchestrate(unittest.TestCase):
         from ingest.models import AuctionRef
         self.assertEqual(orchestrate._archive_dir("hdh"), "HDH")
         self.assertEqual(orchestrate._archive_dir("sothebys"), "Sothebys")
+        self.assertEqual(orchestrate._archive_dir("koppe"), "Koppe")
         self.assertEqual(orchestrate._archive_dir("weinauktionator"),
                          "weinauktionator")
         self.assertEqual(

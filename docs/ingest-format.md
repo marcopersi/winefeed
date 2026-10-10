@@ -49,8 +49,8 @@ Felder extrahieren · ＋ Loader fehlt (neu bauen).
 | finarte | `fetch` mappt auf `auction{slug,name,date}` + `lots{lot_nr,name,region,vintage,estimate_min,estimate_max,hammer_price,sold,currency,vat_regime}` | identisch (`load_finarte`); `name`/`date` bleiben `None` (nicht extrahiert) | ✓ |
 | besch-cannes | `fetch` lädt je Lot die Detail-Seite (`/en-lots/{id}`) und mappt auf `auction{id,slug,date,currency,price_basis}` + `lots{lot_no,appellation,vintage,estimate[list],adjuge,description,remarks}` | identisch (`load_beschcannes`) | ✓ |
 | dobiaschofsky | `fetch` mappt auf `auction{id,name,date}` + `lots{lot_nr,name,vintage,estimate_chf,hammer_chf,description}` (Auktions-Ref `A###` in `description` bewahrt) | identisch (`load_dobiaschofsky`); `name`/`date`/`estimate_chf` bleiben `None` | ✓ |
-| koppe | `lots{name,vintage,region,color,bottle_size,format,hammer_price,hammer_price_raw,estimate}` | **kein Loader** | ＋ `load_koppe` bauen (Step 4) |
-| weinauktion (steinfels/weinboerse) | `{title,date,currency,auction_meta,lots(items)}` (rohe API-Items) | `load_steinfels` liest nur Alt-XLSX; kein `load_weinboerse` | ＋ Loader bauen, XLSX↔JSON klären (Step 4) |
+| koppe | `fetch` mappt auf `auction{id,name,date}` + `lots{lot_no,name,vintage,region,color,bottle_size,format,hammer_price,…}` | identisch (`load_koppe`) | ✓ |
+| weinauktion (steinfels/weinboerse) | `fetch` mappt auf `auction{id,name,date,currency}` + `lots{lot_no,wine,vintage,estimate_low,estimate_high,hammer_price,sold,currency}` | `load_weinboerse`/`load_steinfels` (JSON) via `_load_weinauktion_json` | ✓ |
 
 ## Verzeichnisname: provider ↔ Loader-Hausname
 
@@ -104,9 +104,6 @@ ist daher aus `run_ingest.PROVIDERS` entfernt (Entscheidung D1).
    offen (GraphQL liefert `ResultHidden`).
 4. **Pandolfini `estimate_low/high`** und **Winefields `producer`/`size`** sind
    nicht im Roh-Payload vorhanden — bleiben `None`.
-5. **weinauktion-Altbestand**: `load_steinfels` liest historische XLSX; die
-   neuen API-Items müssen auf dieselbe Spaltenstruktur gemappt oder ein
-   separater `load_weinboerse`/`load_steinfels_json` gebaut werden (Step 4).
-6. **Fail-loud bei leerem Fetch** (z. B. Sothebys ohne `Auction`-Eintrag →
+5. **Fail-loud bei leerem Fetch** (z. B. Sothebys ohne `Auction`-Eintrag →
    `{"auction": {}, "lots": []}` wird trotzdem als „gefetcht" markiert) — wird
    in Step 7 (Guardrails) adressiert.

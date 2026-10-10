@@ -159,7 +159,9 @@ Freigegeben (D1, D2 bestätigt). Umsetzung schrittweise; nach jedem Step
 - [ ] Step 3: Gruppe B normalisieren + in Ingest (finarte, besch-cannes, dobiaschofsky)
 - [x] Step 3: Gruppe B normalisieren + in Ingest (finarte, besch-cannes, dobiaschofsky)
   - Evidence: 3 Fetcher liefern `{auction, lots}` im Loader-Format; besch-cannes lädt je Lot die Detail-Seite (`/en-lots/{id}`); `ARCHIVE_DIRS` + `_json_filename`-Patterns (auction-/auktion-*.json); `idealwine` aus PROVIDERS entfernt. Senior-Review lief, Findings gefixt: (MEDIUM) veralteter Docstring + dobiaschofsky Auktions-Ref `A###` in description bewahrt, (LOW) finarte `sold` bool+string, `_lot_id`/`_year` geankert. Orchestrator-Mapping-Test ergänzt. `-s ingest/tests` 33 OK + `-s data/tests` 86 OK, Pylint 10.00. Commit `52f1806`.
-- [ ] Step 4: Gruppe C Loader bauen (koppe, weinboerse)
+- [x] Step 4: Gruppe C Loader bauen (koppe, weinboerse)
+  - Evidence: `load_koppe` + `load_weinboerse` (+ `_load_weinauktion_json`) gebaut; koppe/weinauktion-Fetcher normalisiert; `load_steinfels` lädt Alt-XLSX + API-JSON. Senior-Review lief, Findings gefixt: (HIGH) `koppe→Koppe` in `ARCHIVE_DIRS`, (MEDIUM) `--limit`-Restbudget bei steinfels, (LOW) disjunkte-Namensräume-Kommentar. Orchestrator-Mapping-Test um koppe ergänzt. `-s ingest/tests` 33 OK + `-s data/tests` 88 OK, Pylint 10.00. Commit `831ba04`.
+- [ ] Step 5: PROVIDERS-Vollständigkeit + Dedup-Idempotenz
 - [ ] Step 5: PROVIDERS-Vollständigkeit + Dedup-Idempotenz
 - [ ] Step 6: Scheduler (ingest.yml + process.yml)
 - [ ] Step 7: E2E-Test + Guardrails
