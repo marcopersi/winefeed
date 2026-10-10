@@ -870,6 +870,66 @@ def load_pandolfini(b, limit):
             break
 
 
+def load_koppe(b, limit):
+    n = 0
+    for f in _json_files("Koppe"):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        aid = str(a.get("id"))
+        a_id = b.add_auction("koppe", aid, a.get("name"),
+                             parse_date(a.get("date")), "EUR", "HAMMER")
+        for lot in d.get("lots", []):
+            b.add_lot(a_id, {
+                "lot_no": str(lot.get("lot_no")),
+                "wine": lot.get("name"),
+                "region": lot.get("region"),
+                "vintage": to_int(lot.get("vintage")),
+                "color": lot.get("color") or None,
+                "bottle_size_dl": parse_dl(
+                    (lot.get("bottle_size") or "").replace(",", ".") or None),
+                "hammer_price": to_float(lot.get("hammer_price")),
+                "price_basis": "HAMMER", "currency": "EUR",
+                "description": ", ".join(lot.get("format") or []) or None,
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+
+def _load_weinauktion_json(b, provider, limit):
+    """Load the weinauktion-platform API JSON (steinfels / weinboerse)."""
+    n = 0
+    for f in _json_files(provider):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        aid = str(a.get("id"))
+        a_id = b.add_auction(provider, aid, a.get("name"),
+                             parse_date(a.get("date")),
+                             a.get("currency") or "CHF", "HAMMER")
+        for lot in d.get("lots", []):
+            b.add_lot(a_id, {
+                "lot_no": str(lot.get("lot_no")),
+                "wine": lot.get("wine"),
+                "vintage": to_int(lot.get("vintage")),
+                "estimate_low": to_float(lot.get("estimate_low")),
+                "estimate_high": to_float(lot.get("estimate_high")),
+                "hammer_price": to_float(lot.get("hammer_price")),
+                "price_basis": "HAMMER",
+                "currency": lot.get("currency") or "CHF",
+                "sold": 1 if lot.get("sold") else 0,
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+    return n
+
+
+def load_weinboerse(b, limit):
+    _load_weinauktion_json(b, "weinboerse", limit)
+
+
 def load_dobiaschofsky(b, limit):
     n = 0
     for f in _json_files("Dobiaschofsky", "**/auktion-*.json"):
@@ -1072,6 +1132,7 @@ def load_steinfels(b, limit):
         n += 1
         if limit and n >= limit:
             break
+    _load_weinauktion_json(b, "steinfels", limit)
 
 
 # --------------------------------------------------------------------------- #
@@ -1090,6 +1151,7 @@ HOUSES = [
     ("finarte", load_finarte),
     ("dorotheum", load_dorotheum),
     ("pandolfini", load_pandolfini),
+    ("koppe", load_koppe),
     ("dobiaschofsky", load_dobiaschofsky),
     ("munich-wine-company", load_munich_wine_company),
     ("winebarrel", load_winebarrel),
@@ -1097,6 +1159,7 @@ HOUSES = [
     ("weinauktionator", load_weinauktionator),
     ("wermuth-sa", load_wermuth),
     ("steinfels", load_steinfels),
+    ("weinboerse", load_weinboerse),
 ]
 
 

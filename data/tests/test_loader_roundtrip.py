@@ -122,6 +122,28 @@ class TestLoaderRoundtrip(unittest.TestCase):
             "BeschCannes", "auction-408.json", data, "load_beschcannes")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
 
+    def test_koppe(self):
+        data = {"auction": {"id": "10", "name": "Koppe 10", "date": None},
+                "lots": [{"lot_no": "1", "name": "Chateau Haut-Brion",
+                          "region": "Pessac-Leognan", "vintage": "1998",
+                          "color": "Rot", "bottle_size": "6,0 l",
+                          "format": ["1 Imperial"],
+                          "hammer_price": 6000.0}]}
+        count, hammer, wine = _run_loader(
+            "Koppe", "10.json", data, "load_koppe")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_weinboerse(self):
+        data = {"auction": {"id": "627", "name": "eAuktion 116",
+                            "date": "2026-01-31", "currency": "CHF"},
+                "lots": [{"lot_no": "1", "wine": "Barolo 2015",
+                          "vintage": "2015", "estimate_low": 20.0,
+                          "estimate_high": 40.0, "hammer_price": 34.0,
+                          "sold": 1, "currency": "CHF"}]}
+        count, hammer, wine = _run_loader(
+            "weinboerse", "627.json", data, "load_weinboerse")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
     def test_dobiaschofsky(self):
         data = {"auction": {"id": "wein", "name": None, "date": None},
                 "lots": [{"lot_nr": "12550", "name": "Domaine de la Romanee",

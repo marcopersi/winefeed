@@ -22,7 +22,9 @@ LOTS_PAGE = {
     "$page": 1,
     "$totalPages": 2,
     "$totalCount": 2,
-    "items": [{"id": 1, "number": "1", "hammerPrice": 34.0}],
+    "items": [{"id": 1, "number": "1", "hammerPrice": 34.0,
+               "basePrice": 20.0, "upperBasePrice": 40.0,
+               "state": "sold", "shortDescription": "Barolo 2015"}],
 }
 
 
@@ -59,7 +61,14 @@ class TestWeinauktion(unittest.TestCase):
         session = FakeSession([LOTS_PAGE, LOTS_PAGE])
         result = f.fetch(session, AuctionRef("steinfels", "627"))
         self.assertEqual(len(result.data["lots"]), 2)  # 2 pages x 1 item
-        self.assertEqual(result.data["title"], "eAuktion 116")
+        self.assertEqual(result.data["auction"]["id"], "627")
+        self.assertEqual(result.data["auction"]["name"], "eAuktion 116")
+        lot = result.data["lots"][0]
+        self.assertEqual(lot["lot_no"], "1")
+        self.assertEqual(lot["hammer_price"], 34.0)
+        self.assertEqual(lot["estimate_low"], 20.0)
+        self.assertEqual(lot["vintage"], "2015")
+        self.assertEqual(lot["sold"], 1)
         # pagination requested page 1 and 2
         lot_urls = [u for u in session.requests if "/api/lots" in u]
         self.assertIn("$page=1", lot_urls[0])

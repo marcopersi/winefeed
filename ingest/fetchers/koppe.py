@@ -68,7 +68,8 @@ class KoppeFetcher:
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
-            data={"provider": self.provider, "auction_id": ref.auction_id,
+            data={"auction": {"id": ref.auction_id, "name": ref.title,
+                              "date": None},
                   "lots": lots},
         )
 
@@ -84,6 +85,7 @@ class KoppeFetcher:
             vintage_match = _YEAR.search(name)
             color_img = card.select_one('img[title^="Weinfarbe"]')
             lots.append({
+                "lot_no": _lot_no(_text(card, ".lot-nr")),
                 "name": name,
                 "vintage": vintage_match.group(0) if vintage_match else None,
                 "region": _text(card, ".ursprung"),
@@ -97,6 +99,11 @@ class KoppeFetcher:
                 "estimate": _text(card, ".schaetzung"),
             })
         return lots
+
+
+def _lot_no(text):
+    match = re.search(r"(\d+)", text or "")
+    return match.group(1) if match else None
 
 
 def _text(card, selector):

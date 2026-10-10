@@ -7,6 +7,8 @@ Both houses run the same auction software:
 - fetch: ``GET /api/lots?cat_id={id}&...&$page={i}&$maxpagesize=50``, paginated
   until ``$totalPages`` is reached.
 """
+import re
+
 from ..models import AuctionRef, FetchResult
 
 API_VERSION = "1.14"
@@ -62,17 +64,18 @@ class WeinauktionFetcher:
                 meta = self._meta(body)
             page += 1
 
+        currency = meta.get("currency")
         return FetchResult(
             provider=self.provider,
             auction_id=ref.auction_id,
             data={
-                "provider": self.provider,
-                "auction_id": ref.auction_id,
-                "title": meta.get("title") or ref.title,
-                "date": meta.get("startDate") or ref.date,
-                "currency": meta.get("currency"),
-                "auction_meta": meta,
-                "lots": lots,
+                "auction": {
+                    "id": ref.auction_id,
+                    "name": meta.get("title") or ref.title,
+                    "date": meta.get("startDate") or ref.date,
+                    "currency": currency,
+                },
+                "lots": [self._map_lot(lot, currency) for lot in lots],
             },
         )
 
@@ -93,3 +96,27 @@ class WeinauktionFetcher:
             "catalog_id": catalog.get("id"),
             "catalog_description": catalog.get("description") or "",
         }
+
+    @staticmethod
+    def _map_lot(lot, currency):
+        text = _strip_html(lot.get("shortDescription")
+                            or lot.get("description") or "")
+        return {
+            "lot_no": lot.get("number"),
+            "wine": text or None,
+            "vintage": _year_in(text),
+            "estimate_low": lot.get("basePrice"),
+            "estimate_high": lot.get("upperBasePrice"),
+            "hammer_price": lot.get("hammerPrice"),
+            "sold": 1 if lot.get("state") == "sold" else 0,
+            "currency": currency,
+        }
+
+
+def _strip_html(text):
+    return re.sub(r"<[^>]+>", " ", text or "").strip()
+
+
+def _year_in(text):
+    match = re.search(r"\b(19|20)\d{2}\b", text or "")
+    return match.group(0) if match else None

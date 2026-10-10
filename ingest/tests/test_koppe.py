@@ -10,6 +10,7 @@ LIST_HTML = """
 
 LOT_HTML = """
 <div class="card">
+  <div class="lot-nr d-flex justify-content-between p-2">LOT 1</div>
   <div class="artikel p-2">
     <div class="artikel-name bold">
       <p class="lot-card-artikel-name">Chateau Haut-Brion<br>Chateau Haut-Brion 1998</p>
@@ -65,9 +66,11 @@ class TestKoppe(unittest.TestCase):
             "https://www.weinauktion.de/de/auktionen/10": LOT_HTML,
         })
         result = f.fetch(session, ref)
+        self.assertEqual(result.data["auction"]["id"], "10")
         lots = result.data["lots"]
         self.assertEqual(len(lots), 1)
         lot = lots[0]
+        self.assertEqual(lot["lot_no"], "1")
         self.assertEqual(lot["region"], "Pessac-Leognan")
         self.assertEqual(lot["vintage"], "1998")
         self.assertEqual(lot["bottle_size"], "6,0 l")
