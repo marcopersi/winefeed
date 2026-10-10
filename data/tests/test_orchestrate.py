@@ -83,6 +83,19 @@ class TestOrchestrate(unittest.TestCase):
             self.assertEqual(len(parsed["lots"]), 1)
             self.assertEqual(parsed["lots"][0]["region"], "Alsace")
 
+    def test_runs_idempotent(self):
+        with tempfile.TemporaryDirectory() as d:
+            manifest = os.path.join(d, "manifest.json")
+            archive = os.path.join(d, "archive")
+            session = FakeSession()
+            with mock.patch.dict("sys.modules", {}):
+                first = orchestrate.run_provider(
+                    "weinauktionator", session, manifest, archive)
+                second = orchestrate.run_provider(
+                    "weinauktionator", session, manifest, archive)
+            self.assertEqual(first, 1)
+            self.assertEqual(second, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
