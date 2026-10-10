@@ -26,6 +26,7 @@ data/*.tmp.*
 data/*.lock
 data/**/__pycache__/
 data/wine_auction_prices.sqlite
+data/reference/vintage_review_missing.csv
 
 # Local secrets
 .env
