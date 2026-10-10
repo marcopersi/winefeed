@@ -986,6 +986,8 @@ def load_munich_wine_company(b, limit):
 
 def load_winebarrel(b, limit):
     f = os.path.join(ARCHIVE, "winebarrel", "winebarrel_lots.json")
+    if not os.path.exists(f):
+        return
     d = load_json(f)
     b.set_source(f)
     # one virtual auction holding everything

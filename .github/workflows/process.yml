@@ -1,0 +1,46 @@
+---
+# Build the wine auction DB from the archive produced by the ingest workflow,
+# run wine resolution, and publish the SQLite DB as an artifact.
+name: Process
+
+on:
+  workflow_run:
+    workflows: ["Ingest"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    name: Build DB + resolve wines
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r data/requirements.txt
+
+      - name: Download archive
+        uses: actions/download-artifact@v4
+        with:
+          name: auction-archive
+          path: ${{ runner.temp }}/archive
+
+      - name: Build DB
+        env:
+          ARCHIVE_PATH: ${{ runner.temp }}/archive
+          DB_PATH: ${{ runner.temp }}/wine_auction_prices.sqlite
+        run: python data/build_db.py
+
+      - name: Upload DB
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-auction-db
+          path: ${{ runner.temp }}/wine_auction_prices.sqlite
