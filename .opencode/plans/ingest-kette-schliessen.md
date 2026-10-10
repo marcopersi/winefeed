@@ -154,7 +154,9 @@ Freigegeben (D1, D2 bestätigt). Umsetzung schrittweise; nach jedem Step
 
 - [x] Step 1: Kanonisches Format dokumentieren
   - Evidence: `docs/ingest-format.md` erstellt; Senior-Review lief, alle Findings gefixt (hdh ⇧, price_basis-Enum, sothebys final_price als "zu bauen", dorotheum description, finarte currency, idealwine-Sonderweg). `python -m unittest discover -s ingest/tests` 32 OK, Pylint 10.00.
-- [ ] Step 2: Gruppe A normalisieren (langtons, winefields, dorotheum, pandolfini, sothebys) + hdh-Parser erweitern
+- [x] Step 2: Gruppe A normalisieren (langtons, winefields, dorotheum, pandolfini, sothebys) + hdh-Parser erweitern
+  - Evidence: 5 Fetcher liefern jetzt `{auction, lots}` im Loader-Format; `parse_hdh_pdf` extrahiert `vintage/wine/estimate_low/estimate_high`; `ARCHIVE_DIRS`-Mapping in `orchestrate.py` (nur Gruppe A + hdh). Senior-Review lief, Findings gefixt: (HIGH) Gruppe-B aus `ARCHIVE_DIRS` entfernt, (MEDIUM) `_parse_price` europ. Zahlenformat, (LOW) Docs aktualisiert. Loader-Roundtrip-Test `data/tests/test_loader_roundtrip.py` (5 Häuser). `python -m unittest discover -s ingest/tests` 32 OK + `-s data/tests` 82 OK, Pylint 10.00. Commit `52bdb7a`.
+- [ ] Step 3: Gruppe B normalisieren + in Ingest (finarte, besch-cannes, dobiaschofsky)
 - [ ] Step 3: Gruppe B normalisieren + in Ingest (finarte, besch-cannes, dobiaschofsky)
 - [ ] Step 4: Gruppe C Loader bauen (koppe, weinboerse)
 - [ ] Step 5: PROVIDERS-Vollständigkeit + Dedup-Idempotenz

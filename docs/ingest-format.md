@@ -40,17 +40,17 @@ Felder extrahieren · ＋ Loader fehlt (neu bauen).
 | Haus | Fetcher/Parser liefert (roh) | Loader erwartet | Status |
 |---|---|---|---|
 | weinauktionator | Parser `{auction{id,name,date}, lots{lot_no,region,wine,hammer_price,format}}` | identisch (`load_weinauktionator`) | ✓ |
-| hdh | Parser `{auction{sale_number,name,year,month}, lots{lot_no,qty,description,estimate(String),hammer,aggregate}}` | `load_hdh` liest zusätzlich `wine,grower,vintage,size,estimate_low,estimate_high,mixed_lot,condition` (der Parser extrahiert sie **nicht**, `estimate` ist ein String „X - Y“ statt `estimate_low/high`) | ⇧ |
-| langtons | `lots{lot_no,wine,region,classification,vintage,notes,quantity,winning_bid}` | `auction{id,name,date}` + `lots{lot,wine,region,classification,vintage,quantity,winning_bid,currency,notes}` | ✗ `lot`←`lot_no`, `auction` bauen |
-| winefields | `auction{location_name,currency_code,…}` + `lots{lot_number,title,status,sold_price,currency_code,quantity,estimate_low,estimate_high}` | `auction{auction_id,title,time_start}` + `lots{lot_no,title,producer,quantity,size,estimate_low,estimate_high,hammer,status,is_mixed_lot,condition,currency}` | ✗ map |
-| dorotheum | `lots` als **Dict** `{uid:{titel,postennummer,preisFloat,preis1,preis2,preis3,beschreibung}}` | `auction{id,name,date}` + `lots` **Liste** `{lot_nr,name,estimate,realized_price,sold,currency,description}` | ✗ Dict→Liste, map |
-| pandolfini | `auction{name,start_date,location}` + `lots{name,price,currency,sold,url}` | `auction{id,name,date}` + `lots{lot_nr,name,estimate_low,estimate_high,sold_price{class,value},description}` | ⇧ erweitern + map |
-| sothebys | `lots{title,lot_no,hammer,estimate_low,estimate_high,currency,location,sale_number,state}` (UUID/`title`/`dates` der Auktion werden **nicht** erfasst) | `auction{auction_id,title,dates,currency,location}` + `lots{lot_number,title,estimate_low,estimate_high,hammer_price,final_price,sold,currency}` | ⇧ erweitern + map |
-| finarte | `lots` roh `{stringa_filtro_autore_lotto,anno,prezzo_aggiudicazione,valore_base_asta,base_asta,…}` | `auction{slug,name,date}` + `lots{lot_nr,name,region,vintage,estimate_min,estimate_max,hammer_price,sold,currency,vat_regime}` | ⇧ erweitern + map |
-| besch-cannes | `lots{lot_no,hammer,estimate,url}` | `auction{id,slug,date,currency,price_basis}` + `lots{lot_no,appellation,vintage,estimate[list],hammer/adjuge,description,remarks}` | ⇧ erweitern + map |
-| dobiaschofsky | `lots{name,hammer,auction,url}` | `auction{id,name,date}` + `lots{lot_nr,name,vintage,estimate_chf,hammer_chf,description}` | ⇧ erweitern + map |
-| koppe | `lots{name,vintage,region,color,bottle_size,format,hammer_price,hammer_price_raw,estimate}` | **kein Loader** | ＋ `load_koppe` bauen |
-| weinauktion (steinfels/weinboerse) | `{title,date,currency,auction_meta,lots(items)}` (rohe API-Items) | `load_steinfels` liest nur Alt-XLSX; kein `load_weinboerse` | ＋ Loader bauen, XLSX↔JSON klären |
+| hdh | Parser extrahiert jetzt `vintage`, `wine`, `estimate_low`, `estimate_high`; liefert zusätzlich `lot_no,qty,description,estimate,hammer,aggregate` | `load_hdh` liest außerdem `grower,size,mixed_lot,condition` — diese liefert das PDF nicht strukturiert, bleiben `NULL` | ⇧ |
+| langtons | `fetch` mappt auf `auction{id,name,date}` + `lots{lot,wine,region,classification,vintage,quantity,winning_bid,currency,notes}` | identisch (`load_langtons`) | ✓ |
+| winefields | `fetch` mappt auf `auction{auction_id,title,time_start}` + `lots{lot_no,title,producer,quantity,size,estimate_low,estimate_high,hammer,status,is_mixed_lot,condition,currency}` | identisch (`load_winefields`); `producer`/`size` bleiben `None` (nicht im `result_page`) | ✓ |
+| dorotheum | `fetch` mappt `lots`-Dict auf Liste `{lot_nr,name,estimate,realized_price,sold,currency,description}` (europ. Zahlenformat) | identisch (`load_dorotheum`) | ✓ |
+| pandolfini | `fetch` mappt auf `auction{id,name,date}` + `lots{lot_nr,name,estimate_low,estimate_high,sold_price{class,value},description}` | identisch (`load_pandolfini`); `estimate_low/high` bleiben `None` (nicht im JSON-LD) | ✓ |
+| sothebys | `fetch` mappt auf `auction{auction_id,title,dates,currency,location}` + `lots{lot_number,title,estimate_low,estimate_high,hammer_price,final_price,sold,currency}`; `final_price = hammer × 1.25` | identisch (`load_sothebys`) | ✓ |
+| finarte | `lots` roh `{stringa_filtro_autore_lotto,anno,prezzo_aggiudicazione,valore_base_asta,base_asta,…}` | `auction{slug,name,date}` + `lots{lot_nr,name,region,vintage,estimate_min,estimate_max,hammer_price,sold,currency,vat_regime}` | ⇧ erweitern + map (Step 3) |
+| besch-cannes | `lots{lot_no,hammer,estimate,url}` | `auction{id,slug,date,currency,price_basis}` + `lots{lot_no,appellation,vintage,estimate[list],hammer/adjuge,description,remarks}` | ⇧ erweitern + map (Step 3) |
+| dobiaschofsky | `lots{name,hammer,auction,url}` | `auction{id,name,date}` + `lots{lot_nr,name,vintage,estimate_chf,hammer_chf,description}` | ⇧ erweitern + map (Step 3) |
+| koppe | `lots{name,vintage,region,color,bottle_size,format,hammer_price,hammer_price_raw,estimate}` | **kein Loader** | ＋ `load_koppe` bauen (Step 4) |
+| weinauktion (steinfels/weinboerse) | `{title,date,currency,auction_meta,lots(items)}` (rohe API-Items) | `load_steinfels` liest nur Alt-XLSX; kein `load_weinboerse` | ＋ Loader bauen, XLSX↔JSON klären (Step 4) |
 
 ## Verzeichnisname: provider ↔ Loader-Hausname
 
@@ -91,21 +91,22 @@ ist daher aus `run_ingest.PROVIDERS` entfernt (Entscheidung D1).
 
 ## Offene Punkte (in den folgenden Schritten zu klären)
 
-1. **hdh-Parser erweitern**: `parse_hdh_pdf` muss zusätzlich `wine`, `grower`,
-   `vintage`, `size`, `estimate_low`/`estimate_high`, `mixed_lot`, `condition`
-   aus dem Lot-Text bzw. der PDF-Struktur extrahieren (aktuell nur
-   `description`-String). Sonst schreibt `load_hdh` diese Felder stets `NULL`.
-2. **Vollständige Roh-Feldlisten** für `winefields.result_page`,
-   `finarte.__DATI_LOTTI__`, `weinauktion`-API-Items und `dorotheum.var lots`
-   sind nur teilweise aus den Test-Fixtures bekannt. Die vollständige Liste ist
-   beim Normalisieren (Step 2–4) live bzw. gegen einen echten Payload zu
-   verifizieren.
-3. **Pandolfini** extrahiert zu wenig Felder (kein `lot_nr`, `estimate`,
-   `sold_price{class,value}`). Der JSON-LD muss zusätzlich ausgewertet werden.
-4. **Sothebys** erfasst weder `auction_id` (UUID, wird in `fetch` verworfen)
-   noch `title`/`dates`; `final_price` ist im GraphQL verborgen
-   (`ResultHidden`) und muss als `hammer × 1.25` (24 % Premium + 1 % Overhead)
-   **noch gebaut** werden (derzeit immer `None`).
+1. **hdh**: `grower`, `size`, `mixed_lot`, `condition` liefert das PDF nicht
+   strukturiert — bleiben `NULL` im `load_hdh`. Wäre nur über ein erweitertes
+   PDF-Parsing (Lot-Beschreibungstext) erreichbar; aktuell bewusst offen.
+2. **Vollständige Roh-Feldlisten** für `finarte.__DATI_LOTTI__` und
+   `weinauktion`-API-Items sind nur teilweise aus den Test-Fixtures bekannt.
+   Die vollständige Liste ist beim Normalisieren (Step 3/4) live bzw. gegen
+   einen echten Payload zu verifizieren.
+3. **Sothebys `final_price = hammer × 1.25`** ist eine Flat-Approximation. Die
+   reale Buyer's Premium ist gestaffelt (26 %/21 %/14,5 % je Betrag und
+   Währung); exakte `final_price` bleibt bis zu einer verlässlichen Quelle
+   offen (GraphQL liefert `ResultHidden`).
+4. **Pandolfini `estimate_low/high`** und **Winefields `producer`/`size`** sind
+   nicht im Roh-Payload vorhanden — bleiben `None`.
 5. **weinauktion-Altbestand**: `load_steinfels` liest historische XLSX; die
    neuen API-Items müssen auf dieselbe Spaltenstruktur gemappt oder ein
-   separater `load_weinboerse`/`load_steinfels_json` gebaut werden.
+   separater `load_weinboerse`/`load_steinfels_json` gebaut werden (Step 4).
+6. **Fail-loud bei leerem Fetch** (z. B. Sothebys ohne `Auction`-Eintrag →
+   `{"auction": {}, "lots": []}` wird trotzdem als „gefetcht" markiert) — wird
+   in Step 7 (Guardrails) adressiert.

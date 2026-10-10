@@ -57,6 +57,13 @@ class TestDorotheum(unittest.TestCase):
         self.assertEqual(lot["currency"], "EUR")
         self.assertEqual(lot["sold"], 1)
 
+    def test_parse_price_european_format(self):
+        from ingest.fetchers.dorotheum import _parse_price
+        self.assertEqual(_parse_price("EUR 800,-"), 800.0)
+        self.assertEqual(_parse_price("EUR 1.500,-"), 1500.0)
+        self.assertEqual(_parse_price("EUR 12.345,67"), 12345.67)
+        self.assertIsNone(_parse_price(""))
+
 
 if __name__ == "__main__":
     unittest.main()

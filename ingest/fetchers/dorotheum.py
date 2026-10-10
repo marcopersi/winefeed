@@ -75,7 +75,9 @@ class DorotheumFetcher:
 
 
 def _parse_price(text):
+    """European number format: 'EUR 1.500,-' -> 1500.0, 'EUR 800,-' -> 800.0."""
     if not text:
         return None
-    digits = re.sub(r"[^\d.]", "", text)
+    digits = re.sub(r"[^\d.]", "",
+                    str(text).replace(".", "").replace(",", "."))
     return float(digits) if digits else None
