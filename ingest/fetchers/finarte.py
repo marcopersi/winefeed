@@ -80,7 +80,7 @@ class FinarteFetcher:
 
     @staticmethod
     def _map_lot(lot):
-        sold = lot.get("opera_venduta") == "True" \
+        sold = lot.get("opera_venduta") in ("True", True) \
             or lot.get("stato") == "VENDUTO"
         return {
             "lot_nr": lot.get("numero_lotto"),

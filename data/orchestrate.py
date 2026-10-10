@@ -20,13 +20,8 @@ FILE_PARSERS = {
 # Provider -> archive directory name. Fetchers use lowercase provider names,
 # but the loaders in build_db.py read from CamelCase directories. Without this
 # mapping, freshly fetched JSONs would land in a directory the loader never
-# reads.
-#
-# Only providers whose fetcher already emits the canonical {auction, lots}
-# format are listed here. Group-B fetchers (finarte, besch-cannes,
-# dobiaschofsky) still emit the raw format; mapping them now would make the
-# loaders read raw JSONs and write silent NULLs. They are added once their
-# fetchers are normalized (Step 3).
+# reads. Every provider listed here emits the canonical {auction, lots}
+# format; providers whose fetcher is not yet normalized must not be added.
 ARCHIVE_DIRS = {
     "hdh": "HDH",
     "langtons": "Langtons",

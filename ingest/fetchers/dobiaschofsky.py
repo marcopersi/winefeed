@@ -56,20 +56,32 @@ class DobiaschofskyFetcher:
                 "estimate_chf": None,
                 "hammer_chf": _swiss_number(
                     zuschlag.get_text(strip=True) if zuschlag else None),
-                "description": (description.get_text(strip=True)
-                                if description else None),
+                "description": _description(
+                    description.get_text(strip=True) if description else None,
+                    _auction_ref(action)),
             })
         return lots
 
 
 def _lot_id(action):
-    match = re.search(r"-(\d+)-", action)
+    match = re.search(r"-A\d+-(\d+)-", action)
     return match.group(1) if match else None
 
 
 def _year(action):
-    match = re.search(r"-(19|20)\d{2}", action)
-    return match.group(0)[1:] if match else None
+    match = re.search(r"-((?:19|20)\d{2})\.html", action)
+    return match.group(1) if match else None
+
+
+def _auction_ref(action):
+    match = re.search(r"-(A\d+)-", action)
+    return match.group(1) if match else None
+
+
+def _description(description, auction_ref):
+    if auction_ref and description:
+        return f"{auction_ref} | {description}"
+    return description
 
 
 def _swiss_number(text):

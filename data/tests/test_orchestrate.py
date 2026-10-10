@@ -46,6 +46,25 @@ class FakeSession:
 
 
 class TestOrchestrate(unittest.TestCase):
+    def test_archive_dir_and_filename_mapping(self):
+        from ingest.models import AuctionRef
+        self.assertEqual(orchestrate._archive_dir("hdh"), "HDH")
+        self.assertEqual(orchestrate._archive_dir("sothebys"), "Sothebys")
+        self.assertEqual(orchestrate._archive_dir("weinauktionator"),
+                         "weinauktionator")
+        self.assertEqual(
+            orchestrate._json_filename(
+                "besch-cannes", AuctionRef("besch-cannes", "408")),
+            "auction-408.json")
+        self.assertEqual(
+            orchestrate._json_filename(
+                "dobiaschofsky", AuctionRef("dobiaschofsky", "wein")),
+            "auktion-wein.json")
+        self.assertEqual(
+            orchestrate._json_filename(
+                "langtons", AuctionRef("langtons", "8212")),
+            "8212.json")
+
     def test_runs_and_parses_file_fetcher(self):
         with tempfile.TemporaryDirectory() as d:
             manifest = os.path.join(d, "manifest.json")

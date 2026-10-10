@@ -46,9 +46,9 @@ Felder extrahieren · ＋ Loader fehlt (neu bauen).
 | dorotheum | `fetch` mappt `lots`-Dict auf Liste `{lot_nr,name,estimate,realized_price,sold,currency,description}` (europ. Zahlenformat) | identisch (`load_dorotheum`) | ✓ |
 | pandolfini | `fetch` mappt auf `auction{id,name,date}` + `lots{lot_nr,name,estimate_low,estimate_high,sold_price{class,value},description}` | identisch (`load_pandolfini`); `estimate_low/high` bleiben `None` (nicht im JSON-LD) | ✓ |
 | sothebys | `fetch` mappt auf `auction{auction_id,title,dates,currency,location}` + `lots{lot_number,title,estimate_low,estimate_high,hammer_price,final_price,sold,currency}`; `final_price = hammer × 1.25` | identisch (`load_sothebys`) | ✓ |
-| finarte | `lots` roh `{stringa_filtro_autore_lotto,anno,prezzo_aggiudicazione,valore_base_asta,base_asta,…}` | `auction{slug,name,date}` + `lots{lot_nr,name,region,vintage,estimate_min,estimate_max,hammer_price,sold,currency,vat_regime}` | ⇧ erweitern + map (Step 3) |
-| besch-cannes | `lots{lot_no,hammer,estimate,url}` | `auction{id,slug,date,currency,price_basis}` + `lots{lot_no,appellation,vintage,estimate[list],hammer/adjuge,description,remarks}` | ⇧ erweitern + map (Step 3) |
-| dobiaschofsky | `lots{name,hammer,auction,url}` | `auction{id,name,date}` + `lots{lot_nr,name,vintage,estimate_chf,hammer_chf,description}` | ⇧ erweitern + map (Step 3) |
+| finarte | `fetch` mappt auf `auction{slug,name,date}` + `lots{lot_nr,name,region,vintage,estimate_min,estimate_max,hammer_price,sold,currency,vat_regime}` | identisch (`load_finarte`); `name`/`date` bleiben `None` (nicht extrahiert) | ✓ |
+| besch-cannes | `fetch` lädt je Lot die Detail-Seite (`/en-lots/{id}`) und mappt auf `auction{id,slug,date,currency,price_basis}` + `lots{lot_no,appellation,vintage,estimate[list],adjuge,description,remarks}` | identisch (`load_beschcannes`) | ✓ |
+| dobiaschofsky | `fetch` mappt auf `auction{id,name,date}` + `lots{lot_nr,name,vintage,estimate_chf,hammer_chf,description}` (Auktions-Ref `A###` in `description` bewahrt) | identisch (`load_dobiaschofsky`); `name`/`date`/`estimate_chf` bleiben `None` | ✓ |
 | koppe | `lots{name,vintage,region,color,bottle_size,format,hammer_price,hammer_price_raw,estimate}` | **kein Loader** | ＋ `load_koppe` bauen (Step 4) |
 | weinauktion (steinfels/weinboerse) | `{title,date,currency,auction_meta,lots(items)}` (rohe API-Items) | `load_steinfels` liest nur Alt-XLSX; kein `load_weinboerse` | ＋ Loader bauen, XLSX↔JSON klären (Step 4) |
 

@@ -82,7 +82,7 @@ class TestDobiaschofsky(unittest.TestCase):
         self.assertEqual(lot["name"], "DOMAINE DE LA ROMANEE")
         self.assertEqual(lot["vintage"], "1986")
         self.assertEqual(lot["hammer_chf"], 10000.0)
-        self.assertEqual(lot["description"], "Romanee Conti, Grand Cru")
+        self.assertEqual(lot["description"], "A129 | Romanee Conti, Grand Cru")
 
 
 if __name__ == "__main__":
