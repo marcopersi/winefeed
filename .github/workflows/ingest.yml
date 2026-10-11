@@ -1,7 +1,11 @@
 ---
 # Monthly ingest: fetch new auction results for every fetchable house, persist
-# the manifest (for incremental dedup) and upload the raw archive as an
-# artifact for the process workflow.
+# the manifest (for incremental dedup) and the cumulative archive as artifacts
+# for the process workflow.
+#
+# The archive is cumulative: the previous archive artifact is downloaded first,
+# new auctions are added to it, and the combined archive is re-uploaded. This
+# keeps the process workflow able to rebuild the full DB from scratch.
 #
 # Sothebys and idealwine are deliberately not covered here:
 # - sothebys needs camoufox + a residential IP (runs locally only);
@@ -36,6 +40,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r data/requirements.txt
 
+      - name: Download previous archive
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ingest.yml
+          name: auction-archive
+          path: ${{ runner.temp }}/archive
+          if_no_artifact_found: warn
+
       - name: Fetch new auctions
         env:
           ARCHIVE_PATH: ${{ runner.temp }}/archive
@@ -44,7 +56,7 @@ jobs:
           PANDOLFINI_PWD: ${{ secrets.PANDOLFINI_PWD }}
           FINARTE_USER: ${{ secrets.FINARTE_USER }}
           FINARTE_PWD: ${{ secrets.FINARTE_PWD }}
-        run: python data/run_ingest.py
+        run: python data/run_ingest.py --only steinfels,weinboerse,weinauktionator,hdh,koppe,langtons,winefields,dorotheum,pandolfini,finarte,besch-cannes,dobiaschofsky
 
       - name: Commit manifest
         run: |
