@@ -57,12 +57,16 @@ def run_provider(provider, session, manifest_path, archive_path, env=None):
     for ref in new_refs:
         result = fetcher.fetch(session, ref)
         if not _is_valid(result):
-            raise RuntimeError(
-                f"{provider}/{ref.auction_id}: empty fetch result")
-        if result.content:
-            _store_parsed(provider, result, archive_path)
-        else:
-            _store_json(provider, result, archive_path)
+            print(f"{provider}/{ref.auction_id}: leeres Ergebnis, übersprungen")
+            continue
+        try:
+            if result.content:
+                _store_parsed(provider, result, archive_path)
+            else:
+                _store_json(provider, result, archive_path)
+        except RuntimeError as exc:
+            print(f"{provider}/{ref.auction_id}: {exc}, übersprungen")
+            continue
         mark_fetched(manifest, ref)
         fetched += 1
 

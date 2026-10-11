@@ -99,7 +99,7 @@ class TestOrchestrate(unittest.TestCase):
         binary = FetchResult("weinauktionator", "x", content=b"data")
         self.assertTrue(orchestrate._is_valid(binary))
 
-    def test_fail_loud_on_empty_result(self):
+    def test_skips_empty_result(self):
         from ingest.models import AuctionRef, FetchResult
 
         class EmptyFetcher:
@@ -115,10 +115,13 @@ class TestOrchestrate(unittest.TestCase):
             archive = os.path.join(d, "archive")
             with mock.patch("ingest.fetchers.get",
                             return_value=EmptyFetcher()):
-                with self.assertRaises(RuntimeError):
-                    orchestrate.run_provider(
-                        "x", FakeSession(), manifest, archive)
-            self.assertFalse(os.path.exists(manifest))
+                fetched = orchestrate.run_provider(
+                    "x", FakeSession(), manifest, archive)
+            self.assertEqual(fetched, 0)
+            self.assertTrue(os.path.exists(manifest))
+            with open(manifest, encoding="utf-8") as fh:
+                saved = json.load(fh)
+            self.assertNotIn("1", saved.get("x", {}))
 
     def test_runs_idempotent(self):
         with tempfile.TemporaryDirectory() as d:
