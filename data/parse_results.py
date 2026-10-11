@@ -59,6 +59,12 @@ _LOT_LINE = re.compile(
     r"^(\d+)\s+(\d+)\s+(.+?)\s+([\d,]{3,})\s*-\s*([\d,]{3,})\s+"
     r"([\d,]{3,})\s+([\d,]+\.\d{2})$")
 
+# Older "Prices Realized" PDFs list only Lot# + aggregate in a 10-column table
+# (5 pairs per row), without the detailed lot description.
+_AGGREGATE_LINE = re.compile(
+    r"^(\d+)\s+([\d,]+)\s+(\d+)\s+([\d,]+)\s+(\d+)\s+"
+    r"([\d,]+)\s+(\d+)\s+([\d,]+)\s+(\d+)\s+([\d,]+)$")
+
 _YEAR = re.compile(r"\b(19|20)\d{2}\b")
 
 
@@ -70,6 +76,24 @@ def parse_hdh_pdf(path):
     title = _hdh_title(lines)
     sale_number = _hdh_sale_number(lines)
 
+    lots = _parse_detailed_lots(lines)
+    if not lots:
+        lots = _parse_aggregate_lots(lines)
+
+    year, month = _sale_year_month(sale_number)
+    return {
+        "auction": {
+            "sale_number": sale_number,
+            "name": title,
+            "year": year,
+            "month": month,
+            "source": "hdh",
+        },
+        "lots": lots,
+    }
+
+
+def _parse_detailed_lots(lines):
     lots = []
     for line in lines:
         match = _LOT_LINE.match(line.strip())
@@ -89,18 +113,21 @@ def parse_hdh_pdf(path):
             "hammer": _us_number(match.group(6)),
             "aggregate": _us_number(match.group(7)),
         })
+    return lots
 
-    year, month = _sale_year_month(sale_number)
-    return {
-        "auction": {
-            "sale_number": sale_number,
-            "name": title,
-            "year": year,
-            "month": month,
-            "source": "hdh",
-        },
-        "lots": lots,
-    }
+
+def _parse_aggregate_lots(lines):
+    lots = []
+    for line in lines:
+        match = _AGGREGATE_LINE.match(line.strip())
+        if not match:
+            continue
+        for pair in range(5):
+            lots.append({
+                "lot_no": int(match.group(pair * 2 + 1)),
+                "aggregate": _us_number(match.group(pair * 2 + 2)),
+            })
+    return lots
 
 
 def _split_vintage(description):
@@ -122,7 +149,11 @@ def _hdh_title(lines):
 
 def _hdh_sale_number(lines):
     for line in lines[:6]:
-        match = re.search(r"^(\d{4})\s+Auction\s+Results", line.strip())
+        line = line.strip()
+        match = re.search(r"^(\d{4})\s+Auction\s+Results", line)
+        if match:
+            return match.group(1)
+        match = re.search(r"Prices Realized Sale (\d{4})", line)
         if match:
             return match.group(1)
     return None

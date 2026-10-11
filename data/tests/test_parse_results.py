@@ -109,6 +109,25 @@ class TestHdhHelpers(unittest.TestCase):
         self.assertEqual(_split_vintage("Château Le Pin"), (None, "Château Le Pin"))
         self.assertEqual(_split_vintage("1999 Vintage Port"), (1999, "Vintage Port"))
 
+    def test_aggregate_lots(self):
+        from parse_results import _parse_aggregate_lots
+        lots = _parse_aggregate_lots([
+            "Lot# Aggregate Lot# Aggregate",
+            "1 1,912 47 5,736 93 657 139 5,736 185 2,629",
+        ])
+        self.assertEqual(len(lots), 5)
+        self.assertEqual(lots[0]["lot_no"], 1)
+        self.assertEqual(lots[0]["aggregate"], 1912.0)
+        self.assertEqual(lots[4]["lot_no"], 185)
+        self.assertEqual(lots[4]["aggregate"], 2629.0)
+
+    def test_hdh_sale_number_prices_realized(self):
+        from parse_results import _hdh_sale_number
+        self.assertEqual(
+            _hdh_sale_number(["Prices Realized Sale 1302"]), "1302")
+        self.assertEqual(
+            _hdh_sale_number(["2609 Auction Results"]), "2609")
+
 
 if __name__ == "__main__":
     unittest.main()
