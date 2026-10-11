@@ -89,11 +89,36 @@ class TestOrchestrate(unittest.TestCase):
         from ingest.models import FetchResult
         empty = FetchResult("sothebys", "x", data={"auction": {}, "lots": []})
         self.assertFalse(orchestrate._is_valid(empty))
+        empty_lots = FetchResult("langtons", "x",
+                                 data={"auction": {"id": "1"}, "lots": []})
+        self.assertFalse(orchestrate._is_valid(empty_lots))
         json_lot = FetchResult("langtons", "x",
-                               data={"auction": {"id": "1"}, "lots": []})
+                               data={"auction": {"id": "1"},
+                                     "lots": [{"lot": "1"}]})
         self.assertTrue(orchestrate._is_valid(json_lot))
         binary = FetchResult("weinauktionator", "x", content=b"data")
         self.assertTrue(orchestrate._is_valid(binary))
+
+    def test_fail_loud_on_empty_result(self):
+        from ingest.models import AuctionRef, FetchResult
+
+        class EmptyFetcher:
+            def discover(self, session):
+                return [AuctionRef("x", "1", url="u")]
+
+            def fetch(self, session, ref):
+                return FetchResult("x", "1",
+                                   data={"auction": {}, "lots": []})
+
+        with tempfile.TemporaryDirectory() as d:
+            manifest = os.path.join(d, "manifest.json")
+            archive = os.path.join(d, "archive")
+            with mock.patch("ingest.fetchers.get",
+                            return_value=EmptyFetcher()):
+                with self.assertRaises(RuntimeError):
+                    orchestrate.run_provider(
+                        "x", FakeSession(), manifest, archive)
+            self.assertFalse(os.path.exists(manifest))
 
     def test_runs_idempotent(self):
         with tempfile.TemporaryDirectory() as d:

@@ -163,5 +163,7 @@ Freigegeben (D1, D2 bestätigt). Umsetzung schrittweise; nach jedem Step
   - Evidence: `load_koppe` + `load_weinboerse` (+ `_load_weinauktion_json`) gebaut; koppe/weinauktion-Fetcher normalisiert; `load_steinfels` lädt Alt-XLSX + API-JSON. Senior-Review lief, Findings gefixt: (HIGH) `koppe→Koppe` in `ARCHIVE_DIRS`, (MEDIUM) `--limit`-Restbudget bei steinfels, (LOW) disjunkte-Namensräume-Kommentar. Orchestrator-Mapping-Test um koppe ergänzt. `-s ingest/tests` 33 OK + `-s data/tests` 88 OK, Pylint 10.00. Commit `831ba04`.
 - [ ] Step 5: PROVIDERS-Vollständigkeit + Dedup-Idempotenz
 - [ ] Step 5: PROVIDERS-Vollständigkeit + Dedup-Idempotenz
-- [ ] Step 6: Scheduler (ingest.yml + process.yml)
+- [x] Step 6: Scheduler (ingest.yml + process.yml)
+  - Evidence: `ingest.yml` (monatlicher cron + workflow_dispatch, kumulatives Archiv via `dawidd6/action-download-artifact`, Manifest-Commit, sothebys/idealwine ausgeschlossen) + `process.yml` (workflow_run, cross-run download-artifact mit github-token+run-id, success-guard). `load_winebarrel` graceful-skip. `python data/build_db.py --dry-run` läuft durch (48132 Lots aus committetem Alt-Bestand). Senior-Review lief, Findings gefixt: (CRITICAL) download-artifact cross-run, (HIGH) kumulatives Archiv + success-guard, (MEDIUM) sothebys --only. YAML validiert.
+- [ ] Step 7: E2E-Test + Guardrails
 - [ ] Step 7: E2E-Test + Guardrails

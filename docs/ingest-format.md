@@ -104,6 +104,8 @@ ist daher aus `run_ingest.PROVIDERS` entfernt (Entscheidung D1).
    offen (GraphQL liefert `ResultHidden`).
 4. **Pandolfini `estimate_low/high`** und **Winefields `producer`/`size`** sind
    nicht im Roh-Payload vorhanden — bleiben `None`.
-5. **Fail-loud bei leerem Fetch** (z. B. Sothebys ohne `Auction`-Eintrag →
-   `{"auction": {}, "lots": []}` wird trotzdem als „gefetcht" markiert) — wird
-   in Step 7 (Guardrails) adressiert.
+5. **Fail-loud bei leerem Fetch** ist adressiert: `run_provider` wirft
+   `RuntimeError` bei leerem Ergebnis (leeres `auction` **oder** leere `lots`;
+   FILE_PARSER-Output wird nach dem Parse validiert). Semantik: ein fehlender
+   Ref stoppt den ganzen Provider-Lauf (Manifest wird nicht fortgeschrieben),
+   `run_ingest.py` fängt das pro Provider ab und meldet „FEHLER".

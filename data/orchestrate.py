@@ -82,6 +82,9 @@ def _store_parsed(provider, result, archive_path):
         with open(src, "wb") as fh:
             fh.write(result.content)
         parsed = parse(src)
+    if not parsed.get("lots"):
+        raise RuntimeError(
+            f"{provider}/{result.auction_id}: empty parse result")
     _write_json(archive_path, provider, _filename(result, parsed), parsed)
 
 
@@ -120,16 +123,17 @@ def _archive_dir(provider):
 
 
 def _is_valid(result):
-    """A fetch must yield either binary content or a non-empty auction block.
+    """A fetch must yield either binary content or a non-empty auction + lots.
 
     Guards against fetchers that silently return an empty result (e.g. a
     failed page parse), which would otherwise be marked as fetched and never
-    retried.
+    retried. An auction block alone is not enough: a scrape that found no
+    lots is an error, not a valid empty auction.
     """
     if result.content:
         return True
     data = result.data or {}
-    return bool(data.get("auction")) and "lots" in data
+    return bool(data.get("auction")) and bool(data.get("lots"))
 
 
 # Providers whose loaders look for a specific file-name pattern rather than
