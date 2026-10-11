@@ -56,6 +56,9 @@ def run_provider(provider, session, manifest_path, archive_path, env=None):
     fetched = 0
     for ref in new_refs:
         result = fetcher.fetch(session, ref)
+        if not _is_valid(result):
+            raise RuntimeError(
+                f"{provider}/{ref.auction_id}: empty fetch result")
         if result.content:
             _store_parsed(provider, result, archive_path)
         else:
@@ -114,6 +117,19 @@ def _write_json(archive_path, provider, filename, data):
 
 def _archive_dir(provider):
     return ARCHIVE_DIRS.get(provider, provider)
+
+
+def _is_valid(result):
+    """A fetch must yield either binary content or a non-empty auction block.
+
+    Guards against fetchers that silently return an empty result (e.g. a
+    failed page parse), which would otherwise be marked as fetched and never
+    retried.
+    """
+    if result.content:
+        return True
+    data = result.data or {}
+    return bool(data.get("auction")) and "lots" in data
 
 
 # Providers whose loaders look for a specific file-name pattern rather than

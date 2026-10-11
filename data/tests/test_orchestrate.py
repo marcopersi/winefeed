@@ -1,12 +1,14 @@
 import io
 import json
 import os
+import sqlite3
 import tempfile
 import unittest
 from unittest import mock
 
 import openpyxl
 
+import build_db
 import orchestrate
 
 RESULTS_HTML = """
@@ -83,6 +85,16 @@ class TestOrchestrate(unittest.TestCase):
             self.assertEqual(len(parsed["lots"]), 1)
             self.assertEqual(parsed["lots"][0]["region"], "Alsace")
 
+    def test_is_valid_guard(self):
+        from ingest.models import FetchResult
+        empty = FetchResult("sothebys", "x", data={"auction": {}, "lots": []})
+        self.assertFalse(orchestrate._is_valid(empty))
+        json_lot = FetchResult("langtons", "x",
+                               data={"auction": {"id": "1"}, "lots": []})
+        self.assertTrue(orchestrate._is_valid(json_lot))
+        binary = FetchResult("weinauktionator", "x", content=b"data")
+        self.assertTrue(orchestrate._is_valid(binary))
+
     def test_runs_idempotent(self):
         with tempfile.TemporaryDirectory() as d:
             manifest = os.path.join(d, "manifest.json")
@@ -97,6 +109,57 @@ class TestOrchestrate(unittest.TestCase):
             self.assertEqual(second, 0)
             files = os.listdir(os.path.join(archive, "weinauktionator"))
             self.assertEqual(files, ["weinauktionator_results_39.json"])
+
+    def test_json_fetcher_end_to_end(self):
+        closed = ('<a href="Auction-ShowDetails?id=8212&amp;name=F27UR014'
+                  '&amp;title=04%20SUN%3a%20Unreserved">')
+        lot = (
+            '<tbody class="auction-closed-row-tbody">'
+            '<tr class="auction-closed-sm-data">'
+            '<td class="column-header" data-label="Lot #"><span>1</span></td>'
+            '<td class="column-header hidden-sm-down">'
+            '<p class="wine-name">Penfolds Grange</p>'
+            '<p class="wine-description">South Australia</p></td>'
+            '<td class="column-header" data-label="Vintage">'
+            '<span>2019</span></td>'
+            '<td class="column-header" data-label="Quantity">'
+            '<span>1</span></td>'
+            '<td class="column-header" data-label="Winning bid per item">'
+            '<span>$850.00</span></td></tr></tbody>')
+
+        class LangtonsSession:
+            def get(self, url):
+                if "ClosedAuction" in url:
+                    return FakeResponse(text=closed)
+                return FakeResponse(text=lot)
+
+        with tempfile.TemporaryDirectory() as d:
+            manifest = os.path.join(d, "manifest.json")
+            archive = os.path.join(d, "archive")
+            session = LangtonsSession()
+            with mock.patch.dict("sys.modules", {}):
+                fetched = orchestrate.run_provider(
+                    "langtons", session, manifest, archive)
+            self.assertEqual(fetched, 1)
+            out = os.path.join(archive, "Langtons", "8212.json")
+            self.assertTrue(os.path.exists(out))
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = archive
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            try:
+                build_db.load_langtons(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            conn.commit()
+            count = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+            hammer = conn.execute(
+                "SELECT hammer_price FROM lots WHERE wine='Penfolds Grange'"
+            ).fetchone()[0]
+            conn.close()
+            self.assertEqual(count, 1)
+            self.assertEqual(hammer, 850.0)
 
 
 if __name__ == "__main__":
