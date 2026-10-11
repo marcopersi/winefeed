@@ -1,0 +1,828 @@
+{
+  "besch-cannes": {
+    "397": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:59.500063+00:00",
+      "url": "https://www.cannesauction.com/auctions/397-arts-passion"
+    },
+    "401": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:53.514264+00:00",
+      "url": "https://www.cannesauction.com/auctions/401-importants-diamants-bijoux-signes-haute-joaillerie-montres-de-prestige"
+    },
+    "407": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:47.621517+00:00",
+      "url": "https://www.cannesauction.com/auctions/407-grands-vins-alcools"
+    },
+    "408": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:41.633657+00:00",
+      "url": "https://www.cannesauction.com/auctions/408-grands-vins-alcools"
+    },
+    "409": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:35.635104+00:00",
+      "url": "https://www.cannesauction.com/auctions/409-arts-passion"
+    },
+    "410": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:29.692698+00:00",
+      "url": "https://www.cannesauction.com/auctions/410-importants-diamants-haute-joaillerie-bijoux-signes-montres-de-prestige"
+    },
+    "413": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:59.656619+00:00",
+      "url": "https://www.cannesauction.com/auctions/413-arts-passion-tableaux-modernes-art-contemporain-arts-decoratifs-asie-maroquinerie-photographies"
+    },
+    "414": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:53.558769+00:00",
+      "url": "https://www.cannesauction.com/auctions/414-importants-diamants-haute-joaillerie-bijoux-signes-montres-de-prestige"
+    },
+    "415": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:11.751119+00:00",
+      "url": "https://www.cannesauction.com/auctions/415-grands-vins-alcools"
+    },
+    "416": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:05.672683+00:00",
+      "url": "https://www.cannesauction.com/auctions/416-grands-vins-alcools"
+    },
+    "417": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:23.604364+00:00",
+      "url": "https://www.cannesauction.com/auctions/417-bande-dessinee-et-correspondances-la-collection-d-un-passionne"
+    },
+    "418": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:43:17.612729+00:00",
+      "url": "https://www.cannesauction.com/auctions/418-vente-aux-encheres-speciale-de-l-agrasc-a-nice"
+    },
+    "__last_run_at__": "2026-10-11T13:43:59.500078+00:00"
+  },
+  "dobiaschofsky": {
+    "__last_run_at__": "2026-10-11T13:44:00.478145+00:00",
+    "wein": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:44:00.478129+00:00",
+      "url": "https://www.dobiaschofsky.com/d346.html"
+    }
+  },
+  "dorotheum": {
+    "__last_run_at__": "2026-10-11T13:41:25.704005+00:00"
+  },
+  "finarte": {
+    "02": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:40.648691+00:00",
+      "url": "https://www.finarte.it/auction/the-wine-odyssey-finest-wines-spirits-online-2025-04-02"
+    },
+    "04": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:36.567389+00:00",
+      "url": "https://www.finarte.it/auction/fine-wines-spirits-milan-2025-06-04"
+    },
+    "05": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:24.788505+00:00",
+      "url": "https://www.finarte.it/auction/the-christmas-collection-holiday-wine-spirits-online-2025-12-05"
+    },
+    "07": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:29.833108+00:00",
+      "url": "https://www.finarte.it/auction/grappe-e-distillati-rari-online-2025-10-07"
+    },
+    "08": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:15.369197+00:00",
+      "url": "https://www.finarte.it/auction/fine-wines-rome-2026-06-08"
+    },
+    "10": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:34.364923+00:00",
+      "url": "https://www.finarte.it/auction/the-art-of-whisky-milan-2025-09-10"
+    },
+    "13": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:54.592032+00:00",
+      "url": "https://www.finarte.it/auction/memora-first-charity-photography-auction-milan-2026-10-13"
+    },
+    "14": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:56.662250+00:00",
+      "url": "https://www.finarte.it/auction/photographs-milan-2026-10-14"
+    },
+    "16": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:12.003672+00:00",
+      "url": "https://www.finarte.it/auction/fine-wines-milan-2026-09-16"
+    },
+    "17": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:32.178972+00:00",
+      "url": "https://www.finarte.it/auction/the-burgundy-chapter-a-curated-auction-of-vintage-icons-milan-2025-09-17"
+    },
+    "18": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:20.488447+00:00",
+      "url": "https://www.finarte.it/auction/fine-spirits-milan-2026-03-18"
+    },
+    "19": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:58.909870+00:00",
+      "url": "https://www.finarte.it/auction/antique-and-vintage-toys-roma-2026-10-19"
+    },
+    "20": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:01.327100+00:00",
+      "url": "https://www.finarte.it/auction/original-comic-arts-milan-2026-10-20"
+    },
+    "21": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:03.700868+00:00",
+      "url": "https://www.finarte.it/auction/comic-art-masters-of-eroticism-milan-2026-10-21"
+    },
+    "22": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:38.314545+00:00",
+      "url": "https://www.finarte.it/auction/rare-and-special-second-chance-wine-auction-online-2025-04-22"
+    },
+    "23": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:08.439086+00:00",
+      "url": "https://www.finarte.it/auction/easy-design-milan-2026-10-23"
+    },
+    "26": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:46.421784+00:00",
+      "url": "https://www.finarte.it/auction/fine-wines-spirits-milan-2024-11-26"
+    },
+    "27": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:28.211262+00:00",
+      "url": "https://www.finarte.it/auction/fine-wines-rome-2025-11-27"
+    },
+    "28": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:26.591272+00:00",
+      "url": "https://www.finarte.it/auction/fine-spirits-roma-2025-11-28"
+    },
+    "30": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:42:44.312048+00:00",
+      "url": "https://www.finarte.it/auction/wines-old-but-gold-milan-2025-01-30"
+    },
+    "__last_run_at__": "2026-10-11T13:42:46.421801+00:00"
+  },
+  "hdh": {
+    "1309": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:36:07.080365+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1309_AuctionResults.pdf"
+    },
+    "1402": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:35:59.567631+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1402_AuctionResults.pdf"
+    },
+    "1403": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:35:55.773562+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1403_AuctionResults.pdf"
+    },
+    "1405": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:35:47.223451+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1405_AuctionResults.pdf"
+    },
+    "1406": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:35:41.410021+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1406_AuctionResults.pdf"
+    },
+    "1409": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:35:29.647204+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1409_AuctionResults.pdf"
+    },
+    "1410": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:35:19.824160+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1410_AuctionResults.pdf"
+    },
+    "1412": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:35:14.109915+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1412_AuctionResults.pdf"
+    },
+    "1502": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:35:04.376636+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1502_AuctionResults.pdf"
+    },
+    "1503": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:34:56.623311+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1503_AuctionResults.pdf"
+    },
+    "1505": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:34:50.399004+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1505_AuctionResults.pdf"
+    },
+    "1506": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:34:39.183811+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1506_AuctionResults.pdf"
+    },
+    "1509": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:34:32.005949+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1509_AuctionResults.pdf"
+    },
+    "1510": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:34:22.855371+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1510_AuctionResults.pdf"
+    },
+    "1512": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:34:15.321950+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1512_AuctionResults.pdf"
+    },
+    "1602": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:34:01.809147+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1602_AuctionResults_WebPosting_A.pdf"
+    },
+    "1605": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:33:53.281648+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1605_AuctionResults_WebPost.pdf"
+    },
+    "1606": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:33:34.111503+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1606_AuctionResults_Web.pdf"
+    },
+    "1609": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:33:23.605349+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1609_AuctionResults_Web.pdf"
+    },
+    "1611": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:33:19.868197+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1611_AuctionResults_WEB.pdf"
+    },
+    "1612": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:33:12.419654+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1612_AuctionResults_WEB.pdf"
+    },
+    "1702": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:32:54.554237+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1702_AuctionResults_WEB.pdf"
+    },
+    "1704": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:32:45.291422+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1704_AuctionResults_WEB.pdf"
+    },
+    "1705": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:32:38.894651+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1705_AuctionResults_WEB.pdf"
+    },
+    "1706": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:32:28.456984+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1706_AuctionResults_WEB.pdf"
+    },
+    "1711": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:32:20.616461+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1711_AuctionResults_Web.pdf"
+    },
+    "1802": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:32:15.045659+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1802_AuctionResults_web.pdf"
+    },
+    "1805": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:32:00.777383+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1805_AuctionResults_web.pdf"
+    },
+    "1806": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:31:48.719149+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1806_AuctionResults_web.pdf"
+    },
+    "1809": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:31:39.709914+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1809_AuctionResults_web.pdf"
+    },
+    "1812": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:31:26.893521+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1812_AuctionResults_web.pdf"
+    },
+    "1905": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:29:38.201528+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1905_AuctionResultsWEB.pdf"
+    },
+    "1909": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:29:27.026473+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1909_AuctionResults.pdf"
+    },
+    "1911": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:29:11.170188+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1911_AuctionResults_PDF.pdf"
+    },
+    "1912": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:29:01.683642+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/1912_AuctionResults_PDF.pdf"
+    },
+    "2004": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:28:50.552903+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2004_AuctionResults_PDFweb.pdf"
+    },
+    "2005": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:28:39.821763+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2005_AuctionResults_PDFweb.pdf"
+    },
+    "2006": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:28:33.069390+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2006_AuctionResults_web.pdf"
+    },
+    "2007": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:28:27.514414+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2007_AuctionResults_Web.pdf"
+    },
+    "2008": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:28:12.990342+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2008_AuctionResults.pdf"
+    },
+    "2009": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:27:52.360711+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2009_AuctionResults_Website.pdf"
+    },
+    "2010": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:27:38.274999+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2010_AuctionResults_Web.pdf"
+    },
+    "2011": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:27:31.695988+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2011_AuctionResults_Web.pdf"
+    },
+    "2012": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:27:27.029933+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2012_AuctionResults_PDF.pdf"
+    },
+    "2102": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:27:14.776507+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2102_AuctionResults_Web.pdf"
+    },
+    "2103": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:27:06.303999+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2103_AuctionResults_PDF.pdf"
+    },
+    "2104": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:26:58.636802+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2104_AuctionResults_Website.pdf"
+    },
+    "2105": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:26:48.537475+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/06/2105_AuctionResults_PDF_website.pdf"
+    },
+    "2106": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:26:39.776880+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/11/2106_AuctionResults_WEB.pdf"
+    },
+    "2108": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:26:31.330844+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/11/2108_AuctionResults_PDF.pdf"
+    },
+    "2111": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:26:04.520040+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/11/2111_AuctionResults_PDF.pdf"
+    },
+    "2112": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:25:54.587516+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2021/12/2112_AuctionResults_PDF.pdf"
+    },
+    "2201": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:25:41.146392+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2022/01/2201_AuctionResults_PDF.pdf"
+    },
+    "2205": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:25:21.447268+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2022/05/2205_AuctionResults_PDF.pdf"
+    },
+    "2206": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:25:14.069258+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2022/07/2206_AuctionResults_PDF.pdf"
+    },
+    "2209": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:25:05.417486+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2022/09/2209_AuctionResults_PDF.pdf"
+    },
+    "2211": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:24:56.699581+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2022/11/2211_AuctionResultsPDF.pdf"
+    },
+    "2212": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:24:50.231429+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2022/12/2212_AuctionResults.pdf"
+    },
+    "2301": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:24:41.237758+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/01/2301_AuctionResults_PDF.pdf"
+    },
+    "2303": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:24:24.809775+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/06/2303_AuctionResults_PDF.pdf"
+    },
+    "2304": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:24:18.489084+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/06/2304_AuctionResults_PDF.pdf"
+    },
+    "2306": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:24:09.099404+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/06/2306_AuctionResults.pdf"
+    },
+    "2307": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:24:02.935611+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/07/2307_AuctionResults_PDF.pdf"
+    },
+    "2308": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:23:53.216967+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/08/2308_AuctionResults.pdf"
+    },
+    "2309": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:23:53.010614+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/09/2309_AuctionResults.pdf"
+    },
+    "2310": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:23:43.636240+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/10/2310_AuctionResults.pdf"
+    },
+    "2311": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:23:19.772121+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/11/2311_AuctionResults.pdf"
+    },
+    "2312": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:23:12.230150+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2023/12/2312_AuctionResults.pdf"
+    },
+    "2402": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:22:59.952412+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/03/2402_AuctionResults.pdf"
+    },
+    "2404": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:22:53.454424+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/04/2404_AuctionResults.pdf"
+    },
+    "2405": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:22:34.842436+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/05/2405_AuctionResults.pdf"
+    },
+    "2406": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:22:19.887064+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/07/2406_AuctionResults.pdf"
+    },
+    "2408": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:22:05.925846+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/09/2408_AuctionResults.pdf"
+    },
+    "2409": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:21:48.320378+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/10/2409_AuctionResults.pdf"
+    },
+    "2410": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:21:34.114395+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/10/2410_AuctionResults.pdf"
+    },
+    "2411": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:21:21.059967+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/11/2411_AuctionResults.pdf"
+    },
+    "2412": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:21:07.709423+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2024/12/2412_AuctionResults.pdf"
+    },
+    "2503": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:20:54.852523+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2025/03/2503_AuctionResults_update.pdf"
+    },
+    "2504": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:20:42.699912+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2025/04/2504_AuctionResults.pdf"
+    },
+    "2505": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:20:17.705814+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2025/05/2505_AuctionResults.pdf"
+    },
+    "2506": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:19:59.789241+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2025/06/2506_AuctionResults.pdf"
+    },
+    "2508": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:19:47.230928+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2025/08/2508_AuctionResults.pdf"
+    },
+    "2509": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:19:11.029910+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2025/09/2509_AuctionResults.pdf"
+    },
+    "2511": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:19:03.333483+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2025/11/2511_AuctionResults.pdf"
+    },
+    "2512": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:18:52.516490+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2025/12/2512_AuctionResults.pdf"
+    },
+    "2603": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:18:38.154541+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2026/03/2603_AuctionResults.pdf"
+    },
+    "2604": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:18:27.902211+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2026/04/2604_AuctionResults.pdf"
+    },
+    "2605": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:48.115134+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2026/05/2605_AuctionResults.pdf"
+    },
+    "2606": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:32.029692+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2026/07/2606_AuctionResults_PDF.pdf"
+    },
+    "2608": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:18:03.570499+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2026/08/2608_AuctionResults.pdf"
+    },
+    "2609": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:23.599123+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2026/09/2609_AuctionResults.pdf"
+    },
+    "__last_run_at__": "2026-10-11T13:36:10.590540+00:00"
+  },
+  "koppe": {
+    "10": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:38:51.521893+00:00",
+      "url": "https://www.weinauktion.de/de/auktionen/10"
+    },
+    "11": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:38:12.070755+00:00",
+      "url": "https://www.weinauktion.de/de/auktionen/11"
+    },
+    "12": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:36:54.746103+00:00",
+      "url": "https://www.weinauktion.de/de/auktionen/12"
+    },
+    "__last_run_at__": "2026-10-11T13:38:51.521912+00:00"
+  },
+  "langtons": {
+    "8212": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:04.867571+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8212&name=F27UR014&clearSearch=true&isAjax=true"
+    },
+    "8213": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:40:32.257684+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8213&name=F27FR015&clearSearch=true&isAjax=true"
+    },
+    "8214": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:40:21.279882+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8214&name=F27EA015&clearSearch=true&isAjax=true"
+    },
+    "8215": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:39:53.183749+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8215&name=F27IT015&clearSearch=true&isAjax=true"
+    },
+    "8216": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:39:34.352714+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8216&name=F27LC015&clearSearch=true&isAjax=true"
+    },
+    "8217": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:39:21.737002+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8217&name=F27SA015&clearSearch=true&isAjax=true"
+    },
+    "8218": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:39:04.103020+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8218&name=F27IL015&clearSearch=true&isAjax=true"
+    },
+    "8281": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:40:53.794571+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8281&name=F27BP014&clearSearch=true&isAjax=true"
+    },
+    "8310": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:38:58.735068+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8310&name=F27VN015&clearSearch=true&isAjax=true"
+    },
+    "8321": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:39:34.768877+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8321&name=F27SZ015&clearSearch=true&isAjax=true"
+    },
+    "8322": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:39:35.470217+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8322&name=F27MP015&clearSearch=true&isAjax=true"
+    },
+    "8323": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:39:35.147256+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8323&name=F27MP015%2e1&clearSearch=true&isAjax=true"
+    },
+    "__last_run_at__": "2026-10-11T13:41:04.867588+00:00"
+  },
+  "pandolfini": {
+    "1376": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:47.642069+00:00",
+      "url": "https://www.pandolfini.it/uk/auction-1376/smartwine-2-0--spring-classics.asp?action=reset"
+    },
+    "1399": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:44.160622+00:00",
+      "url": "https://www.pandolfini.it/uk/auction-1399/forma--fine-and-rare-wine.asp?action=reset"
+    },
+    "1420": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:40.137364+00:00",
+      "url": "https://www.pandolfini.it/uk/auction-1420/smartwine-2-0--christmas-edition.asp?action=reset"
+    },
+    "1431": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:35.959808+00:00",
+      "url": "https://www.pandolfini.it/uk/auction-1431/la-joie-du-vin--fine-and-rare-wine.asp?action=reset"
+    },
+    "1448": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:33.270390+00:00",
+      "url": "https://www.pandolfini.it/uk/auction-1448/smartwine-2-0--fleurs-de-vigne.asp?action=reset"
+    },
+    "__last_run_at__": "2026-10-11T13:41:47.642086+00:00"
+  },
+  "steinfels": {
+    "768": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:08.180341+00:00",
+      "url": "https://auktionen.steinfelsweine.ch/api/lots?cat_id=768"
+    },
+    "771": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:09.362494+00:00",
+      "url": "https://auktionen.steinfelsweine.ch/api/lots?cat_id=771"
+    },
+    "__last_run_at__": "2026-10-11T13:17:09.362510+00:00"
+  },
+  "weinauktionator": {
+    "34": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:11.813928+00:00",
+      "url": "https://www.weinauktionator.de/de/info/results/xlsx/34/weinauktionator_results_34.xlsx"
+    },
+    "35": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:11.669380+00:00",
+      "url": "https://www.weinauktionator.de/de/info/results/xlsx/35/weinauktionator_results_35.xlsx"
+    },
+    "36": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:11.526082+00:00",
+      "url": "https://www.weinauktionator.de/de/info/results/xlsx/36/weinauktionator_results_36.xlsx"
+    },
+    "37": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:11.368562+00:00",
+      "url": "https://www.weinauktionator.de/de/info/results/xlsx/37/weinauktionator_results_37.xlsx"
+    },
+    "38": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:11.222976+00:00",
+      "url": "https://www.weinauktionator.de/de/info/results/xlsx/38/weinauktionator_results_38.xlsx"
+    },
+    "39": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:17:11.083829+00:00",
+      "url": "https://www.weinauktionator.de/de/info/results/xlsx/39/weinauktionator_results_39.xlsx"
+    },
+    "__last_run_at__": "2026-10-11T13:17:11.813938+00:00"
+  },
+  "weinboerse": {
+    "__last_run_at__": "2026-10-11T13:17:10.349049+00:00"
+  },
+  "winefields": {
+    "1-79YM6Y": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:19.609593+00:00",
+      "url": "https://auctions.winefields.com/auctions/1-79YM6Y/sg40-fine-rare-wines-part-i"
+    },
+    "1-928NAD": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:22.705083+00:00",
+      "url": "https://auctions.winefields.com/auctions/1-928NAD/wf73-fine-rare-wines-part-i"
+    },
+    "1-9AY9J7": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:17.936757+00:00",
+      "url": "https://auctions.winefields.com/auctions/1-9AY9J7/sg45-fine-rare-wines-part-i"
+    },
+    "1-A7HKIB": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:23.908543+00:00",
+      "url": "https://auctions.winefields.com/auctions/1-A7HKIB/wf76-fine-rare-wines-online-only"
+    },
+    "1-AF4IX0": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:21.127576+00:00",
+      "url": "https://auctions.winefields.com/auctions/1-AF4IX0/sg48-fine-rare-wines-part-i"
+    },
+    "1-AO56VE": {
+      "etag": "",
+      "fetched_at": "2026-10-11T13:41:25.606062+00:00",
+      "url": "https://auctions.winefields.com/auctions/1-AO56VE/wf77-fine-rare-wines-part-i"
+    },
+    "__last_run_at__": "2026-10-11T13:41:25.606079+00:00"
+  }
+}
