@@ -1,5 +1,6 @@
 """Fetcher registry."""
 from .beschcannes import BeschCannesFetcher
+from .christies import ChristiesFetcher
 from .dobiaschofsky import DobiaschofskyFetcher
 from .dorotheum import DorotheumFetcher
 from .sothebys import SothebysFetcher
@@ -30,6 +31,7 @@ FETCHERS = {
     "besch-cannes": BeschCannesFetcher(),
     "dobiaschofsky": DobiaschofskyFetcher(),
     "sothebys": SothebysFetcher(),
+    "christies": ChristiesFetcher(),
 }
 
 
