@@ -27,10 +27,14 @@ WINE_AUCTION = re.compile(
 
 # Legacy (past-sales) pages carry no department field, so the wine/spirits
 # filter is a title heuristic. Word-boundary markers so "Vintage" (film
-# posters) does not match "vin".
+# posters) does not match "vin". Only unambiguous wine/spirits terms are used;
+# ambiguous English words ("spirit", "palate", "burgundy" as a colour,
+# "cellar" in a non-wine sense) are deliberately excluded to avoid false
+# positives, at the cost of a few false negatives (e.g. "Signature Cellars"),
+# which the ground-truth sample verification surfaces.
 WINE_TITLE = re.compile(
-    r"\b(wine|wines|vin|vins|spirit|spirits|whisky|whiskey|champagne|"
-    r"bordeaux|burgundy|bourgogne|cellar|cellars|palate)\b", re.I)
+    r"\b(wine|wines|vin|vins|champagne|bordeaux|bourgogne|whisky|whiskey)\b",
+    re.I)
 
 
 class ChristiesFetcher:
@@ -73,7 +77,12 @@ class ChristiesFetcher:
                 html = session.get(url).text
                 meta = _auction_meta(html, AuctionRef(self.provider, "",
                                                       url=url))
-                _validate_backfill_meta(meta)
+                try:
+                    _validate_backfill_meta(meta)
+                except RuntimeError as exc:
+                    print(f"christies/backfill: {url}: {exc}, übersprungen",
+                          flush=True)
+                    continue
                 if not _is_wine_title(meta.get("title")):
                     continue
                 sale_id = meta["sale_id"]
@@ -198,11 +207,19 @@ def _is_wine_title(title):
 
 def _validate_backfill_meta(meta):
     """Hard-assert required legacy meta fields (NFR-4)."""
-    missing = [field for field in ("sale_id", "sale_number", "saleroomcode")
-               if not meta.get(field)]
-    if meta.get("year") is None or meta.get("month") is None:
-        missing.append("year/month")
-    if missing:
+    problems = []
+    if not re.fullmatch(r"\d+", str(meta.get("sale_id") or "")):
+        problems.append("sale_id")
+    if not re.fullmatch(r"\d+", str(meta.get("sale_number") or "")):
+        problems.append("sale_number")
+    if not re.fullmatch(r"[A-Za-z]{2,3}", str(meta.get("saleroomcode") or "")):
+        problems.append("saleroomcode")
+    year, month = meta.get("year"), meta.get("month")
+    if not isinstance(year, int) or not 1990 <= year <= 2026:
+        problems.append("year")
+    if not isinstance(month, int) or not 1 <= month <= 12:
+        problems.append("month")
+    if problems:
         raise RuntimeError(
-            f"christies/backfill: missing meta fields {missing} "
+            f"christies/backfill: invalid meta fields {problems} "
             f"for sale_id={meta.get('sale_id')}")

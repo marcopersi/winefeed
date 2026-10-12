@@ -123,7 +123,7 @@ class TestChristies(unittest.TestCase):
         wine = ["Fine and Rare Wines",
                 "A Gentleman's Palate: A Journey Through Three Centuries "
                 "of Wine",
-                "Signature Cellars", "Fine Wine", "Vins de Bourgogne",
+                "Fine Wine", "Vins de Bourgogne",
                 "Fine and Rare Wines and Vintage Cigars"]
         for title in wine:
             self.assertTrue(_is_wine_title(title), title)
@@ -131,7 +131,12 @@ class TestChristies(unittest.TestCase):
                     "Fine Chinese Ceramics and Works of Art",
                     "Furniture and Decorative Objects", "Jewellery",
                     "The House Sale", "Vintage Film Posters",
-                    "Shipping and Vintage Posters"]
+                    "Shipping and Vintage Posters",
+                    "The Spirit of India: Modern South Asian Art",
+                    "A Feast for the Palate: Fine Dining and Cookery",
+                    "Burgundy Velvet and Silver",
+                    "The Cellar Door: A Story of Collecting",
+                    "Signature Cellars"]
         for title in not_wine:
             self.assertFalse(_is_wine_title(title), title)
 

@@ -71,12 +71,20 @@ def _reason(exc):
     return "HTTP_ERROR"
 
 
-def _write_skips(path, skips):
-    if not skips:
+def _load_skips():
+    if not os.path.exists(SKIP_PATH):
+        return {}
+    with open(SKIP_PATH, encoding="utf-8") as fh:
+        return {s["sale_id"]: s for s in json.load(fh)}
+
+
+def _write_skips(path, skips_by_id):
+    if not skips_by_id:
         return
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    ordered = [skips_by_id[k] for k in sorted(skips_by_id)]
     with open(path, "w", encoding="utf-8") as fh:
-        json.dump(skips, fh, ensure_ascii=False, indent=2)
+        json.dump(ordered, fh, ensure_ascii=False, indent=2)
 
 
 def main():
@@ -114,12 +122,20 @@ def main():
         return 0
 
     fetched = 0
-    skips = []
+    skips = _load_skips()
     consecutive = 0
+    aborted = False
     targets = new_refs[:args.limit] if args.limit else new_refs
     for i, ref in enumerate(targets, 1):
         try:
             result = fetcher.fetch(session, ref)
+            if not result.data.get("lots"):
+                skips[ref.auction_id] = {
+                    "sale_id": ref.auction_id, "reason": "EMPTY_RESULT",
+                    "detail": "total_hits_filtered=0"}
+                print(f"[{i}/{len(targets)}] sale_id={ref.auction_id} "
+                      "SKIP empty", flush=True)
+                continue
             _archive(ref.auction_id, result.data)
             mark_fetched(manifest, ref)
             save_manifest(MANIFEST_PATH, manifest)
@@ -129,20 +145,22 @@ def main():
                   f"lots={len(result.data.get('lots', []))} OK", flush=True)
         except Exception as exc:  # noqa: BLE001
             consecutive += 1
-            skips.append({"sale_id": ref.auction_id,
-                          "reason": _reason(exc),
-                          "detail": str(exc)[:200]})
+            skips[ref.auction_id] = {
+                "sale_id": ref.auction_id,
+                "reason": _reason(exc),
+                "detail": str(exc)[:200]}
             print(f"[{i}/{len(targets)}] sale_id={ref.auction_id} "
                   f"SKIP {exc}", flush=True)
             if consecutive >= args.max_fail:
                 print(f"Circuit-Breaker: {args.max_fail} konsekutive Fehler",
                       file=sys.stderr)
+                aborted = True
                 break
         time.sleep(args.delay)
 
     _write_skips(SKIP_PATH, skips)
     print(f"Erfolgreich: {fetched} | Skip: {len(skips)}")
-    return 0
+    return 1 if aborted else 0
 
 
 if __name__ == "__main__":
