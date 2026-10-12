@@ -9,9 +9,10 @@ RESULTS_HTML = (
     '{"@id":"https://www.christies.com/en/auction/auction-31122#event"}]}')
 
 AUCTION_HTML = (
-    '"sale_id":"31122","sale_location":"HongKong",'
+    '{"sale_id":"31122","sale_location":"HongKong",'
+    '"sale_number":"24465","sale_room_code":"HGK",'
     '"title":"The Cellar of the Hon. Henry Tang",'
-    '"auction_status":{"start_date":"2026-10-10T00:00Z"')
+    '"auction_status":{"start_date":"2026-10-10T00:00Z"}}')
 
 LOT = {
     "lot_id_txt": "1",
@@ -46,7 +47,9 @@ class FakeSession:
         if "/en/results" in url:
             return FakeResponse(text=self._results)
         if "lotsearch" in url:
-            return FakeResponse(payload=self._pages.pop(0))
+            if self._pages:
+                return FakeResponse(payload=self._pages.pop(0))
+            return FakeResponse(payload={"lots": [], "total_hits_filtered": 0})
         return FakeResponse(text=self._auction)
 
 
@@ -91,6 +94,27 @@ class TestChristies(unittest.TestCase):
         result = f.fetch(session, ref)
         self.assertEqual(len(result.data["lots"]), 2)
         self.assertEqual(result.data["lots"][1]["title"], "Château Latour 1982")
+
+    def test_fetch_stops_when_total_missing(self):
+        f = ChristiesFetcher()
+        from ingest.models import AuctionRef
+        ref = AuctionRef("christies", "31122",
+                         url="https://www.christies.com/en/auction/auction-31122")
+        session = FakeSession(
+            auction=AUCTION_HTML, lotsearch_pages=[{"lots": [LOT]}])
+        result = f.fetch(session, ref)
+        self.assertEqual(len(result.data["lots"]), 1)
+
+    def test_fetch_raises_on_reconciliation_mismatch(self):
+        f = ChristiesFetcher()
+        from ingest.models import AuctionRef
+        ref = AuctionRef("christies", "31122",
+                         url="https://www.christies.com/en/auction/auction-31122")
+        session = FakeSession(
+            auction=AUCTION_HTML,
+            lotsearch_pages=[{"lots": [LOT], "total_hits_filtered": 5}])
+        with self.assertRaises(RuntimeError):
+            f.fetch(session, ref)
 
 
 if __name__ == "__main__":

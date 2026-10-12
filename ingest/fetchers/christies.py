@@ -10,6 +10,7 @@ Note: ``discover`` currently returns all auctions; the wine/spirits category
 filter is not yet applied (no department marker found in the results feed).
 """
 import re
+from json.decoder import JSONDecoder
 
 from ..models import AuctionRef, FetchResult
 
@@ -72,25 +73,35 @@ class ChristiesFetcher:
                 headers={"Accept": "application/vnd.christies.v2+json"},
             ).json()
             total = body.get("total_hits_filtered")
-            lots.extend(_map_lots(body.get("lots") or []))
-            if not lots or (total is not None and len(lots) >= total):
+            page_lots = _map_lots(body.get("lots") or [])
+            lots.extend(page_lots)
+            if not page_lots or total is None or len(lots) >= total:
                 break
             page += 1
+        if total is not None and len(lots) != total:
+            raise RuntimeError(
+                f"christies/{meta.get('sale_id')}: expected {total} lots, "
+                f"got {len(lots)}")
         return lots
 
 
 def _auction_meta(html, ref):
     meta = {"sale_id": ref.auction_id, "url": ref.url}
-    match = re.search(r'"sale_id":"(\d+)"', html)
-    if match:
-        meta["sale_id"] = match.group(1)
-    match = re.search(r'"title":"([^"]+)"', html)
-    if match:
-        meta["title"] = match.group(1)
-    match = re.search(r'"sale_location":"([^"]+)"', html)
-    if match:
-        meta["location"] = match.group(1)
-    match = re.search(r'"start_date":"(\d{4})-(\d{2})', html)
+    marker = html.find('"sale_id"')
+    if marker == -1:
+        return meta
+    start = html.rfind("{", 0, marker)
+    try:
+        obj, _ = JSONDecoder().raw_decode(html[start:])
+    except ValueError:
+        return meta
+    meta["sale_id"] = obj.get("sale_id", ref.auction_id)
+    meta["title"] = obj.get("title")
+    meta["location"] = obj.get("sale_location")
+    meta["sale_number"] = obj.get("sale_number")
+    meta["saleroomcode"] = obj.get("sale_room_code")
+    status = obj.get("auction_status") or {}
+    match = re.match(r"(\d{4})-(\d{2})", status.get("start_date") or "")
     if match:
         meta["year"] = int(match.group(1))
         meta["month"] = int(match.group(2))
@@ -103,8 +114,8 @@ def _lotsearch_params(meta, page):
         "pagesize": PAGE_SIZE,
         "geocountrycode": "",
         "saleid": meta.get("sale_id"),
-        "salenumber": "",
-        "saleroomcode": "",
+        "salenumber": meta.get("sale_number") or "",
+        "saleroomcode": meta.get("saleroomcode") or "",
         "page": str(page),
         "filterids": "",
         "searchphrase": "",
