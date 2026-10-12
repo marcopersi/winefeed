@@ -117,9 +117,15 @@ Freigegeben; Reconciliation (NFR-7) nachträglich aufgenommen.
 
 ## Progress
 
-- [ ] Step 1: Fetcher-Gerüst + discover
-- [ ] Step 2: fetch + Lot-Mapping
-- [ ] Step 3: Pagination + Reconciliation
-- [ ] Step 4: Loader-Roundtrip
-- [ ] Step 5: Ingest-Integration
-- [ ] Step 6: Senior-Review + Fixes
+- [x] Step 1: Fetcher-Gerüst + discover
+  - Evidence: `christies.py` discover filtert über `followAnalyticsMetadata` auf Wine & Spirits (live verifiziert: 1 Wein-Auktion 31122). Commit `e9eb972`.
+- [x] Step 2: fetch + Lot-Mapping
+  - Evidence: lotsearch-API + Mapping auf `load_christies`-Format. Commit `e9eb972`.
+- [x] Step 3: Pagination + Reconciliation
+  - Evidence: `_all_lots` paginiert bis `total_hits_filtered`, `RuntimeError` bei Abweichung/fehlendem total. Live verifiziert: 860 Lots (11 Seiten). Commit `98ba774`/`526de7c`.
+- [x] Step 4: Loader-Roundtrip
+  - Evidence: `test_christies` in `test_loader_roundtrip.py` (1/1 hammer+wein). Commit `2bdddee`.
+- [x] Step 5: Ingest-Integration
+  - Evidence: `ARCHIVE_DIRS["christies"]="Christies"`, `PROVIDERS` + `ingest.yml --only` um christies. Commit `2bdddee`.
+- [x] Step 6: Senior-Review + Fixes
+  - Evidence: 2 Review-Runden, alle Findings gefixt (Infinite-Loop, Reconciliation, Meta raw_decode→gezielte Regex, Wein-Filter, total-None fail-loud, Orchestrator pro-auction fetch-guard). Live E2E verifiziert. `-s ingest/tests` 35 OK + `-s data/tests` 92 OK, Pylint 10.00.
