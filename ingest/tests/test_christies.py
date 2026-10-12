@@ -3,10 +3,12 @@ import unittest
 from ingest.fetchers.christies import ChristiesFetcher
 
 RESULTS_HTML = (
-    '{"@type":"ItemList","itemListElement":['
-    '{"@id":"https://www.christies.com/en/auction/auction-31122#event"},'
-    '{"@id":"https://www.christies.com/en/auction/auction-31033#event"},'
-    '{"@id":"https://www.christies.com/en/auction/auction-31122#event"}]}')
+    '\\"department\\":\\"Wine \\u0026 Spirits\\",\\"saleNumber\\":\\"24465\\",'
+    '\\"saleId\\":\\"31122\\"'
+    '\\"department\\":\\"Watches \\u0026 Wristwatches\\",\\"saleNumber\\":'
+    '\\"24477\\",\\"saleId\\":\\"31133\\"'
+    '\\"department\\":\\"Wine \\u0026 Spirits\\",\\"saleNumber\\":\\"24465\\",'
+    '\\"saleId\\":\\"31122\\"')
 
 AUCTION_HTML = (
     '{"sale_id":"31122","sale_location":"HongKong",'
@@ -54,10 +56,10 @@ class FakeSession:
 
 
 class TestChristies(unittest.TestCase):
-    def test_discover_dedupes_auction_links(self):
+    def test_discover_filters_wine_auctions(self):
         f = ChristiesFetcher()
         refs = f.discover(FakeSession(results=RESULTS_HTML))
-        self.assertEqual([r.auction_id for r in refs], ["31122", "31033"])
+        self.assertEqual([r.auction_id for r in refs], ["31122"])
 
     def test_fetch_maps_lots(self):
         f = ChristiesFetcher()

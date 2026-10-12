@@ -19,7 +19,11 @@ LOTSEARCH_URL = ("https://www.christies.com/api/discoverywebsite/"
                  "auctionpages/lotsearch")
 PAGE_SIZE = "84"
 
-AUCTION_LINK = re.compile(r"/en/auction/auction-(\d+)#event")
+# The results feed embeds, per auction, a double-escaped JSON string
+# ``followAnalyticsMetadata`` carrying the department and sale id. Filter to
+# the Wine & Spirits department.
+WINE_AUCTION = re.compile(
+    r'\\"department\\":\\"(Wine|Spirits).*?\\"saleId\\":\\"(\d+)\\"', re.S)
 
 
 class ChristiesFetcher:
@@ -32,8 +36,8 @@ class ChristiesFetcher:
         html = session.get(f"{self.base_url}/en/results").text
         refs = []
         seen = set()
-        for match in AUCTION_LINK.finditer(html):
-            sale_id = match.group(1)
+        for match in WINE_AUCTION.finditer(html):
+            sale_id = match.group(2)
             if sale_id in seen:
                 continue
             seen.add(sale_id)
