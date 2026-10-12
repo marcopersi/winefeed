@@ -17,12 +17,20 @@ BASE_URL = "https://www.christies.com"
 LOTSEARCH_URL = ("https://www.christies.com/api/discoverywebsite/"
                  "auctionpages/lotsearch")
 PAGE_SIZE = "84"
+SITEMAP_INDEX_URL = "https://www.christies.com/LotFinder_Sitemap1.xml"
 
 # The results feed embeds, per auction, a single-escaped JSON string
 # ``followAnalyticsMetadata`` carrying the department and sale id. Filter to
 # the Wine & Spirits department.
 WINE_AUCTION = re.compile(
     r'\\"department\\":\\"(Wine|Spirits).*?\\"saleId\\":\\"(\d+)\\"', re.S)
+
+# Legacy (past-sales) pages carry no department field, so the wine/spirits
+# filter is a title heuristic. Word-boundary markers so "Vintage" (film
+# posters) does not match "vin".
+WINE_TITLE = re.compile(
+    r"\b(wine|wines|vin|vins|spirit|spirits|whisky|whiskey|champagne|"
+    r"bordeaux|burgundy|bourgogne|cellar|cellars|palate)\b", re.I)
 
 
 class ChristiesFetcher:
@@ -45,6 +53,39 @@ class ChristiesFetcher:
                 auction_id=sale_id,
                 url=f"{self.base_url}/en/auction/auction-{sale_id}",
             ))
+        return refs
+
+    def discover_backfill(self, session):
+        """Sitemap index -> all past sales -> wine AuctionRefs (title heuristic).
+
+        Each past-sale URL is loaded once to resolve the numeric ``sale_id`` and
+        title; only wine/spirits auctions (title heuristic) are kept. Raises
+        ``RuntimeError`` on any auction with missing required meta (NFR-4).
+        """
+        index = session.get(SITEMAP_INDEX_URL).text
+        subsites = re.findall(r"<loc>([^<]+)</loc>", index)
+        past_sales = [u for u in subsites if "PastSales" in u]
+        refs = []
+        seen = set()
+        for subsite in past_sales:
+            xml = session.get(subsite).text
+            for url in re.findall(r"<loc>([^<]+)</loc>", xml):
+                html = session.get(url).text
+                meta = _auction_meta(html, AuctionRef(self.provider, "",
+                                                      url=url))
+                _validate_backfill_meta(meta)
+                if not _is_wine_title(meta.get("title")):
+                    continue
+                sale_id = meta["sale_id"]
+                if sale_id in seen:
+                    continue
+                seen.add(sale_id)
+                refs.append(AuctionRef(
+                    provider=self.provider,
+                    auction_id=sale_id,
+                    url=url,
+                    title=meta.get("title"),
+                ))
         return refs
 
     def fetch(self, session, ref):
@@ -149,3 +190,19 @@ def _map_lot(lot):
 def _currency(text):
     match = re.match(r"^([A-Z]{3})\b", (text or "").strip())
     return match.group(1) if match else None
+
+
+def _is_wine_title(title):
+    return bool(WINE_TITLE.search(title or ""))
+
+
+def _validate_backfill_meta(meta):
+    """Hard-assert required legacy meta fields (NFR-4)."""
+    missing = [field for field in ("sale_id", "sale_number", "saleroomcode")
+               if not meta.get(field)]
+    if meta.get("year") is None or meta.get("month") is None:
+        missing.append("year/month")
+    if missing:
+        raise RuntimeError(
+            f"christies/backfill: missing meta fields {missing} "
+            f"for sale_id={meta.get('sale_id')}")

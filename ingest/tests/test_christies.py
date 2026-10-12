@@ -118,6 +118,63 @@ class TestChristies(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             f.fetch(session, ref)
 
+    def test_is_wine_title_ground_truth(self):
+        from ingest.fetchers.christies import _is_wine_title
+        wine = ["Fine and Rare Wines",
+                "A Gentleman's Palate: A Journey Through Three Centuries "
+                "of Wine",
+                "Signature Cellars", "Fine Wine", "Vins de Bourgogne",
+                "Fine and Rare Wines and Vintage Cigars"]
+        for title in wine:
+            self.assertTrue(_is_wine_title(title), title)
+        not_wine = ["ART AFRICAIN, OCEANIEN ET PRECOLOMBIEN",
+                    "Fine Chinese Ceramics and Works of Art",
+                    "Furniture and Decorative Objects", "Jewellery",
+                    "The House Sale", "Vintage Film Posters",
+                    "Shipping and Vintage Posters"]
+        for title in not_wine:
+            self.assertFalse(_is_wine_title(title), title)
+
+    def test_validate_backfill_meta(self):
+        from ingest.fetchers.christies import _validate_backfill_meta
+        ok = {"sale_id": "18467", "sale_number": "5057", "saleroomcode": "PAR",
+              "year": 2003, "month": 6}
+        _validate_backfill_meta(ok)
+        with self.assertRaises(RuntimeError):
+            _validate_backfill_meta({"sale_id": "18467"})
+
+    def test_discover_backfill_filters_wine(self):
+        f = ChristiesFetcher()
+        index = ('<sitemapindex><sitemap><loc>'
+                 'https://www.christies.com/SiteMapPastSales1.xml'
+                 '</loc></sitemap></sitemapindex>')
+        sales = ('<urlset>'
+                 '<url><loc>https://www.christies.com/auction/'
+                 'auction-5057-par/browse-lots</loc></url>'
+                 '<url><loc>https://www.christies.com/auction/'
+                 'auction-7187-lon/browse-lots</loc></url>'
+                 '</urlset>')
+        art = ('{"sale_id":"18467","sale_number":"5057",'
+               '"sale_room_code":"PAR","title":"ART AFRICAIN",'
+               '"auction_status":{"start_date":"2003-06-12T00:00Z"}}')
+        wine = ('{"sale_id":"12345","sale_number":"7187",'
+                '"sale_room_code":"LON","title":"Fine and Rare Wines",'
+                '"auction_status":{"start_date":"2020-06-01T00:00Z"}}')
+
+        class BackfillSession:
+            def get(self, url):
+                if "LotFinder_Sitemap1" in url:
+                    return FakeResponse(text=index)
+                if "SiteMapPastSales" in url:
+                    return FakeResponse(text=sales)
+                if "auction-5057" in url:
+                    return FakeResponse(text=art)
+                return FakeResponse(text=wine)
+
+        refs = f.discover_backfill(BackfillSession())
+        self.assertEqual([r.auction_id for r in refs], ["12345"])
+        self.assertEqual(refs[0].title, "Fine and Rare Wines")
+
 
 if __name__ == "__main__":
     unittest.main()
