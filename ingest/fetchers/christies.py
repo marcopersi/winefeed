@@ -1,16 +1,15 @@
 """Fetcher for Christie's wine auction results (server-rendered + JSON API).
 
-- discover: parse ``/en/results`` for ``/en/auction/auction-{sale_id}#event``
-  links (JSON-LD ``ItemList``).
+- discover: parse ``/en/results`` and filter the embedded auction metadata
+  (``followAnalyticsMetadata``) to the Wine & Spirits department.
 - fetch: page through the ``lotsearch`` API for each auction until all lots
   (``total_hits_filtered``) are collected, and map them onto the
   ``load_christies`` format.
 
-Note: ``discover`` currently returns all auctions; the wine/spirits category
-filter is not yet applied (no department marker found in the results feed).
+Note: ``discover`` only sees the current results-page window (newest auctions),
+so historical wine auctions are not backfilled.
 """
 import re
-from json.decoder import JSONDecoder
 
 from ..models import AuctionRef, FetchResult
 
@@ -19,7 +18,7 @@ LOTSEARCH_URL = ("https://www.christies.com/api/discoverywebsite/"
                  "auctionpages/lotsearch")
 PAGE_SIZE = "84"
 
-# The results feed embeds, per auction, a double-escaped JSON string
+# The results feed embeds, per auction, a single-escaped JSON string
 # ``followAnalyticsMetadata`` carrying the department and sale id. Filter to
 # the Wine & Spirits department.
 WINE_AUCTION = re.compile(
@@ -79,10 +78,14 @@ class ChristiesFetcher:
             total = body.get("total_hits_filtered")
             page_lots = _map_lots(body.get("lots") or [])
             lots.extend(page_lots)
-            if not page_lots or total is None or len(lots) >= total:
+            if total is None:
+                raise RuntimeError(
+                    f"christies/{meta.get('sale_id')}: "
+                    "total_hits_filtered missing")
+            if not page_lots or len(lots) >= total:
                 break
             page += 1
-        if total is not None and len(lots) != total:
+        if len(lots) != total:
             raise RuntimeError(
                 f"christies/{meta.get('sale_id')}: expected {total} lots, "
                 f"got {len(lots)}")
@@ -91,21 +94,19 @@ class ChristiesFetcher:
 
 def _auction_meta(html, ref):
     meta = {"sale_id": ref.auction_id, "url": ref.url}
-    marker = html.find('"sale_id"')
-    if marker == -1:
-        return meta
-    start = html.rfind("{", 0, marker)
-    try:
-        obj, _ = JSONDecoder().raw_decode(html[start:])
-    except ValueError:
-        return meta
-    meta["sale_id"] = obj.get("sale_id", ref.auction_id)
-    meta["title"] = obj.get("title")
-    meta["location"] = obj.get("sale_location")
-    meta["sale_number"] = obj.get("sale_number")
-    meta["saleroomcode"] = obj.get("sale_room_code")
-    status = obj.get("auction_status") or {}
-    match = re.match(r"(\d{4})-(\d{2})", status.get("start_date") or "")
+
+    def _field(pattern, group=1):
+        match = re.search(pattern, html)
+        return match.group(group) if match else None
+
+    sale_id = _field(r'"sale_id":"(\d+)"')
+    if sale_id:
+        meta["sale_id"] = sale_id
+    meta["title"] = _field(r'"title":"([^"]+)"')
+    meta["location"] = _field(r'"sale_location":"([^"]+)"')
+    meta["sale_number"] = _field(r'"sale_number":"([^"]+)"')
+    meta["saleroomcode"] = _field(r'"sale_room_code":"([^"]+)"')
+    match = re.search(r'"start_date":"(\d{4})-(\d{2})', html)
     if match:
         meta["year"] = int(match.group(1))
         meta["month"] = int(match.group(2))

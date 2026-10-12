@@ -97,15 +97,15 @@ class TestChristies(unittest.TestCase):
         self.assertEqual(len(result.data["lots"]), 2)
         self.assertEqual(result.data["lots"][1]["title"], "Château Latour 1982")
 
-    def test_fetch_stops_when_total_missing(self):
+    def test_fetch_fails_loud_when_total_missing(self):
         f = ChristiesFetcher()
         from ingest.models import AuctionRef
         ref = AuctionRef("christies", "31122",
                          url="https://www.christies.com/en/auction/auction-31122")
         session = FakeSession(
             auction=AUCTION_HTML, lotsearch_pages=[{"lots": [LOT]}])
-        result = f.fetch(session, ref)
-        self.assertEqual(len(result.data["lots"]), 1)
+        with self.assertRaises(RuntimeError):
+            f.fetch(session, ref)
 
     def test_fetch_raises_on_reconciliation_mismatch(self):
         f = ChristiesFetcher()
