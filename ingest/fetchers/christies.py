@@ -10,6 +10,7 @@ Note: ``discover`` only sees the current results-page window (newest auctions),
 so historical wine auctions are not backfilled.
 """
 import re
+import time
 
 from ..models import AuctionRef, FetchResult
 
@@ -59,12 +60,12 @@ class ChristiesFetcher:
             ))
         return refs
 
-    def discover_backfill(self, session):
+    def discover_backfill(self, session, delay=0.0):
         """Sitemap index -> all past sales -> wine AuctionRefs (title heuristic).
 
         Each past-sale URL is loaded once to resolve the numeric ``sale_id`` and
-        title; only wine/spirits auctions (title heuristic) are kept. Raises
-        ``RuntimeError`` on any auction with missing required meta (NFR-4).
+        title; only wine/spirits auctions (title heuristic) are kept. Invalid
+        meta (missing required fields) is skipped, not fatal (NFR-4).
         """
         index = session.get(SITEMAP_INDEX_URL).text
         subsites = re.findall(r"<loc>([^<]+)</loc>", index)
@@ -95,6 +96,8 @@ class ChristiesFetcher:
                     url=url,
                     title=meta.get("title"),
                 ))
+                if delay:
+                    time.sleep(delay)
         return refs
 
     def fetch(self, session, ref):
