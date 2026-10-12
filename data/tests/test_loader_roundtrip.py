@@ -122,6 +122,22 @@ class TestLoaderRoundtrip(unittest.TestCase):
             "BeschCannes", "auction-408.json", data, "load_beschcannes")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
 
+    def test_christies(self):
+        data = {"auction": {"event_id": "31122", "title": "Henry Tang",
+                            "year": 2026, "month": 10,
+                            "landing_url": "https://www.christies.com/en/"
+                                           "auction/auction-31122",
+                            "location": "HongKong"},
+                "lots": [{"lot_number": "1",
+                          "title": "Château Lafite Rothschild 1953",
+                          "estimate_low": 70000.0, "estimate_high": 100000.0,
+                          "price_realised": 118750.0, "lot_withdrawn": False,
+                          "currency": "HKD", "description": "1 Magnum",
+                          "url": "https://www.christies.com/en/lot/lot-6604342"}]}
+        count, hammer, wine = _run_loader(
+            "Christies", "31122.json", data, "load_christies")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
     def test_koppe(self):
         data = {"auction": {"id": "10", "name": "Koppe 10", "date": None},
                 "lots": [{"lot_no": "1", "name": "Chateau Haut-Brion",

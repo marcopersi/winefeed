@@ -56,7 +56,7 @@ jobs:
           PANDOLFINI_PWD: ${{ secrets.PANDOLFINI_PWD }}
           FINARTE_USER: ${{ secrets.FINARTE_USER }}
           FINARTE_PWD: ${{ secrets.FINARTE_PWD }}
-        run: python data/run_ingest.py --only steinfels,weinboerse,weinauktionator,hdh,koppe,langtons,winefields,dorotheum,pandolfini,finarte,besch-cannes,dobiaschofsky
+        run: python data/run_ingest.py --only steinfels,weinboerse,weinauktionator,hdh,koppe,langtons,winefields,dorotheum,pandolfini,finarte,besch-cannes,dobiaschofsky,christies
 
       - name: Commit manifest
         run: |

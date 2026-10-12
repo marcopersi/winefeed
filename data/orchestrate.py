@@ -33,6 +33,7 @@ ARCHIVE_DIRS = {
     "besch-cannes": "BeschCannes",
     "dobiaschofsky": "Dobiaschofsky",
     "koppe": "Koppe",
+    "christies": "Christies",
 }
 
 
