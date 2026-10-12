@@ -60,22 +60,35 @@ class ChristiesFetcher:
             ))
         return refs
 
-    def discover_backfill(self, session, delay=0.0):
+    def discover_backfill(self, session, delay=0.0, max_fail=10):
         """Sitemap index -> all past sales -> wine AuctionRefs (title heuristic).
 
         Each past-sale URL is loaded once to resolve the numeric ``sale_id`` and
         title; only wine/spirits auctions (title heuristic) are kept. Invalid
-        meta (missing required fields) is skipped, not fatal (NFR-4).
+        meta is skipped, not fatal (NFR-4). Transient network errors are retried
+        with backoff; ``max_fail`` consecutive failed URLs abort the run
+        (circuit breaker, NFR-7).
         """
         index = session.get(SITEMAP_INDEX_URL).text
         subsites = re.findall(r"<loc>([^<]+)</loc>", index)
         past_sales = [u for u in subsites if "PastSales" in u]
         refs = []
         seen = set()
+        consecutive = 0
         for subsite in past_sales:
             xml = session.get(subsite).text
             for url in re.findall(r"<loc>([^<]+)</loc>", xml):
-                html = session.get(url).text
+                html = _get_retry(session, url)
+                if html is None:
+                    consecutive += 1
+                    print(f"christies/backfill: {url}: übersprungen "
+                          "(retries erschöpft)", flush=True)
+                    if consecutive >= max_fail:
+                        raise RuntimeError(
+                            f"christies/backfill: {max_fail} konsekutive "
+                            "Fehler, Abbruch")
+                    continue
+                consecutive = 0
                 meta = _auction_meta(html, AuctionRef(self.provider, "",
                                                       url=url))
                 try:
@@ -202,6 +215,17 @@ def _map_lot(lot):
 def _currency(text):
     match = re.match(r"^([A-Z]{3})\b", (text or "").strip())
     return match.group(1) if match else None
+
+
+def _get_retry(session, url, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return session.get(url).text
+        except Exception as exc:  # noqa: BLE001
+            print(f"christies/backfill: retry {attempt + 1}/{max_retries} "
+                  f"für {url[-40:]}: {exc}", flush=True)
+            time.sleep(2 ** attempt)
+    return None
 
 
 def _is_wine_title(title):

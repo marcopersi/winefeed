@@ -104,7 +104,8 @@ def main():
 
     candidates = _load_candidates()
     if candidates is None:
-        refs = fetcher.discover_backfill(session, delay=args.delay)
+        refs = fetcher.discover_backfill(session, delay=args.delay,
+                                         max_fail=args.max_fail)
         _save_candidates(refs)
         candidates = [{"sale_id": r.auction_id, "url": r.url,
                        "title": r.title} for r in refs]
