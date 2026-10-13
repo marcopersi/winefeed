@@ -1273,6 +1273,7 @@ def _build(conn, args):
     print(f"\nproviders={np_} auctions={na} lots={nl}")
 
     _annotate_fx(conn)
+    _apply_premium_policy(conn)
 
     if not args.skip_resolution:
         from build_wines import run as resolve_wines
@@ -1297,6 +1298,52 @@ def _annotate_fx(conn):
         conn.execute(
             "UPDATE lots SET fx_rate = ?, fx_target_currency = 'EUR'"
             " WHERE currency = ?", (rate, currency))
+
+
+# Buyer's premium policy per house (first tier; tiered houses approximated).
+# ``rate`` = flat premium fraction of the hammer; ``fees`` = flat per-lot fee
+# in the house currency. Houses not listed either include the premium in their
+# recorded price (pandolfini, zacky, hdh) or have no hammer (idealwine,
+# winebarrel). Source: docs/premium-policy.md.
+PREMIUM_POLICY = {
+    "sothebys": {"rate": 0.25},
+    "christies": {"rate": 0.25},
+    "langtons": {"rate": 0.18},
+    "dorotheum": {"rate": 0.25},
+    "winefields": {"rate": 0.24},
+    "baghera": {"rate": 0.22},
+    "steinfels": {"rate": 0.12, "fees": 10.0},
+    "finarte": {"rate": 0.23},
+    "weinboerse": {"rate": 0.15, "fees": 10.0},
+    "koppe": {"rate": 0.10, "fees": 5.0},
+    "weinauktionator": {"rate": 0.15},
+    "dobiaschofsky": {"rate": 0.25},
+    "wermuth-sa": {"rate": 0.10, "fees": 8.0},
+    "besch-cannes": {"rate": 0.24},
+    "munich-wine-company": {"rate": 0.15, "fees": 5.0},
+}
+
+
+def _apply_premium_policy(conn):
+    """Derive buyer_premium/fees/total_price from the per-house premium policy.
+
+    Applies only to hammer-price lots that do not already carry an observed
+    buyer_premium. Marks ``price_source = DERIVED`` (hammer is OBSERVED).
+    """
+    for provider, policy in PREMIUM_POLICY.items():
+        rate = policy["rate"]
+        fees = policy.get("fees")
+        conn.execute(
+            "UPDATE lots SET"
+            " buyer_premium = ROUND(hammer_price * ?, 2),"
+            " fees = ?,"
+            " total_price = ROUND(hammer_price + hammer_price * ?"
+            " + COALESCE(?, 0), 2),"
+            " price_source = 'DERIVED'"
+            " WHERE hammer_price IS NOT NULL AND buyer_premium IS NULL"
+            " AND auction_id IN (SELECT id FROM auctions WHERE provider_id ="
+            " (SELECT id FROM providers WHERE name = ?))",
+            (rate, fees, rate, fees, provider))
 
 
 def _acquire_lock(lock_path):

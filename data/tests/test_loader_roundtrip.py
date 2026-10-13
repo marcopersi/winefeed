@@ -41,6 +41,22 @@ def _run_loader(house_dir, filename, data, loader_name):
 
 
 class TestLoaderRoundtrip(unittest.TestCase):
+    def test_apply_premium_policy(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "Koppe 1", None, "EUR",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x",
+                               "hammer_price": 100.0, "price_basis": "HAMMER",
+                               "currency": "EUR"})
+        build_db._apply_premium_policy(conn)
+        row = conn.execute(
+            "SELECT buyer_premium, fees, total_price, price_source FROM lots"
+        ).fetchone()
+        self.assertEqual(row, (10.0, 5.0, 115.0, "DERIVED"))
+        conn.close()
+
     def test_langtons(self):
         data = {"auction": {"id": "8212", "name": "Unreserved", "date": None},
                 "lots": [{"lot": "1", "wine": "Penfolds Grange",
