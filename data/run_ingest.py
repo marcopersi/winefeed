@@ -31,11 +31,14 @@ MANIFEST_PATH = os.environ.get("MANIFEST_PATH",
 PROVIDERS = [
     "steinfels", "weinboerse", "weinauktionator", "hdh", "koppe",
     "langtons", "winefields", "dorotheum", "pandolfini",
-    "finarte", "besch-cannes", "dobiaschofsky", "christies",
+    "finarte", "besch-cannes", "dobiaschofsky",
     # Sothebys needs camoufox (heavy) + a residential IP to solve the
     # Cloudflare Turnstile login; it only runs locally, not in CI.
     "sothebys",
 ]
+# christies is deliberately not in PROVIDERS: its historical backfill runs
+# locally (run_christies_backfill.py) against the same shared manifest, and
+# running it in CI too would double-fetch / skip lots across the two archives.
 # idealwine is deliberately not listed: it runs via run_idealwine_delta.py
 # (Algolia -> normalize -> diff -> direct DB append), not the build_db chain.
 

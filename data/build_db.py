@@ -777,12 +777,19 @@ def load_christies(b, limit):
         for lot in d.get("lots", []):
             sold = 1 if (lot.get("price_realised") and
                          not lot.get("lot_withdrawn")) else 0
+            price = to_float(lot.get("price_realised"))
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_number")),
                 "wine": lot.get("title"),
                 "estimate_low": to_float(lot.get("estimate_low")),
                 "estimate_high": to_float(lot.get("estimate_high")),
-                "hammer_price": to_float(lot.get("price_realised")),
+                # Christie's "price realised" is gross (incl. 25% wine buyer's
+                # premium); back out the net hammer and keep the gross as
+                # realised_price. Historic NLG lots used 20.825% — approximated
+                # with 25% here.
+                "hammer_price": round(price / 1.25, 2)
+                if price is not None else None,
+                "realised_price": price,
                 "price_basis": "HAMMER",
                 "currency": lot.get("currency"),
                 "sold": sold,
@@ -1300,14 +1307,18 @@ def _annotate_fx(conn):
             " WHERE currency = ?", (rate, currency))
 
 
-# Buyer's premium policy per house (first tier; tiered houses approximated).
-# ``rate`` = flat premium fraction of the hammer; ``fees`` = flat per-lot fee
-# in the house currency. Houses not listed either include the premium in their
-# recorded price (pandolfini, zacky, hdh) or have no hammer (idealwine,
-# winebarrel). Source: docs/premium-policy.md.
+# Buyer's premium policy per house. ``rate`` = flat premium fraction of the
+# hammer; ``fees`` = flat per-lot fee in the house currency.
+#
+# Approximation (documented, not exact): tiered rates are flattened to their
+# first tier, and time-varying rates (langtons 16.5%->18%, winefields
+# 22%->24%) use the current rate for all lots — a temporal policy would be a
+# follow-up. Houses not listed: include the premium in their recorded price
+# (pandolfini, zacky, hdh), are a cote/valuation price rather than an auction
+# (idealwine), or are a consignment service with a seller-side fee rather than
+# a buyer's premium (winebarrel). Source: docs/premium-policy.md.
 PREMIUM_POLICY = {
     "sothebys": {"rate": 0.25},
-    "christies": {"rate": 0.25},
     "langtons": {"rate": 0.18},
     "dorotheum": {"rate": 0.25},
     "winefields": {"rate": 0.24},
@@ -1336,14 +1347,15 @@ def _apply_premium_policy(conn):
         conn.execute(
             "UPDATE lots SET"
             " buyer_premium = ROUND(hammer_price * ?, 2),"
+            " realised_price = ROUND(hammer_price * (1 + ?), 2),"
             " fees = ?,"
-            " total_price = ROUND(hammer_price + hammer_price * ?"
-            " + COALESCE(?, 0), 2),"
+            " total_price = ROUND(hammer_price * (1 + ?) + COALESCE(?, 0), 2),"
             " price_source = 'DERIVED'"
             " WHERE hammer_price IS NOT NULL AND buyer_premium IS NULL"
+            " AND price_basis = 'HAMMER'"
             " AND auction_id IN (SELECT id FROM auctions WHERE provider_id ="
             " (SELECT id FROM providers WHERE name = ?))",
-            (rate, fees, rate, fees, provider))
+            (rate, rate, fees, rate, fees, provider))
 
 
 def _acquire_lock(lock_path):
