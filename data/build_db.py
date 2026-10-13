@@ -429,6 +429,11 @@ PROVIDER_LOCATIONS = {
     "dorotheum": "Wien",
     "hdh": "Chicago",
     "langtons": "Sydney",
+    "idealwine": "Paris",
+    "munich-wine-company": "München",
+    "winebarrel": "Zürich",
+    "winefields": "Amsterdam",
+    "zacky": "New York",
 }
 
 
