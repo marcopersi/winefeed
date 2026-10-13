@@ -9,10 +9,23 @@
 Note: ``discover`` only sees the current results-page window (newest auctions),
 so historical wine auctions are not backfilled.
 """
+import datetime
 import re
 import time
 
 from ..models import AuctionRef, FetchResult
+
+
+class MetaInvalid(RuntimeError):
+    """Required auction meta fields are missing or invalid."""
+
+
+class ReconciliationMismatch(RuntimeError):
+    """Fetched lot count does not match the advertised total."""
+
+
+class MalformedResponse(RuntimeError):
+    """API response is missing expected fields (e.g. total_hits_filtered)."""
 
 BASE_URL = "https://www.christies.com"
 LOTSEARCH_URL = ("https://www.christies.com/api/discoverywebsite/"
@@ -27,15 +40,14 @@ WINE_AUCTION = re.compile(
     r'\\"department\\":\\"(Wine|Spirits).*?\\"saleId\\":\\"(\d+)\\"', re.S)
 
 # Legacy (past-sales) pages carry no department field, so the wine/spirits
-# filter is a title heuristic. Word-boundary markers so "Vintage" (film
-# posters) does not match "vin". Only unambiguous wine/spirits terms are used;
-# ambiguous English words ("spirit", "palate", "burgundy" as a colour,
-# "cellar" in a non-wine sense) are deliberately excluded to avoid false
-# positives, at the cost of a few false negatives (e.g. "Signature Cellars"),
-# which the ground-truth sample verification surfaces.
+# filter is a title heuristic.  Three-way classification: WINE (unambiguous),
+# AMBIGUOUS (may or may not be wine — logged for manual review), NOT_WINE.
 WINE_TITLE = re.compile(
     r"\b(wine|wines|vin|vins|champagne|bordeaux|bourgogne|whisky|whiskey)\b",
     re.I)
+AMBIGUOUS_TITLE = re.compile(
+    r"\b(spirit|spirits|cellar|cellars|burgundy|palate|"
+    r"cognac|port|madeira|sake|grappa|armagnac)\b", re.I)
 
 
 class ChristiesFetcher:
@@ -64,22 +76,31 @@ class ChristiesFetcher:
         """Sitemap index -> all past sales -> wine AuctionRefs (title heuristic).
 
         Each past-sale URL is loaded once to resolve the numeric ``sale_id`` and
-        title; only wine/spirits auctions (title heuristic) are kept. Invalid
-        meta is skipped, not fatal (NFR-4). Transient network errors are retried
-        with backoff; ``max_fail`` consecutive failed URLs abort the run
-        (circuit breaker, NFR-7).
+        title; only wine/spirits auctions (title heuristic) are kept. Ambiguous
+        titles are collected separately for manual review. Invalid meta is
+        skipped, not fatal. Transient network errors are retried with backoff;
+        ``max_fail`` consecutive failed URLs abort the run (circuit breaker).
+
+        Returns ``(refs, ambiguous)`` where ``ambiguous`` is a list of
+        ``{url, title, sale_id}`` dicts for titles that matched only the
+        ambiguous heuristic.
         """
         index = session.get(SITEMAP_INDEX_URL).text
         subsites = re.findall(r"<loc>([^<]+)</loc>", index)
         past_sales = [u for u in subsites if "PastSales" in u]
         refs = []
+        ambiguous = []
         seen = set()
         consecutive = 0
         for subsite in past_sales:
             xml = session.get(subsite).text
             for url in re.findall(r"<loc>([^<]+)</loc>", xml):
-                html = _get_retry(session, url)
-                if html is None:
+                result = _get_retry(session, url)
+                if delay:
+                    time.sleep(delay)
+                if result is PERMANENT_SKIP:
+                    continue
+                if result is None:
                     consecutive += 1
                     print(f"christies/backfill: {url}: übersprungen "
                           "(retries erschöpft)", flush=True)
@@ -88,30 +109,35 @@ class ChristiesFetcher:
                             f"christies/backfill: {max_fail} konsekutive "
                             "Fehler, Abbruch")
                     continue
+                html = result
                 consecutive = 0
                 meta = _auction_meta(html, AuctionRef(self.provider, "",
                                                       url=url))
                 try:
                     _validate_backfill_meta(meta)
-                except RuntimeError as exc:
+                except MetaInvalid as exc:
                     print(f"christies/backfill: {url}: {exc}, übersprungen",
                           flush=True)
                     continue
-                if not _is_wine_title(meta.get("title")):
-                    continue
+                title = meta.get("title")
                 sale_id = meta["sale_id"]
                 if sale_id in seen:
                     continue
                 seen.add(sale_id)
+                classification = _classify_title(title)
+                if classification == "NOT_WINE":
+                    continue
+                if classification == "AMBIGUOUS":
+                    ambiguous.append({"url": url, "title": title,
+                                      "sale_id": sale_id})
+                    continue
                 refs.append(AuctionRef(
                     provider=self.provider,
                     auction_id=sale_id,
                     url=url,
-                    title=meta.get("title"),
+                    title=title,
                 ))
-                if delay:
-                    time.sleep(delay)
-        return refs
+        return refs, ambiguous
 
     def fetch(self, session, ref):
         html = session.get(ref.url).text
@@ -145,14 +171,14 @@ class ChristiesFetcher:
             page_lots = _map_lots(body.get("lots") or [])
             lots.extend(page_lots)
             if total is None:
-                raise RuntimeError(
+                raise MalformedResponse(
                     f"christies/{meta.get('sale_id')}: "
                     "total_hits_filtered missing")
             if not page_lots or len(lots) >= total:
                 break
             page += 1
         if len(lots) != total:
-            raise RuntimeError(
+            raise ReconciliationMismatch(
                 f"christies/{meta.get('sale_id')}: expected {total} lots, "
                 f"got {len(lots)}")
         return lots
@@ -217,10 +243,27 @@ def _currency(text):
     return match.group(1) if match else None
 
 
+# Sentinel: permanent client error (e.g. 404) — skip, don't count as failure.
+PERMANENT_SKIP = object()
+
+
 def _get_retry(session, url, max_retries=3):
+    """Returns text on success, PERMANENT_SKIP for permanent 4xx, None on
+    exhausted retries (network/server error)."""
     for attempt in range(max_retries):
         try:
-            return session.get(url).text
+            resp = session.get(url)
+            if resp.status_code in (429, 500, 502, 503, 504):
+                print(f"christies/backfill: HTTP {resp.status_code} "
+                      f"retry {attempt + 1}/{max_retries} "
+                      f"für {url[-40:]}", flush=True)
+                time.sleep(2 ** attempt)
+                continue
+            if resp.status_code >= 400:
+                print(f"christies/backfill: HTTP {resp.status_code} "
+                      f"für {url[-40:]}, übersprungen", flush=True)
+                return PERMANENT_SKIP
+            return resp.text
         except Exception as exc:  # noqa: BLE001
             print(f"christies/backfill: retry {attempt + 1}/{max_retries} "
                   f"für {url[-40:]}: {exc}", flush=True)
@@ -228,8 +271,17 @@ def _get_retry(session, url, max_retries=3):
     return None
 
 
+def _classify_title(title):
+    """Three-way classify: 'WINE', 'AMBIGUOUS', or 'NOT_WINE'."""
+    if WINE_TITLE.search(title or ""):
+        return "WINE"
+    if AMBIGUOUS_TITLE.search(title or ""):
+        return "AMBIGUOUS"
+    return "NOT_WINE"
+
+
 def _is_wine_title(title):
-    return bool(WINE_TITLE.search(title or ""))
+    return _classify_title(title) == "WINE"
 
 
 def _validate_backfill_meta(meta):
@@ -241,12 +293,13 @@ def _validate_backfill_meta(meta):
         problems.append("sale_number")
     if not re.fullmatch(r"[A-Za-z]{2,3}", str(meta.get("saleroomcode") or "")):
         problems.append("saleroomcode")
+    current_year = datetime.date.today().year
     year, month = meta.get("year"), meta.get("month")
-    if not isinstance(year, int) or not 1990 <= year <= 2026:
+    if not isinstance(year, int) or not 1900 <= year <= current_year:
         problems.append("year")
     if not isinstance(month, int) or not 1 <= month <= 12:
         problems.append("month")
     if problems:
-        raise RuntimeError(
+        raise MetaInvalid(
             f"christies/backfill: invalid meta fields {problems} "
             f"for sale_id={meta.get('sale_id')}")

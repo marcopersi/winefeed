@@ -29,6 +29,7 @@ data/wine_auction_prices.sqlite
 data/reference/vintage_review_missing.csv
 data/christies_backfill_candidates.json
 data/christies_backfill_skips.json
+data/christies_backfill_ambiguous.json
 
 # Local secrets
 .env

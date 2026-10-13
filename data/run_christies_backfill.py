@@ -22,9 +22,12 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 
 from ingest.fetchers import get  # noqa: E402
+from ingest.fetchers.christies import (MalformedResponse, MetaInvalid,  # noqa: E402
+                                       ReconciliationMismatch)
 from ingest.registry import (dedup, load_manifest, mark_fetched,  # noqa: E402
                              save_manifest)
 from ingest.models import AuctionRef  # noqa: E402
+from orchestrate import ARCHIVE_DIRS  # noqa: E402
 
 ARCHIVE = os.environ.get(
     "ARCHIVE_PATH",
@@ -33,24 +36,46 @@ ARCHIVE = os.environ.get(
         "Meine Ablage/Wein/WeinAuktionspreise"))
 MANIFEST_PATH = os.environ.get("MANIFEST_PATH",
                                os.path.join(ARCHIVE, "ingest_manifest.json"))
-ARCHIVE_DIR = os.path.join(ARCHIVE, "Christies")
+ARCHIVE_DIR = os.path.join(ARCHIVE, ARCHIVE_DIRS["christies"])
 CANDIDATES_PATH = os.path.join(REPO, "data",
                                "christies_backfill_candidates.json")
+AMBIGUOUS_PATH = os.path.join(REPO, "data",
+                              "christies_backfill_ambiguous.json")
 SKIP_PATH = os.path.join(REPO, "data", "christies_backfill_skips.json")
+
+# Skip reasons that are terminal for historical auctions (won't change on retry).
+TERMINAL_SKIP_REASONS = {"EMPTY_RESULT"}
 
 
 def _load_candidates():
     if not os.path.exists(CANDIDATES_PATH):
         return None
     with open(CANDIDATES_PATH, encoding="utf-8") as fh:
-        return json.load(fh)
+        data = json.load(fh)
+    if isinstance(data, dict) and not data.get("complete"):
+        print("Warnung: vorherige Discovery war unvollständig, "
+              "starte neu", flush=True)
+        return None
+    if isinstance(data, dict):
+        return data.get("candidates", [])
+    return data
 
 
-def _save_candidates(refs):
+def _save_candidates(refs, ambiguous):
     with open(CANDIDATES_PATH, "w", encoding="utf-8") as fh:
-        json.dump([{"sale_id": r.auction_id, "url": r.url,
-                    "title": r.title} for r in refs],
-                  fh, ensure_ascii=False, indent=2)
+        json.dump({
+            "generated_at": _now(),
+            "n_wine_refs": len(refs),
+            "n_ambiguous": len(ambiguous),
+            "complete": True,
+            "candidates": [{"sale_id": r.auction_id, "url": r.url,
+                            "title": r.title} for r in refs],
+        }, fh, ensure_ascii=False, indent=2)
+    if ambiguous:
+        with open(AMBIGUOUS_PATH, "w", encoding="utf-8") as fh:
+            json.dump(ambiguous, fh, ensure_ascii=False, indent=2)
+        print(f"Ambiguous Titel: {len(ambiguous)} → {AMBIGUOUS_PATH}",
+              flush=True)
 
 
 def _archive(sale_id, data):
@@ -61,13 +86,12 @@ def _archive(sale_id, data):
 
 
 def _reason(exc):
-    text = str(exc)
-    if "missing meta" in text:
-        return "META_MISSING"
-    if "expected" in text and "lots" in text:
+    if isinstance(exc, MetaInvalid):
+        return "META_INVALID"
+    if isinstance(exc, ReconciliationMismatch):
         return "RECONCILIATION_MISMATCH"
-    if "total_hits_filtered" in text:
-        return "EMPTY_RESULT"
+    if isinstance(exc, MalformedResponse):
+        return "MALFORMED_RESPONSE"
     return "HTTP_ERROR"
 
 
@@ -87,6 +111,11 @@ def _write_skips(path, skips_by_id):
         json.dump(ordered, fh, ensure_ascii=False, indent=2)
 
 
+def _now():
+    import datetime
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true",
@@ -104,16 +133,20 @@ def main():
 
     candidates = _load_candidates()
     if candidates is None:
-        refs = fetcher.discover_backfill(session, delay=args.delay,
-                                         max_fail=args.max_fail)
-        _save_candidates(refs)
+        refs, ambiguous = fetcher.discover_backfill(
+            session, delay=args.delay, max_fail=args.max_fail)
+        _save_candidates(refs, ambiguous)
         candidates = [{"sale_id": r.auction_id, "url": r.url,
                        "title": r.title} for r in refs]
     refs = [AuctionRef("christies", c["sale_id"], url=c["url"],
                        title=c.get("title")) for c in candidates]
 
     manifest = load_manifest(MANIFEST_PATH)
-    new_refs = dedup(refs, manifest, "christies")
+    skips = _load_skips()
+    terminal_ids = {sid for sid, s in skips.items()
+                    if s.get("reason") in TERMINAL_SKIP_REASONS}
+    new_refs = [r for r in dedup(refs, manifest, "christies")
+                if r.auction_id not in terminal_ids]
     print(f"Wine & Spirits (N_expected): {len(refs)}")
     print(f"Neu zu fetchen: {len(new_refs)}")
 
@@ -123,44 +156,52 @@ def main():
         return 0
 
     fetched = 0
-    skips = _load_skips()
+    this_run_skips = 0
     consecutive = 0
     aborted = False
     targets = new_refs[:args.limit] if args.limit else new_refs
-    for i, ref in enumerate(targets, 1):
-        try:
-            result = fetcher.fetch(session, ref)
-            if not result.data.get("lots"):
-                skips[ref.auction_id] = {
-                    "sale_id": ref.auction_id, "reason": "EMPTY_RESULT",
-                    "detail": "total_hits_filtered=0"}
+    try:
+        for i, ref in enumerate(targets, 1):
+            try:
+                result = fetcher.fetch(session, ref)
+                if not result.data.get("lots"):
+                    skips[ref.auction_id] = {
+                        "sale_id": ref.auction_id, "reason": "EMPTY_RESULT",
+                        "detail": "total_hits_filtered=0"}
+                    this_run_skips += 1
+                    print(f"[{i}/{len(targets)}] sale_id={ref.auction_id} "
+                          "SKIP empty", flush=True)
+                    continue
+                _archive(ref.auction_id, result.data)
+                mark_fetched(manifest, ref)
+                save_manifest(MANIFEST_PATH, manifest)
+                skips.pop(ref.auction_id, None)
+                fetched += 1
+                consecutive = 0
                 print(f"[{i}/{len(targets)}] sale_id={ref.auction_id} "
-                      "SKIP empty", flush=True)
-                continue
-            _archive(ref.auction_id, result.data)
-            mark_fetched(manifest, ref)
-            save_manifest(MANIFEST_PATH, manifest)
-            fetched += 1
-            consecutive = 0
-            print(f"[{i}/{len(targets)}] sale_id={ref.auction_id} "
-                  f"lots={len(result.data.get('lots', []))} OK", flush=True)
-        except Exception as exc:  # noqa: BLE001
-            consecutive += 1
-            skips[ref.auction_id] = {
-                "sale_id": ref.auction_id,
-                "reason": _reason(exc),
-                "detail": str(exc)[:200]}
-            print(f"[{i}/{len(targets)}] sale_id={ref.auction_id} "
-                  f"SKIP {exc}", flush=True)
-            if consecutive >= args.max_fail:
-                print(f"Circuit-Breaker: {args.max_fail} konsekutive Fehler",
-                      file=sys.stderr)
-                aborted = True
-                break
-        time.sleep(args.delay)
+                      f"lots={len(result.data.get('lots', []))} OK",
+                      flush=True)
+            except Exception as exc:  # noqa: BLE001
+                consecutive += 1
+                this_run_skips += 1
+                skips[ref.auction_id] = {
+                    "sale_id": ref.auction_id,
+                    "reason": _reason(exc),
+                    "detail": str(exc)[:200]}
+                print(f"[{i}/{len(targets)}] sale_id={ref.auction_id} "
+                      f"SKIP {exc}", flush=True)
+                if consecutive >= args.max_fail:
+                    print(f"Circuit-Breaker: {args.max_fail} konsekutive "
+                          "Fehler", file=sys.stderr)
+                    aborted = True
+                    break
+            finally:
+                time.sleep(args.delay)
+    finally:
+        _write_skips(SKIP_PATH, skips)
 
-    _write_skips(SKIP_PATH, skips)
-    print(f"Erfolgreich: {fetched} | Skip: {len(skips)}")
+    print(f"Erfolgreich: {fetched} | Skip (dieser Lauf): {this_run_skips} "
+          f"| Skip (gesamt): {len(skips)}")
     return 1 if aborted else 0
 
 

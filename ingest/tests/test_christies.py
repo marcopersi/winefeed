@@ -1,6 +1,11 @@
 import unittest
+from unittest.mock import patch
 
-from ingest.fetchers.christies import ChristiesFetcher
+from ingest.fetchers.christies import (
+    PERMANENT_SKIP, ChristiesFetcher, MalformedResponse, MetaInvalid,
+    ReconciliationMismatch, _classify_title, _is_wine_title,
+    _validate_backfill_meta,
+)
 
 RESULTS_HTML = (
     '\\"department\\":\\"Wine \\u0026 Spirits\\",\\"saleNumber\\":\\"24465\\",'
@@ -30,22 +35,29 @@ LOT = {
 
 
 class FakeResponse:
-    def __init__(self, text="", payload=None):
+    def __init__(self, text="", payload=None, status_code=200):
         self.text = text
         self._payload = payload
         self.content = b""
+        self.status_code = status_code
 
     def json(self):
         return self._payload
 
 
 class FakeSession:
-    def __init__(self, results="", auction="", lotsearch_pages=None):
+    def __init__(self, results="", auction="", lotsearch_pages=None,
+                 url_responses=None):
         self._results = results
         self._auction = auction
         self._pages = lotsearch_pages or []
+        self._url_responses = url_responses or {}
+        self.request_log = []
 
     def get(self, url, params=None, headers=None):  # pylint: disable=unused-argument
+        self.request_log.append(url)
+        if url in self._url_responses:
+            return self._url_responses[url]
         if "/en/results" in url:
             return FakeResponse(text=self._results)
         if "lotsearch" in url:
@@ -97,17 +109,17 @@ class TestChristies(unittest.TestCase):
         self.assertEqual(len(result.data["lots"]), 2)
         self.assertEqual(result.data["lots"][1]["title"], "Château Latour 1982")
 
-    def test_fetch_fails_loud_when_total_missing(self):
+    def test_fetch_raises_malformed_when_total_missing(self):
         f = ChristiesFetcher()
         from ingest.models import AuctionRef
         ref = AuctionRef("christies", "31122",
                          url="https://www.christies.com/en/auction/auction-31122")
         session = FakeSession(
             auction=AUCTION_HTML, lotsearch_pages=[{"lots": [LOT]}])
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(MalformedResponse):
             f.fetch(session, ref)
 
-    def test_fetch_raises_on_reconciliation_mismatch(self):
+    def test_fetch_raises_reconciliation_mismatch(self):
         f = ChristiesFetcher()
         from ingest.models import AuctionRef
         ref = AuctionRef("christies", "31122",
@@ -115,11 +127,26 @@ class TestChristies(unittest.TestCase):
         session = FakeSession(
             auction=AUCTION_HTML,
             lotsearch_pages=[{"lots": [LOT], "total_hits_filtered": 5}])
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(ReconciliationMismatch):
             f.fetch(session, ref)
 
+    def test_classify_title_three_way(self):
+        self.assertEqual(_classify_title("Fine and Rare Wines"), "WINE")
+        self.assertEqual(_classify_title("Vins de Bourgogne"), "WINE")
+        self.assertEqual(_classify_title("Fine Whisky"), "WINE")
+        self.assertEqual(_classify_title("Rare Spirits"), "AMBIGUOUS")
+        self.assertEqual(_classify_title("Signature Cellars"), "AMBIGUOUS")
+        self.assertEqual(_classify_title("Burgundy Velvet and Silver"),
+                         "AMBIGUOUS")
+        self.assertEqual(_classify_title("The Cellar Door: Collecting"),
+                         "AMBIGUOUS")
+        self.assertEqual(_classify_title("Fine Cognac and Armagnac"),
+                         "AMBIGUOUS")
+        self.assertEqual(_classify_title("Jewellery"), "NOT_WINE")
+        self.assertEqual(_classify_title("Vintage Film Posters"), "NOT_WINE")
+        self.assertEqual(_classify_title("Fine Chinese Ceramics"), "NOT_WINE")
+
     def test_is_wine_title_ground_truth(self):
-        from ingest.fetchers.christies import _is_wine_title
         wine = ["Fine and Rare Wines",
                 "A Gentleman's Palate: A Journey Through Three Centuries "
                 "of Wine",
@@ -131,54 +158,178 @@ class TestChristies(unittest.TestCase):
                     "Fine Chinese Ceramics and Works of Art",
                     "Furniture and Decorative Objects", "Jewellery",
                     "The House Sale", "Vintage Film Posters",
-                    "Shipping and Vintage Posters",
-                    "The Spirit of India: Modern South Asian Art",
-                    "A Feast for the Palate: Fine Dining and Cookery",
-                    "Burgundy Velvet and Silver",
-                    "The Cellar Door: A Story of Collecting",
-                    "Signature Cellars"]
+                    "Shipping and Vintage Posters"]
         for title in not_wine:
             self.assertFalse(_is_wine_title(title), title)
 
-    def test_validate_backfill_meta(self):
-        from ingest.fetchers.christies import _validate_backfill_meta
+    def test_validate_backfill_meta_ok(self):
         ok = {"sale_id": "18467", "sale_number": "5057", "saleroomcode": "PAR",
               "year": 2003, "month": 6}
         _validate_backfill_meta(ok)
-        with self.assertRaises(RuntimeError):
+
+    def test_validate_backfill_meta_raises_meta_invalid(self):
+        with self.assertRaises(MetaInvalid):
             _validate_backfill_meta({"sale_id": "18467"})
 
-    def test_discover_backfill_filters_wine(self):
+    def test_discover_backfill_returns_refs_and_ambiguous(self):
         f = ChristiesFetcher()
         index = ('<sitemapindex><sitemap><loc>'
                  'https://www.christies.com/SiteMapPastSales1.xml'
                  '</loc></sitemap></sitemapindex>')
+        wine_meta = ('{"sale_id":"12345","sale_number":"7187",'
+                     '"sale_room_code":"LON","title":"Fine and Rare Wines",'
+                     '"auction_status":{"start_date":"2020-06-01T00:00Z"}}')
+        ambig_meta = ('{"sale_id":"99999","sale_number":"8888",'
+                      '"sale_room_code":"NYC","title":"Rare Spirits of India",'
+                      '"auction_status":{"start_date":"2019-03-01T00:00Z"}}')
+        art_meta = ('{"sale_id":"18467","sale_number":"5057",'
+                    '"sale_room_code":"PAR","title":"ART AFRICAIN",'
+                    '"auction_status":{"start_date":"2003-06-12T00:00Z"}}')
         sales = ('<urlset>'
                  '<url><loc>https://www.christies.com/auction/'
                  'auction-5057-par/browse-lots</loc></url>'
                  '<url><loc>https://www.christies.com/auction/'
                  'auction-7187-lon/browse-lots</loc></url>'
+                 '<url><loc>https://www.christies.com/auction/'
+                 'auction-8888-nyc/browse-lots</loc></url>'
                  '</urlset>')
-        art = ('{"sale_id":"18467","sale_number":"5057",'
-               '"sale_room_code":"PAR","title":"ART AFRICAIN",'
-               '"auction_status":{"start_date":"2003-06-12T00:00Z"}}')
-        wine = ('{"sale_id":"12345","sale_number":"7187",'
-                '"sale_room_code":"LON","title":"Fine and Rare Wines",'
-                '"auction_status":{"start_date":"2020-06-01T00:00Z"}}')
 
         class BackfillSession:
+            request_count = 0
+
             def get(self, url):
+                BackfillSession.request_count += 1
                 if "LotFinder_Sitemap1" in url:
                     return FakeResponse(text=index)
                 if "SiteMapPastSales" in url:
                     return FakeResponse(text=sales)
                 if "auction-5057" in url:
-                    return FakeResponse(text=art)
-                return FakeResponse(text=wine)
+                    return FakeResponse(text=art_meta)
+                if "auction-8888" in url:
+                    return FakeResponse(text=ambig_meta)
+                return FakeResponse(text=wine_meta)
 
-        refs = f.discover_backfill(BackfillSession())
+        refs, ambiguous = f.discover_backfill(BackfillSession())
         self.assertEqual([r.auction_id for r in refs], ["12345"])
         self.assertEqual(refs[0].title, "Fine and Rare Wines")
+        self.assertEqual(len(ambiguous), 1)
+        self.assertEqual(ambiguous[0]["sale_id"], "99999")
+        self.assertIn("Spirits", ambiguous[0]["title"])
+
+    @patch("ingest.fetchers.christies.time.sleep")
+    def test_discover_backfill_delay_fires_per_url(self, mock_sleep):
+        """Regression: delay must fire for every URL, not just wine hits."""
+        f = ChristiesFetcher()
+        index = ('<sitemapindex><sitemap><loc>'
+                 'https://www.christies.com/SiteMapPastSales1.xml'
+                 '</loc></sitemap></sitemapindex>')
+        wine_meta = ('{"sale_id":"12345","sale_number":"7187",'
+                     '"sale_room_code":"LON","title":"Fine and Rare Wines",'
+                     '"auction_status":{"start_date":"2020-06-01T00:00Z"}}')
+        art_meta = ('{"sale_id":"18467","sale_number":"5057",'
+                    '"sale_room_code":"PAR","title":"ART AFRICAIN",'
+                    '"auction_status":{"start_date":"2003-06-12T00:00Z"}}')
+        sales = ('<urlset>'
+                 '<url><loc>https://www.christies.com/auction/a1</loc></url>'
+                 '<url><loc>https://www.christies.com/auction/a2</loc></url>'
+                 '<url><loc>https://www.christies.com/auction/a3</loc></url>'
+                 '</urlset>')
+
+        class DelaySession:
+            def get(self, url):
+                if "LotFinder_Sitemap1" in url:
+                    return FakeResponse(text=index)
+                if "SiteMapPastSales" in url:
+                    return FakeResponse(text=sales)
+                if "a1" in url:
+                    return FakeResponse(text=art_meta)
+                if "a2" in url:
+                    return FakeResponse(text=art_meta.replace(
+                        "18467", "18468").replace("5057", "5058"))
+                return FakeResponse(text=wine_meta)
+
+        refs, _ = f.discover_backfill(DelaySession(), delay=0.5)
+        self.assertEqual(len(refs), 1)
+        self.assertEqual(mock_sleep.call_count, 3)
+        for call in mock_sleep.call_args_list:
+            self.assertEqual(call[0][0], 0.5)
+
+    def test_discover_backfill_circuit_breaker(self):
+        f = ChristiesFetcher()
+        index = ('<sitemapindex><sitemap><loc>'
+                 'https://www.christies.com/SiteMapPastSales1.xml'
+                 '</loc></sitemap></sitemapindex>')
+        sales = ('<urlset>'
+                 + ''.join(f'<url><loc>https://www.christies.com/auction/'
+                           f'auction-fail-{i}/browse-lots</loc></url>'
+                           for i in range(5))
+                 + '</urlset>')
+
+        class FailSession:
+            def get(self, url):
+                if "LotFinder_Sitemap1" in url:
+                    return FakeResponse(text=index)
+                if "SiteMapPastSales" in url:
+                    return FakeResponse(text=sales)
+                return FakeResponse(text="", status_code=500)
+
+        with self.assertRaises(RuntimeError):
+            f.discover_backfill(FailSession(), max_fail=3)
+
+    def test_discover_backfill_permanent_404_no_breaker(self):
+        """Permanent 404s should not count toward the circuit breaker."""
+        f = ChristiesFetcher()
+        index = ('<sitemapindex><sitemap><loc>'
+                 'https://www.christies.com/SiteMapPastSales1.xml'
+                 '</loc></sitemap></sitemapindex>')
+        wine_meta = ('{"sale_id":"12345","sale_number":"7187",'
+                     '"sale_room_code":"LON","title":"Fine and Rare Wines",'
+                     '"auction_status":{"start_date":"2020-06-01T00:00Z"}}')
+        urls = ''.join(
+            f'<url><loc>https://www.christies.com/auction/stale-{i}'
+            f'/browse-lots</loc></url>' for i in range(5))
+        urls += ('<url><loc>https://www.christies.com/auction/good'
+                 '/browse-lots</loc></url>')
+        sales = f'<urlset>{urls}</urlset>'
+
+        class MixedSession:
+            def get(self, url):
+                if "LotFinder_Sitemap1" in url:
+                    return FakeResponse(text=index)
+                if "SiteMapPastSales" in url:
+                    return FakeResponse(text=sales)
+                if "stale" in url:
+                    return FakeResponse(text="", status_code=404)
+                return FakeResponse(text=wine_meta)
+
+        refs, _ = f.discover_backfill(MixedSession(), max_fail=3)
+        self.assertEqual(len(refs), 1)
+
+    def test_get_retry_handles_retryable_errors(self):
+        from ingest.fetchers.christies import _get_retry
+
+        class ErrorSession:
+            attempt = 0
+
+            def get(self, url):  # pylint: disable=unused-argument
+                ErrorSession.attempt += 1
+                if ErrorSession.attempt < 3:
+                    return FakeResponse(text="", status_code=429)
+                return FakeResponse(text="ok content")
+
+        result = _get_retry(ErrorSession(), "http://example.com",
+                            max_retries=3)
+        self.assertEqual(result, "ok content")
+
+    def test_get_retry_returns_permanent_skip_on_404(self):
+        from ingest.fetchers.christies import _get_retry
+
+        class NotFoundSession:
+            def get(self, url):  # pylint: disable=unused-argument
+                return FakeResponse(text="", status_code=404)
+
+        result = _get_retry(NotFoundSession(), "http://example.com")
+        self.assertIs(result, PERMANENT_SKIP)
 
 
 if __name__ == "__main__":

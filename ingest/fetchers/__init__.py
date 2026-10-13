@@ -1,6 +1,7 @@
 """Fetcher registry."""
 from .beschcannes import BeschCannesFetcher
-from .christies import ChristiesFetcher
+from .christies import (ChristiesFetcher, MalformedResponse, MetaInvalid,
+                        ReconciliationMismatch)
 from .dobiaschofsky import DobiaschofskyFetcher
 from .dorotheum import DorotheumFetcher
 from .sothebys import SothebysFetcher

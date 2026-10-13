@@ -18,3 +18,11 @@ class Fetcher(Protocol):
     def discover(self, session) -> list[AuctionRef]: ...
 
     def fetch(self, session, ref: AuctionRef) -> FetchResult: ...
+
+
+class BackfillFetcher(Fetcher, Protocol):
+    """Extended interface for fetchers that support historical backfill."""
+
+    def discover_backfill(self, session, delay: float = 0.0,
+                          max_fail: int = 10
+                          ) -> tuple[list[AuctionRef], list[dict]]: ...

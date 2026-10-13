@@ -67,13 +67,24 @@ Re-Normalisierungs-Lauf.
 - **(D1) Preis-Modell:** flache Spalten (`buyer_premium`, `fees`,
   `tax_amount`, `total_price`) **oder** separate `price_components`-Tabelle.
   Empfehlung: flache Spalten für Premium/Fees/Tax, `total` berechnet.
+  **Achtung:** Gross-only Häuser (Pandolfini, Zacky, HDH-aggregate) liefern
+  keinen Hammer — `total_price` kann dann nicht abgeleitet werden. Invariante
+  definieren: `price_source` Marker (`OBSERVED` vs. `DERIVED`) je Preisfeld,
+  plus Regel welches Feld autoritativ ist pro `price_basis`.
 - **(D2) CI↔Samsung:** (a) CI lädt DB-Artefakt auf Samsung hoch,
   (b) Ingest läuft **lokal** gegen Samsung statt CI,
   (c) CI produziert nur Archiv, lokal baut DB. Empfehlung (b) oder (c);
   klären, welche die „Master-DB"-Quelle ist.
+  **Status quo widerspricht sich:** `run_christies_backfill.py` nutzt
+  Google-Drive-Archiv + lokales Manifest; CI (`ingest.yml`) nutzt ein
+  eigenes Archiv-Artefakt + `data/ingest_manifest.json`. Beide fetchen
+  Christie's → Doppel-Fetch + Manifest-Drift. D2 muss **vor** weiterem
+  Code entschieden und konsolidiert werden.
 - **(D3) Premium-/Währungs-Quelle:** je Haus aus Primärquelle (Terms/Conditions)
-  verifizieren — nicht raten. Historische Währungen (NLG) mit Fixkurs
-  konvertieren oder als Rohwährung + Zeitstempel belassen.
+  verifizieren — nicht raten. Historische Währungen: NLG→EUR hat gesetzlichen
+  Fixkurs (2,20371) — **beides speichern**: Rohwährung + `fx_rate` +
+  `fx_target_currency` wo gesetzlicher Kurs existiert. Damit ist der
+  Währungs-Teil von D3 entschieden; offen bleibt nur die Premium-Quelle.
 
 ---
 
@@ -84,8 +95,13 @@ Re-Normalisierungs-Lauf.
 - **NFR-2 Korrektheit Premium:** Prozentsätze aus Primärquelle; Cross-Check
   `realised ≈ hammer × (1 + premium)` wo möglich.
 - **NFR-3 FX/Temporal:** Währung + Auktionsdatum zusammen; historische
-  Währungen (NLG) gemäß D3 explizit behandeln.
-- **NFR-4 Idempotenz Re-Normalisierung:** Wiederholungslauf byte-identisch;
+  Währungen (NLG) gemäß D3 explizit behandeln. **Bekannte Lücke:**
+  `auctions.auction_date` ist NULL für winebarrel (virtuelle Einzel-Auktion)
+  und idealwine "cote"-Auktionen — dieselben ~7 444 NULL-currency Lots.
+  Lot-Level `lot_date` als Fallback definieren.
+- **NFR-4 Idempotenz Re-Normalisierung:** Wiederholungslauf strukturell
+  identisch (Tabellen-Level Checksummen exkl. Build-Metadaten, da
+  `builds.started_at`/`completed_at` nicht determinisch sind);
   `UNIQUE`-Gates greifen.
 - **NFR-5 Fail-loud:** fehlende Pflicht-Attribute → Skip + Report, kein
   stummer Teil-Import.
@@ -119,6 +135,7 @@ Re-Normalisierungs-Lauf.
 | Location/Currency | Vollständigkeits-Query (0 NULL je Haus) | NFR-1 |
 | Idempotenz | Wiederholungslauf → 0 Änderungen | NFR-4 |
 | CI↔Samsung | Sync-Dry-Run + Prüfsummen-Vergleich | NFR-6 |
+| Backfill-Coverage | `N_discovered` vs. Ground-Truth Sale Count; Ambiguous-Titel-Review-File nicht leer = Completeness-Gap | NFR-1 |
 | Lint | Pylint | — |
 
 ---
