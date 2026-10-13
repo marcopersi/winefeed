@@ -22,8 +22,11 @@ ARCHIVE = os.environ.get(
     os.path.expanduser(
         "~/Library/CloudStorage/GoogleDrive-persi.marco@gmail.com/"
         "Meine Ablage/Wein/WeinAuktionspreise"))
+# Single shared manifest (D2): local runs and the CI ingest both read/write
+# data/ingest_manifest.json so they dedupe against the same state.
 MANIFEST_PATH = os.environ.get("MANIFEST_PATH",
-                               os.path.join(ARCHIVE, "ingest_manifest.json"))
+                               os.path.join(REPO, "data",
+                                            "ingest_manifest.json"))
 
 PROVIDERS = [
     "steinfels", "weinboerse", "weinauktionator", "hdh", "koppe",

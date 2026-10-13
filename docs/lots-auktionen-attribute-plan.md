@@ -71,15 +71,12 @@ Re-Normalisierungs-Lauf.
   keinen Hammer — `total_price` kann dann nicht abgeleitet werden. Invariante
   definieren: `price_source` Marker (`OBSERVED` vs. `DERIVED`) je Preisfeld,
   plus Regel welches Feld autoritativ ist pro `price_basis`.
-- **(D2) CI↔Samsung:** (a) CI lädt DB-Artefakt auf Samsung hoch,
-  (b) Ingest läuft **lokal** gegen Samsung statt CI,
-  (c) CI produziert nur Archiv, lokal baut DB. Empfehlung (b) oder (c);
-  klären, welche die „Master-DB"-Quelle ist.
-  **Status quo widerspricht sich:** `run_christies_backfill.py` nutzt
-  Google-Drive-Archiv + lokales Manifest; CI (`ingest.yml`) nutzt ein
-  eigenes Archiv-Artefakt + `data/ingest_manifest.json`. Beide fetchen
-  Christie's → Doppel-Fetch + Manifest-Drift. D2 muss **vor** weiterem
-  Code entschieden und konsolidiert werden.
+- **(D2) CI↔Samsung — entschieden (Option c):** CI produziert nur das
+  kumulative Archiv-Artefakt + committet `data/ingest_manifest.json`; lokal
+  baut `build_db.py` die Master-DB (Samsung) aus dem Archiv. **Ein geteiltes
+  Manifest** (`data/ingest_manifest.json`) für Backfill, lokalen `run_ingest`
+  und CI — damit kein Doppel-Fetch und keine Manifest-Drift. Der Sync
+  (CI-Artefakt → Samsung-Archiv) bleibt ein bewusster manueller Schritt.
 - **(D3) Premium-/Währungs-Quelle:** je Haus aus Primärquelle (Terms/Conditions)
   verifizieren — nicht raten. Historische Währungen: NLG→EUR hat gesetzlichen
   Fixkurs (2,20371) — **beides speichern**: Rohwährung + `fx_rate` +

@@ -34,8 +34,12 @@ ARCHIVE = os.environ.get(
     os.path.expanduser(
         "~/Library/CloudStorage/GoogleDrive-persi.marco@gmail.com/"
         "Meine Ablage/Wein/WeinAuktionspreise"))
+# Single shared manifest with the monthly CI ingest (D2): both write/read
+# data/ingest_manifest.json so the backfill and the cron run dedupe against the
+# same state and do not double-fetch.
 MANIFEST_PATH = os.environ.get("MANIFEST_PATH",
-                               os.path.join(ARCHIVE, "ingest_manifest.json"))
+                               os.path.join(REPO, "data",
+                                            "ingest_manifest.json"))
 ARCHIVE_DIR = os.path.join(ARCHIVE, ARCHIVE_DIRS["christies"])
 CANDIDATES_PATH = os.path.join(REPO, "data",
                                "christies_backfill_candidates.json")
