@@ -169,8 +169,14 @@ CREATE TABLE lots (
   hammer_price        REAL,
   buyer_premium       REAL,
   realised_price      REAL,
+  fees                REAL,
+  tax_amount          REAL,
+  total_price         REAL,
+  price_source        TEXT,
   price_basis         TEXT,
   currency            TEXT,
+  fx_rate             REAL,
+  fx_target_currency  TEXT,
   sold                INTEGER,
   condition_text      TEXT,
   description         TEXT,
@@ -407,6 +413,25 @@ def parse_qty_text(v):
     return int(m.group(1)) if m else None
 
 
+# Fixed auction location for houses bound to one physical saleroom. Houses with
+# per-auction locations (sothebys, christies) pass ``location`` explicitly.
+PROVIDER_LOCATIONS = {
+    "weinboerse": "Zürich",
+    "steinfels": "Zürich",
+    "baghera": "Genf",
+    "dobiaschofsky": "Bern",
+    "wermuth-sa": "Zürich",
+    "koppe": "Deutschland",
+    "weinauktionator": "Deutschland",
+    "finarte": "Italien",
+    "pandolfini": "Italien",
+    "besch-cannes": "Cannes",
+    "dorotheum": "Wien",
+    "hdh": "Chicago",
+    "langtons": "Sydney",
+}
+
+
 # --------------------------------------------------------------------------- #
 # Insert helpers
 # --------------------------------------------------------------------------- #
@@ -440,6 +465,7 @@ class Builder:
                     currency=None, price_basis=None, source_url=None,
                     scraped_at=None, location=None):
         pid = self.provider(provider)
+        location = location or PROVIDER_LOCATIONS.get(provider)
         cur = self.conn.execute(
             "INSERT OR IGNORE INTO auctions(provider_id, auction_id, title,"
             " auction_date, location, currency, price_basis, source_url,"
@@ -474,9 +500,11 @@ class Builder:
             " source_lot_key, wine, wine_ref_id, producer, vintage, region,"
             " appellation, classification, color, quantity, bottle_size_dl,"
             " estimate_low, estimate_high, hammer_price, buyer_premium,"
-            " realised_price, price_basis, currency, sold, mixed_lot,"
+            " realised_price, fees, tax_amount, total_price, price_source,"
+            " price_basis, currency, fx_rate, fx_target_currency,"
+            " sold, mixed_lot,"
             " condition_text, description, source_url, scraped_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (auction_id, row.get("lot_no"), row.get("lot_date"),
              source_file, source_record_locator,
              raw_wine, raw_producer, raw_vintage,
@@ -487,7 +515,11 @@ class Builder:
              row.get("bottle_size_dl"), row.get("estimate_low"),
              row.get("estimate_high"), row.get("hammer_price"),
              row.get("buyer_premium"), row.get("realised_price"),
-             row.get("price_basis"), row.get("currency"), row.get("sold"),
+             row.get("fees"), row.get("tax_amount"),
+             row.get("total_price"), row.get("price_source"),
+             row.get("price_basis"), row.get("currency"),
+             row.get("fx_rate"), row.get("fx_target_currency"),
+             row.get("sold"),
              row.get("mixed_lot"), row.get("condition_text"),
              row.get("description"), row.get("source_url"),
              row.get("scraped_at")))
@@ -1235,11 +1267,31 @@ def _build(conn, args):
     np_ = conn.execute("SELECT count(*) FROM providers").fetchone()[0]
     print(f"\nproviders={np_} auctions={na} lots={nl}")
 
+    _annotate_fx(conn)
+
     if not args.skip_resolution:
         from build_wines import run as resolve_wines
         resolve_wines(conn)
 
     _record_build_metadata(conn)
+
+
+# Legal euro fix rates for pre-euro currencies (D3): 1 EUR = rate units.
+_FX_FIX = {
+    "NLG": 2.20371,
+}
+
+
+def _annotate_fx(conn):
+    """Annotate historical currencies with their legal fix rate (D3).
+
+    Raw currency is kept; ``fx_rate`` (units per 1 EUR) and
+    ``fx_target_currency`` are stored so FX/arbitrage logic can convert.
+    """
+    for currency, rate in _FX_FIX.items():
+        conn.execute(
+            "UPDATE lots SET fx_rate = ?, fx_target_currency = 'EUR'"
+            " WHERE currency = ?", (rate, currency))
 
 
 def _acquire_lock(lock_path):
