@@ -19,13 +19,13 @@ Fetcher liefert), Buyer's Premium, Fees (Lotgebühr), MwSt/VAT, Quelle.
 | steinfels | HAMMER | 12 % + CHF 10/Lot Lotgebühr | CHF 10/Lot | 8,1 % | bestätigt (Bidding-Seite) |
 | finarte | HAMMER | 23 % (Wines & Spirits, 18,85 % + VAT) | — | VAT | bestätigt (Conditions of Sale) |
 | weinboerse | HAMMER | 15 % + CHF 10/Lot Lotgebühr | CHF 10/Lot | 8,1 % | bestätigt (Katalog) |
-| koppe | HAMMER | **offen** | **offen** | **offen** | zu ermitteln |
-| weinauktionator | HAMMER | **offen** | **offen** | **offen** | zu ermitteln |
-| dobiaschofsky | HAMMER | **offen** | **offen** | **offen** | zu ermitteln |
-| wermuth-sa | HAMMER | **offen** | **offen** | **offen** | zu ermitteln |
-| besch-cannes | HAMMER | **offen** | **offen** | **offen** | zu ermitteln |
-| munich-wine-company | HAMMER | **offen** | **offen** | **offen** | zu ermitteln |
-| winebarrel | HAMMER | **offen** | **offen** | **offen** | zu ermitteln |
+| koppe | HAMMER | 10 % | EUR 5/Lot Abwicklungsgebühr | USt auf Aufgeld | bestätigt (Auktionsbedingungen) |
+| weinauktionator | HAMMER | 15 % | — | USt | bestätigt (AGB) |
+| dobiaschofsky | HAMMER | 25 % (bis CHF 200k) / 22 % (ab CHF 200k) | — | 8,1 % auf Aufgeld | bestätigt (Auktionsbedingungen) |
+| wermuth-sa (Denz, Zürich) | HAMMER | 10 % | CHF 8/Lot | 8,1 % | bestätigt (Konditionen) |
+| besch-cannes | HAMMER | 24 % (direkt) / 27,6 % (Interenchères) / 25,8 % (Drouot) | — | inkl. MwSt | bestätigt |
+| munich-wine-company | HAMMER | 15 % | € 5/Lot | USt | bestätigt |
+| winebarrel | — (Konsignations-Service, kein klassisches Aufgeld) | Seller-Provision 7,5–15 % (gestaffelt) | — | — | bestätigt |
 
 ## Preis-Quelle-Invariante (D1)
 
