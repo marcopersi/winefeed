@@ -57,6 +57,38 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (10.0, 5.0, 115.0, "DERIVED"))
         conn.close()
 
+    def test_apply_tax(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "Koppe 1", None, "EUR",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x",
+                               "hammer_price": 100.0, "price_basis": "HAMMER",
+                               "currency": "EUR"})
+        build_db._apply_premium_policy(conn)
+        build_db._apply_tax(conn)
+        row = conn.execute(
+            "SELECT buyer_premium, fees, tax_amount, total_price, price_source"
+            " FROM lots").fetchone()
+        self.assertEqual(row, (10.0, 5.0, 1.9, 116.9, "DERIVED"))
+        conn.close()
+
+    def test_fill_lot_date(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "Koppe 1", "2026-01-31",
+                                   "EUR", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x",
+                               "lot_date": "2026-01-30"})
+        builder.add_lot(a_id, {"lot_no": "2", "wine": "y"})
+        build_db._fill_lot_date(conn)
+        rows = conn.execute(
+            "SELECT lot_no, lot_date FROM lots ORDER BY lot_no").fetchall()
+        self.assertEqual(rows, [("1", "2026-01-30"), ("2", "2026-01-31")])
+        conn.close()
+
     def test_langtons(self):
         data = {"auction": {"id": "8212", "name": "Unreserved", "date": None},
                 "lots": [{"lot": "1", "wine": "Penfolds Grange",

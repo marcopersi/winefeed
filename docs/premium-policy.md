@@ -36,3 +36,24 @@ Fetcher liefert), Buyer's Premium, Fees (Lotgebühr), MwSt/VAT, Quelle.
 - `total_price` = realised + fees + tax.
 - Gross-only Häuser (pandolfini, zacky, HDH-aggregate) haben **keinen** Hammer;
   `hammer_price` bleibt NULL und `realised_price` ist OBSERVED.
+
+## MwSt-Ableitung (D3)
+
+`tax_amount` wird nur für Häuser mit klar belegter gesetzlicher MwSt **aufs
+Aufgeld** abgeleitet (`tax_amount = ROUND(buyer_premium × rate, 2)`) und auf
+`total_price` aufgeschlagen:
+
+| Haus | Rate | Land |
+|---|---|---|
+| winefields | 21 % | NL |
+| steinfels | 8,1 % | CH |
+| weinboerse | 8,1 % | CH |
+| wermuth-sa | 8,1 % | CH |
+| dobiaschofsky | 8,1 % auf Aufgeld | CH |
+| koppe | 19 % USt | DE |
+| weinauktionator | 19 % USt | DE |
+| munich-wine-company | 19 % USt | DE |
+
+Häuser mit im Aufgeld enthaltener MwSt (finarte, besch-cannes, dorotheum,
+baghera) sowie nicht numerisch belegte Raten (sothebys, langtons, christies)
+bleiben `tax_amount = NULL`.

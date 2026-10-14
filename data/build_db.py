@@ -1281,6 +1281,8 @@ def _build(conn, args):
 
     _annotate_fx(conn)
     _apply_premium_policy(conn)
+    _apply_tax(conn)
+    _fill_lot_date(conn)
 
     if not args.skip_resolution:
         from build_wines import run as resolve_wines
@@ -1356,6 +1358,52 @@ def _apply_premium_policy(conn):
             " AND auction_id IN (SELECT id FROM auctions WHERE provider_id ="
             " (SELECT id FROM providers WHERE name = ?))",
             (rate, rate, fees, rate, fees, provider))
+
+
+def _fill_lot_date(conn):
+    """Backfill lots.lot_date from auctions.auction_date where missing (D3).
+
+    Only fills NULL lot_date; existing values are never overwritten.
+    """
+    conn.execute(
+        "UPDATE lots SET lot_date ="
+        " (SELECT auction_date FROM auctions WHERE auctions.id = lots.auction_id)"
+        " WHERE lot_date IS NULL")
+
+
+# VAT/USt on the buyer's premium for houses with a clearly documented legal
+# rate. ``tax_amount`` is derived as a fraction of the buyer's premium (not the
+# hammer). Houses whose premium already includes VAT (finarte, besch-cannes,
+# dorotheum, baghera) or whose rate is not numerically documented (sothebys,
+# langtons, christies) are intentionally absent.
+TAX_POLICY = {
+    "winefields": 0.21,
+    "steinfels": 0.081,
+    "weinboerse": 0.081,
+    "wermuth-sa": 0.081,
+    "dobiaschofsky": 0.081,
+    "koppe": 0.19,
+    "weinauktionator": 0.19,
+    "munich-wine-company": 0.19,
+}
+
+
+def _apply_tax(conn):
+    """Derive tax_amount (VAT/USt on the buyer's premium) per TAX_POLICY.
+
+    Applies only to lots that already carry a buyer_premium (derived by
+    ``_apply_premium_policy`` or observed). ``total_price`` is extended by the
+    tax amount: total_price = realised + fees + tax.
+    """
+    for provider, rate in TAX_POLICY.items():
+        conn.execute(
+            "UPDATE lots SET"
+            " tax_amount = ROUND(buyer_premium * ?, 2),"
+            " total_price = total_price + ROUND(buyer_premium * ?, 2)"
+            " WHERE buyer_premium IS NOT NULL"
+            " AND auction_id IN (SELECT id FROM auctions WHERE provider_id ="
+            " (SELECT id FROM providers WHERE name = ?))",
+            (rate, rate, provider))
 
 
 def _acquire_lock(lock_path):
