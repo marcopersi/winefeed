@@ -12,6 +12,13 @@ import unicodedata
 _PUNCT = re.compile(r"[^a-z0-9 ]+")
 _WS = re.compile(r"\s+")
 
+# Word-level abbreviations, expanded before matching so that "ch montrose" and
+# "chateau montrose" produce the same key. Only "ch" is safe: "dom" is
+# ambiguous (Dom Pérignon / Dom Ruinart use "Dom" as a title, not "Domaine").
+_ABBREV = {
+    "ch": "chateau",
+}
+
 
 def normalize(value):
     """Return a normalized matching key for a raw name.
@@ -28,6 +35,7 @@ def normalize(value):
     s = s.replace("'", " ").replace("\u2019", " ")
     s = _PUNCT.sub(" ", s)
     s = _WS.sub(" ", s).strip()
+    s = " ".join(_ABBREV.get(w, w) for w in s.split())
     return s
 
 

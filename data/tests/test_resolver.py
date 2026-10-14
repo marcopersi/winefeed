@@ -39,13 +39,20 @@ class TestResolver(unittest.TestCase):
         self.assertEqual(res["status"], r.STATUS_AMBIGUOUS)
         self.assertEqual(res["reason"], "conflicting-producer")
 
-    def test_conflicting_region(self):
+    def test_conflicting_region_resolves_with_most_frequent(self):
         res = r.resolve_group([
+            obs("Château X", region="Pauillac"),
             obs("Château X", region="Pauillac"),
             obs("Château X", region="Saint-Julien"),
         ])
-        self.assertEqual(res["status"], r.STATUS_AMBIGUOUS)
-        self.assertEqual(res["reason"], "conflicting-region")
+        self.assertEqual(res["status"], r.STATUS_RESOLVED)
+        self.assertEqual(res["region"], "Pauillac")
+
+    def test_abbreviation_normalizes(self):
+        self.assertEqual(normalize("Ch. Montrose"), normalize("Château Montrose"))
+
+    def test_dom_title_not_expanded(self):
+        self.assertEqual(normalize("Dom Pérignon"), "dom perignon")
 
     def test_stable_key_deterministic(self):
         k1 = r.stable_key("chateau margaux", "chateau margaux", "")

@@ -660,7 +660,7 @@ def load_winefields(b, limit):
             cur = lot.get("currency")
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_no")),
-                "wine": lot.get("title"), "producer": lot.get("producer"),
+                "wine": lot.get("title"),
                 "quantity": to_int(lot.get("quantity")),
                 "bottle_size_dl": parse_dl(lot.get("size")),
                 "estimate_low": to_float(lot.get("estimate_low")),
@@ -1114,7 +1114,7 @@ def load_wermuth(b, limit):
             b.add_lot(a_id, {
                 "lot_no": str(_v(rec, "providerOfferingId")),
                 "wine": _v(rec, "name"),
-                "producer": _v(rec, "producer"),
+                "classification": _clean(_v(rec, "producer")),
                 "vintage": to_int(_v(rec, "vintage")),
                 "quantity": to_int(_v(rec, "noOfBottles")),
                 "bottle_size_dl": to_float(_v(rec, "deciliters")),
@@ -1137,6 +1137,14 @@ def _v(rec, key):
         if k and k.strip().lower() == key.strip().lower():
             return rec[k]
     return None
+
+
+def _clean(v):
+    """Normalize 'null'/'none' strings and blanks to None."""
+    if v is None:
+        return None
+    s = str(v).strip().lower()
+    return None if s in ("", "null", "none") else v
 
 
 def load_steinfels(b, limit):
@@ -1167,8 +1175,8 @@ def load_steinfels(b, limit):
             b.add_lot(a_id, {
                 "lot_no": str(_v(rec, "Lot")),
                 "wine": _v(rec, "Wine"),
-                "producer": _v(rec, "Producer") or None,
-                "region": _v(rec, "Region") or None,
+                "producer": _clean(_v(rec, "Producer")),
+                "region": _clean(_v(rec, "Region")),
                 "vintage": to_int(_v(rec, "Year")),
                 "quantity": to_int(_v(rec, "Quantity")),
                 "bottle_size_dl": to_float(_v(rec, "Unit_DL")),
