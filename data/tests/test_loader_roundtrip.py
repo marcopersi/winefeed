@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 import build_db
+import build_wines
 
 
 def _run_loader(house_dir, filename, data, loader_name):
@@ -217,6 +218,24 @@ class TestLoaderRoundtrip(unittest.TestCase):
         count, hammer, wine = _run_loader(
             "Dobiaschofsky", "auktion-wein.json", data, "load_dobiaschofsky")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_backfill_wine_ref_uses_alias_key(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO wine_alias_resolutions(scope_key, alias_key,"
+            " discriminator_key, wine_id, resolution_status,"
+            " resolution_method, confidence, rule_version, reason)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            ("global", "chambolle musigny francois bertheau", "", 42,
+             "RESOLVED", "auto", 1.0, "1.0", "consistent"))
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, lot_kind)"
+            " VALUES (1, '1', 'Chambolle-Musigny François Bertheau', 'SINGLE')")
+        build_wines._backfill_wine_ref(conn)
+        ref = conn.execute("SELECT wine_ref_id FROM lots").fetchone()[0]
+        self.assertEqual(ref, 42)
+        conn.close()
 
 
 if __name__ == "__main__":

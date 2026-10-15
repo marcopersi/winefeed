@@ -35,3 +35,10 @@ data/christies_backfill_ambiguous.json
 .env
 .env.local
 .env_local
+
+# Generated offline producer-consolidation artifacts (reproducible)
+data/reference/wine_alias_overrides_producer.csv
+data/reference/wine_llm_overrides.csv
+data/reference/wine_llm_rest.csv
+data/reference/wine_producer_review.csv
+data/reference/wine_llm_overrides.csv.state

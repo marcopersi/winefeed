@@ -316,7 +316,8 @@ def _resolve(conn, observations, overrides, idealwine_ref):
 
 def _backfill_wine_ref(conn):
     key_to_wine = dict(conn.execute(
-        "SELECT canonical_key, id FROM wines").fetchall())
+        "SELECT alias_key, wine_id FROM wine_alias_resolutions"
+        " WHERE wine_id IS NOT NULL").fetchall())
     cache = {}
     updates = []
     for lot_id, wine in conn.execute(
