@@ -1093,6 +1093,19 @@ def load_idealwine(b, limit):
 
 # --- Excel/CSV houses ------------------------------------------------------ #
 
+def _is_blank_row(row):
+    """True if every cell in an openpyxl row tuple is empty.
+
+    Guards against openpyxl's used-range extending past the real data
+    (leftover formatting on deleted/never-filled rows): iter_rows() then
+    yields trailing all-None rows that aren't real data. Confirmed on
+    "Wermuth SA._14.03.2015" (657 real rows, 341 trailing blanks) and
+    "Wermuth SA._06.06.2015" (786 real, 208 blanks) — without this guard
+    they become fully-NULL lots.
+    """
+    return all(v is None or str(v).strip() == "" for v in row)
+
+
 def load_wermuth(b, limit):
     path = os.path.join(REPO, "VinoImporter", "validatedOutput",
                         "vinoStagingFile2015-2008.xlsx")
@@ -1109,7 +1122,15 @@ def load_wermuth(b, limit):
         event = None
         lots = []
         for row in all_rows[1:]:
+            if _is_blank_row(row):
+                continue
             rec = dict(zip(header, row))
+            # Sheets end with a "Total: <sum of hammer prices>" row: no
+            # lot_no/name/quantity, just a price. It's not a lot — skip it
+            # so it can't double the auction's apparent total if anything
+            # ever sums hammer_price directly over `lots`.
+            if not str(_v(rec, "name") or "").strip():
+                continue
             if event is None:
                 ev = _v(rec, "eventIdentifier")
                 if ev and str(ev).strip() not in ("", "null", "None"):
@@ -1234,7 +1255,13 @@ def load_steinfels_staging(b, limit):
         event = None
         lots = []
         for row in all_rows[1:]:
+            if _is_blank_row(row):
+                continue
             rec = dict(zip(header, row))
+            # See load_wermuth: a trailing "Total" row with a price but no
+            # name/lot_no isn't a lot.
+            if not str(_v(rec, "name") or "").strip():
+                continue
             if event is None:
                 ev = _v(rec, "eventIdentifier")
                 if ev and str(ev).strip() not in ("", "null", "None"):
