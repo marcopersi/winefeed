@@ -6,5 +6,5 @@ is traceable and reproducible.
 """
 
 LOADER_VERSION = "1.0.0"
-NORMALIZER_VERSION = "1.1.0"
+NORMALIZER_VERSION = "1.2.0"
 RESOLVER_VERSION = "1.1.0"

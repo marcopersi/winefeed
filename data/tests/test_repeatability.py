@@ -65,9 +65,14 @@ class TestRepeatability(unittest.TestCase):
 
     def test_margaux_merged(self):
         conn = build_fixture()
+        # §4.2/4.3: the producer-index + fuzzy match splits "Château
+        # Margaux" into producer="Château Margaux" / wine="Margaux" (the
+        # pure wine name, per the Wine.name/Wine.producer model in §0 of
+        # wine-pipeline-v2.md), so both raw spellings merge under
+        # canonical_key='margaux' with producer_key='chateau margaux'.
         cnt = conn.execute(
-            "SELECT count(*) FROM wines WHERE canonical_key="
-            "'chateau margaux'").fetchone()[0]
+            "SELECT count(*) FROM wines WHERE canonical_key='margaux'"
+            " AND producer_key='chateau margaux'").fetchone()[0]
         self.assertEqual(cnt, 1)
 
     def test_petrus_merged_via_override(self):
@@ -83,6 +88,21 @@ class TestRepeatability(unittest.TestCase):
             "SELECT count(*) FROM lots WHERE lot_kind='MIXED'"
             " AND wine_ref_id IS NOT NULL").fetchone()[0]
         self.assertEqual(bad, 0)
+
+    def test_single_lots_backfilled(self):
+        # Regression gate for the exact "stiller Datenverlust" §4.1 exists
+        # to prevent: a SINGLE lot that was correctly resolved into
+        # wine_alias_resolutions must come back out with a wine_ref_id.
+        # This caught a real bug where producer/wine matching (§4.2/4.3)
+        # rewrote the in-memory alias but never wrote it back to
+        # lots.wine/lots.producer, so _backfill_wine_ref looked up a key
+        # the resolutions table never had — every matched lot lost its
+        # wine_ref_id silently.
+        conn = build_fixture()
+        missing = conn.execute(
+            "SELECT count(*) FROM lots WHERE lot_kind='SINGLE'"
+            " AND wine_ref_id IS NULL").fetchone()[0]
+        self.assertEqual(missing, 0)
 
 
 if __name__ == "__main__":

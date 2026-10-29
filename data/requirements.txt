@@ -3,3 +3,4 @@ requests>=2.31
 beautifulsoup4>=4.12
 pdfplumber>=0.11
 curl_cffi>=0.16
+rapidfuzz>=3.6

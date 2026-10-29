@@ -123,10 +123,10 @@ def _parse_bottle_formats(conn):
     """Derive quantity + bottle_size_dl from '(6 BT)'-style name hints."""
     from wine_resolution.bottle import parse_bottle_format
     updates = []
-    for lot_id, raw_wine in conn.execute(
-            "SELECT id, raw_wine FROM lots WHERE quantity IS NULL"
-            " AND raw_wine IS NOT NULL AND raw_wine != ''"):
-        qty, dl = parse_bottle_format(raw_wine)
+    for lot_id, raw_wine, description in conn.execute(
+            "SELECT id, raw_wine, description FROM lots WHERE quantity IS NULL"
+            " AND (raw_wine IS NOT NULL OR description IS NOT NULL)"):
+        qty, dl = parse_bottle_format(raw_wine, description)
         if qty is not None:
             updates.append((qty, dl, lot_id))
     conn.executemany(
@@ -137,7 +137,32 @@ def _parse_bottle_formats(conn):
 # Lot classification
 # --------------------------------------------------------------------------- #
 
+def _exclude_spirits(conn):
+    """Mark spirit lots UNKNOWN so they never reach wine resolution.
+
+    ``wine_resolution.spirits`` is a curated detector (Armagnac, Cognac,
+    brandy...) that existed but was never wired into the pipeline — spirit
+    lots flowed straight into producer/wine matching and picked up false
+    wine identities (e.g. "Marquis de Montdidier Armagnac" resolving a
+    producer purely from "Marquis de ..." word overlap).
+    """
+    from wine_resolution.spirits import is_spirit, load_terms
+    terms = load_terms()
+    updates = []
+    for lot_id, wine, description in conn.execute(
+            "SELECT id, wine, description FROM lots WHERE lot_kind IS NULL"):
+        text = " ".join(x for x in (wine or "", description or "") if x)
+        if text and is_spirit(text, terms):
+            updates.append((lot_id,))
+    conn.executemany(
+        "UPDATE lots SET lot_kind=?, mixed_reason=?, mixed_rule_id=?"
+        " WHERE id=?",
+        [(KIND_UNKNOWN, "spirit", "spirit-terms", lot_id)
+         for (lot_id,) in updates])
+
+
 def _classify_lots(conn):
+    _exclude_spirits(conn)
     conn.execute("UPDATE lots SET lot_kind=?, mixed_reason=?, mixed_rule_id=?"
                  " WHERE mixed_lot=1",
                  (KIND_MIXED, "provider-flag", "provider-flag"))
@@ -188,8 +213,37 @@ def _classify_lots(conn):
 # Observations + resolution
 # --------------------------------------------------------------------------- #
 
+def _match_producer_and_wine(matcher, wine, producer):
+    """Apply §4.2/§4.3 to one (wine, producer) pair, return the resolved pair."""
+    if not producer:
+        # §4.2: if the producer is missing, extract it from the name via
+        # the reference-list token index.
+        matched = matcher.match_producer(wine)
+        if matched:
+            producer = matched
+    else:
+        # The source producer may be a raw variant ("Ch. Margaux") that
+        # isn't the key match_wine's producer_wines index is built on (the
+        # canonical name) — canonicalize it first, or §4.3 below silently
+        # finds no wines and skips the fuzzy match.
+        canonical = matcher.canonical_producer(producer)
+        if canonical:
+            producer = canonical
+    if producer:
+        # §4.3: if the producer is known, normalize the wine name against
+        # its reference list (fuzzy).
+        matched_wine = matcher.match_wine(producer, wine)
+        if matched_wine:
+            wine = matched_wine
+    return wine, producer
+
+
 def _build_observations(conn):
+    from wine_resolution.producer_match import ProducerMatcher
+    matcher = ProducerMatcher()
     observations = []
+    lot_updates = []
+    cache = {}
     rows = conn.execute("""
         SELECT l.id, p.id, l.wine, l.producer, l.region
         FROM lots l
@@ -200,6 +254,18 @@ def _build_observations(conn):
     for lot_id, provider_id, wine, producer, region in rows:
         if not is_valid_name(wine):
             continue
+        ckey = (wine, producer)
+        if ckey not in cache:
+            cache[ckey] = _match_producer_and_wine(matcher, wine, producer)
+        wine, producer = cache[ckey]
+        # Persist the matched values: _backfill_wine_ref (and any other
+        # consumer) reads lots.wine/lots.producer directly, so they must
+        # agree with the alias_key/producer_key written below for this
+        # same alias — otherwise every lot that benefits from matching
+        # loses its wine_ref_id, the exact silent-data-loss failure §4.1
+        # exists to prevent.
+        if (wine, producer) != ckey:
+            lot_updates.append((wine, producer, lot_id))
         observations.append({
             "source_lot_id": lot_id,
             "provider_id": provider_id,
@@ -210,6 +276,9 @@ def _build_observations(conn):
             "region_raw": region,
             "region_key": normalize(region),
         })
+    if lot_updates:
+        conn.executemany(
+            "UPDATE lots SET wine=?, producer=? WHERE id=?", lot_updates)
     return observations
 
 
@@ -244,90 +313,109 @@ def _resolve(conn, observations, overrides, idealwine_ref):
     wine_ids = {}
     for alias_key in sorted(groups):
         obs = groups[alias_key]
-        evidence = {}
+        # AMBIGUOUS-splitting (§4.1): split by producer_key so each
+        # (alias_key, producer_key) pair resolves to its own wine instead of
+        # silently dropping the lots.
+        by_producer = {}
         for o in obs:
-            evidence[o["alias_raw"]] = evidence.get(o["alias_raw"], 0) + 1
-        agg = []
-        for alias_raw, cnt in evidence.items():
-            producer_raw = next((o.get("producer_raw") for o in obs
-                                 if o["alias_raw"] == alias_raw), None)
-            region_raw = next((o.get("region_raw") for o in obs
-                               if o["alias_raw"] == alias_raw), None)
-            agg.append({
-                "alias_raw": alias_raw,
-                "alias_key": alias_key,
-                "producer_raw": producer_raw,
-                "producer_key": normalize(producer_raw),
-                "region_raw": region_raw,
-                "region_key": normalize(region_raw),
-                "evidence_count": cnt,
-            })
-
-        for o in obs:
-            conn.execute(
-                "INSERT INTO wine_alias_observations(provider_id, alias_raw,"
-                " alias_key, producer_raw, producer_key, region_raw, region_key,"
-                " source_lot_id, evidence_count, normalizer_version)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (o["provider_id"], o["alias_raw"], o["alias_key"],
-                 o["producer_raw"], o["producer_key"], o["region_raw"],
-                 o["region_key"], o["source_lot_id"], 1, NORMALIZER_VERSION))
+            by_producer.setdefault(o["producer_key"] or "", []).append(o)
 
         forced = override_map.get(alias_key)
         idealwine_name = idealwine_ref.get(alias_key)
-        res = resolve_group(agg, idealwine_name or forced)
 
-        if res["status"] == STATUS_RESOLVED:
-            canonical_name = forced or res["canonical_name"]
-            canonical_key = normalize(canonical_name)
-            skey = stable_key(canonical_key, res["discriminator_key"])
-            if skey not in wine_ids:
-                cur = conn.execute(
-                    "INSERT INTO wines(stable_key, canonical_name,"
-                    " canonical_key, producer, producer_key, region,"
-                    " classification, canonical_source, resolver_version,"
-                    " review_status) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                    (skey, canonical_name, canonical_key, res["producer"],
-                     normalize(res["producer"]), res["region"], None,
-                     "idealwine" if idealwine_name else
-                     ("curated" if forced else "auto"),
-                     RESOLVER_VERSION, "AUTO_RESOLVED"))
-                wine_ids[skey] = cur.lastrowid
-            conn.execute(
-                "INSERT INTO wine_alias_resolutions(scope_key, alias_key,"
-                " discriminator_key, wine_id, resolution_status,"
-                " resolution_method, confidence, rule_version, reason)"
-                " VALUES (?,?,?,?,?,?,?,?,?)",
-                ("global", alias_key, res["discriminator_key"],
-                 wine_ids[skey], STATUS_RESOLVED,
-                 "curated" if forced else
-                 ("idealwine" if idealwine_name else "auto"),
-                 1.0, RESOLVER_VERSION, res["reason"]))
-        else:
-            conn.execute(
-                "INSERT INTO wine_alias_resolutions(scope_key, alias_key,"
-                " discriminator_key, wine_id, resolution_status,"
-                " resolution_method, confidence, rule_version, reason)"
-                " VALUES (?,?,?,?,?,?,?,?,?)",
-                ("global", alias_key, res["discriminator_key"], None,
-                 STATUS_AMBIGUOUS, "auto", None, RESOLVER_VERSION,
-                 res["reason"]))
+        for sub_obs in by_producer.values():
+            evidence = {}
+            for o in sub_obs:
+                evidence[o["alias_raw"]] = evidence.get(o["alias_raw"], 0) + 1
+            agg = []
+            for alias_raw, cnt in evidence.items():
+                producer_raw = next((o.get("producer_raw") for o in sub_obs
+                                     if o["alias_raw"] == alias_raw), None)
+                region_raw = next((o.get("region_raw") for o in sub_obs
+                                   if o["alias_raw"] == alias_raw), None)
+                agg.append({
+                    "alias_raw": alias_raw,
+                    "alias_key": alias_key,
+                    "producer_raw": producer_raw,
+                    "producer_key": normalize(producer_raw),
+                    "region_raw": region_raw,
+                    "region_key": normalize(region_raw),
+                    "evidence_count": cnt,
+                })
+
+            for o in sub_obs:
+                conn.execute(
+                    "INSERT INTO wine_alias_observations(provider_id, alias_raw,"
+                    " alias_key, producer_raw, producer_key, region_raw,"
+                    " region_key, source_lot_id, evidence_count,"
+                    " normalizer_version) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (o["provider_id"], o["alias_raw"], o["alias_key"],
+                     o["producer_raw"], o["producer_key"], o["region_raw"],
+                     o["region_key"], o["source_lot_id"], 1,
+                     NORMALIZER_VERSION))
+
+            # Precedence: a curated MERGE override is a human decision about
+            # this specific alias and outranks idealwine (an automatic
+            # source) — consistent with §4.5 ("CURATED = höchste
+            # Vertrauensstufe, nie vom Auto-Resolver überschrieben").
+            # ``res["canonical_name"]`` is the one place the name is
+            # decided, so ``canonical_source``/``resolution_method`` below
+            # just need to describe *that* choice instead of re-deriving it
+            # (the previous code re-derived it inconsistently: the name
+            # followed curated>idealwine>auto but the logged
+            # canonical_source checked idealwine first).
+            res = resolve_group(agg, forced or idealwine_name)
+
+            if res["status"] == STATUS_RESOLVED:
+                canonical_name = res["canonical_name"]
+                canonical_key = normalize(canonical_name)
+                source = ("curated" if forced else
+                          ("idealwine" if idealwine_name else "auto"))
+                skey = stable_key(canonical_key, res["discriminator_key"])
+                if skey not in wine_ids:
+                    cur = conn.execute(
+                        "INSERT INTO wines(stable_key, canonical_name,"
+                        " canonical_key, producer, producer_key, region,"
+                        " classification, canonical_source, resolver_version,"
+                        " review_status) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                        (skey, canonical_name, canonical_key, res["producer"],
+                         normalize(res["producer"]), res["region"], None,
+                         source, RESOLVER_VERSION, "AUTO_RESOLVED"))
+                    wine_ids[skey] = cur.lastrowid
+                conn.execute(
+                    "INSERT INTO wine_alias_resolutions(scope_key, alias_key,"
+                    " discriminator_key, wine_id, resolution_status,"
+                    " resolution_method, confidence, rule_version, reason)"
+                    " VALUES (?,?,?,?,?,?,?,?,?)",
+                    ("global", alias_key, res["discriminator_key"],
+                     wine_ids[skey], STATUS_RESOLVED, source,
+                     1.0, RESOLVER_VERSION, res["reason"]))
+            else:
+                conn.execute(
+                    "INSERT INTO wine_alias_resolutions(scope_key, alias_key,"
+                    " discriminator_key, wine_id, resolution_status,"
+                    " resolution_method, confidence, rule_version, reason)"
+                    " VALUES (?,?,?,?,?,?,?,?,?)",
+                    ("global", alias_key, res["discriminator_key"], None,
+                     STATUS_AMBIGUOUS, "auto", None, RESOLVER_VERSION,
+                     res["reason"]))
 
 
 def _backfill_wine_ref(conn):
-    key_to_wine = dict(conn.execute(
-        "SELECT alias_key, wine_id FROM wine_alias_resolutions"
-        " WHERE wine_id IS NOT NULL").fetchall())
+    key_to_wine = {(r[0], r[1]): r[2] for r in conn.execute(
+        "SELECT alias_key, discriminator_key, wine_id"
+        " FROM wine_alias_resolutions WHERE wine_id IS NOT NULL").fetchall()}
     cache = {}
     updates = []
-    for lot_id, wine in conn.execute(
-            "SELECT id, wine FROM lots WHERE wine_ref_id IS NULL"
+    for lot_id, wine, producer in conn.execute(
+            "SELECT id, wine, producer FROM lots WHERE wine_ref_id IS NULL"
             " AND wine IS NOT NULL AND wine != '' AND lot_kind = 'SINGLE'"):
         key = cache.get(wine)
         if key is None:
             key = normalize(wine)
             cache[wine] = key
-        wid = key_to_wine.get(key)
+        pk = normalize(producer)
+        wid = key_to_wine.get((key, pk)) or key_to_wine.get((key, ""))
         if wid is not None:
             updates.append((wid, lot_id))
     conn.executemany("UPDATE lots SET wine_ref_id=? WHERE id=?", updates)
