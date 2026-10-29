@@ -11,6 +11,8 @@ Every run drops and recreates the schema, so the result is fully reproducible:
     python3 build_db.py --dry-run  # no write
 """
 import argparse
+import csv
+import datetime
 import glob
 import json
 import os
@@ -182,6 +184,9 @@ CREATE TABLE lots (
   description         TEXT,
   source_url          TEXT,
   scraped_at          TEXT,
+  is_ohk              INTEGER,
+  note                TEXT,
+  price_per_bottle    REAL,
   CHECK (vintage_final IS NULL OR vintage_final BETWEEN 1700 AND 2100),
   CHECK (lot_kind IS NULL OR lot_kind IN ('SINGLE', 'MIXED', 'UNKNOWN')),
   CHECK (lot_kind <> 'MIXED' OR wine_ref_id IS NULL),
@@ -508,8 +513,10 @@ class Builder:
             " realised_price, fees, tax_amount, total_price, price_source,"
             " price_basis, currency, fx_rate, fx_target_currency,"
             " sold, mixed_lot,"
-            " condition_text, description, source_url, scraped_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " condition_text, description, source_url, scraped_at,"
+            " is_ohk, note, price_per_bottle)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"
+            "?,?)",
             (auction_id, row.get("lot_no"), row.get("lot_date"),
              source_file, source_record_locator,
              raw_wine, raw_producer, raw_vintage,
@@ -527,7 +534,8 @@ class Builder:
              row.get("sold"),
              row.get("mixed_lot"), row.get("condition_text"),
              row.get("description"), row.get("source_url"),
-             row.get("scraped_at")))
+             row.get("scraped_at"), row.get("is_ohk"), row.get("note"),
+             row.get("price_per_bottle")))
         return cur.lastrowid
 
 
@@ -1115,6 +1123,7 @@ def load_wermuth(b, limit):
                 "lot_no": str(_v(rec, "providerOfferingId")),
                 "wine": _v(rec, "name"),
                 "classification": _clean(_v(rec, "producer")),
+                "region": _clean(_v(rec, "region")),
                 "vintage": to_int(_v(rec, "vintage")),
                 "quantity": to_int(_v(rec, "noOfBottles")),
                 "bottle_size_dl": to_float(_v(rec, "deciliters")),
@@ -1123,6 +1132,8 @@ def load_wermuth(b, limit):
                 "hammer_price": to_float(rp),
                 "price_basis": "HAMMER", "currency": "CHF",
                 "sold": 1 if rp not in (None, "", "null", "None") else 0,
+                "is_ohk": _to_bool(_v(rec, "isOHK")),
+                "note": _clean(_v(rec, "note")),
             })
         n += 1
         if limit and n >= limit:
@@ -1145,6 +1156,18 @@ def _clean(v):
         return None
     s = str(v).strip().lower()
     return None if s in ("", "null", "none") else v
+
+
+def _to_bool(v):
+    """Normalize a boolean-ish value ('true'/'false', 1/0) to 1/0/None."""
+    if v is None:
+        return None
+    s = str(v).strip().lower()
+    if s in ("true", "1", "yes"):
+        return 1
+    if s in ("false", "0", "no", ""):
+        return 0
+    return None
 
 
 def load_steinfels(b, limit):
@@ -1193,6 +1216,133 @@ def load_steinfels(b, limit):
     _load_weinauktion_json(b, "steinfels", remaining)
 
 
+def load_steinfels_staging(b, limit):
+    """Steinfels staging workbook (16-col normalized structure, 2 events)."""
+    path = os.path.join(REPO, "data", "vinoStagingFileSteinfels.xlsx")
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    b.set_source(path)
+    n = 0
+    for ws in wb.worksheets:
+        if ws.title == "nonRecordLines":
+            continue
+        all_rows = list(ws.iter_rows(values_only=True))
+        if not all_rows:
+            continue
+        header = [str(c) if c is not None else "" for c in all_rows[0]]
+        m = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", ws.title)
+        date = f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+        event = None
+        lots = []
+        for row in all_rows[1:]:
+            rec = dict(zip(header, row))
+            if event is None:
+                ev = _v(rec, "eventIdentifier")
+                if ev and str(ev).strip() not in ("", "null", "None"):
+                    event = str(ev)
+            lots.append(rec)
+        a_id = b.add_auction("steinfels", event or ws.title, ws.title,
+                             date, "CHF", "HAMMER")
+        for rec in lots:
+            rp = _v(rec, "realizedPrice")
+            b.add_lot(a_id, {
+                "lot_no": str(_v(rec, "providerOfferingId")),
+                "wine": _v(rec, "name"),
+                "classification": _clean(_v(rec, "origin")),
+                "region": _clean(_v(rec, "region")),
+                "vintage": to_int(_v(rec, "vintage")),
+                "quantity": to_int(_v(rec, "noOfBottles")),
+                "bottle_size_dl": to_float(_v(rec, "deciliters")),
+                "estimate_low": to_float(_v(rec, "priceMin")),
+                "estimate_high": to_float(_v(rec, "priceMax")),
+                "hammer_price": to_float(rp),
+                "lot_date": _clean(_v(rec, "offeringDate")),
+                "price_basis": "HAMMER", "currency": "CHF",
+                "sold": 1 if rp not in (None, "", "null", "None", 0) else 0,
+                "is_ohk": _to_bool(_v(rec, "isOHK")),
+                "note": _clean(_v(rec, "note")),
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+
+def _wermuth_xlsx_dates(conn):
+    """Dates already covered by ``load_wermuth`` (the 42-sheet xlsx).
+
+    ``load_wermuth_validated`` runs after ``load_wermuth`` in ``HOUSES``, so
+    this reflects the xlsx import for the current build. The xlsx and the
+    validatedOutput CSVs independently digitize the same real-world Wermuth
+    auctions for 2014-12 through 2015-11 (confirmed: identical lot numbers,
+    wine names and hammer prices under different auction_id spellings — the
+    xlsx uses its own ``eventIdentifier`` column, the CSV loader uses the
+    filename). Without this check both get loaded as separate auctions,
+    silently duplicating ~3,500 lots.
+    """
+    return {row[0] for row in conn.execute(
+        "SELECT DISTINCT a.auction_date FROM auctions a"
+        " JOIN providers p ON a.provider_id = p.id"
+        " WHERE p.name = 'wermuth-sa'")}
+
+
+def load_wermuth_validated(b, limit):
+    """Wermuth validated CSV outputs (VinoImporter, 2014-2018, no header).
+
+    Semicolon-separated, 10 or 11 columns. 11 columns carry an ``origin``
+    (classification) at index 2; 10 columns put ``producer`` there (usually
+    "null"). Filename encodes the event date: output_WermuthSA_DDMMYYYY.csv.
+
+    Skips any date already covered by ``load_wermuth`` (see
+    ``_wermuth_xlsx_dates``) — purely additive for the 2016-2018 events the
+    xlsx doesn't have.
+    """
+    base = os.path.join(REPO, "VinoImporter", "validatedOutput")
+    files = sorted(glob.glob(os.path.join(base, "output_WermuthSA_*.csv")))
+    xlsx_dates = _wermuth_xlsx_dates(b.conn)
+    n = skipped = 0
+    for f in files:
+        m = re.search(r"(\d{2})(\d{2})(\d{4})", os.path.basename(f))
+        date = f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+        if date is not None and date in xlsx_dates:
+            skipped += 1
+            continue
+        event = os.path.basename(f).replace("output_WermuthSA_", "").replace(
+            ".csv", "")
+        with open(f, encoding="utf-8") as fh:
+            rows = list(csv.reader(fh, delimiter=";"))
+        if not rows:
+            continue
+        b.set_source(f)
+        a_id = b.add_auction("wermuth-sa", event, event, date, "CHF", "HAMMER")
+        for row in rows:
+            if len(row) < 10:
+                continue
+            has_origin = len(row) >= 11 and str(row[2]).strip() not in (
+                "", "null", "None")
+            off = 1 if has_origin else 0
+            rp = to_float(row[9 + off])
+            b.add_lot(a_id, {
+                "lot_no": str(row[0]),
+                "wine": row[1],
+                "classification": _clean(row[2]) if has_origin else None,
+                "vintage": to_int(row[3 + off]),
+                "quantity": to_int(row[4 + off]),
+                "bottle_size_dl": to_float(row[5 + off]),
+                "is_ohk": _to_bool(row[6 + off]),
+                "estimate_low": to_float(row[7 + off]),
+                "estimate_high": to_float(row[8 + off]),
+                "hammer_price": rp,
+                "lot_date": date,
+                "price_basis": "HAMMER", "currency": "CHF",
+                "sold": 1 if rp not in (None, "", "null", "None", 0) else 0,
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+    if skipped:
+        print(f"  wermuth-validated: skipped {skipped} file(s) already"
+              f" covered by the xlsx import")
+
+
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
@@ -1216,7 +1366,9 @@ HOUSES = [
     ("idealwine", load_idealwine),
     ("weinauktionator", load_weinauktionator),
     ("wermuth-sa", load_wermuth),
+    ("wermuth-validated", load_wermuth_validated),
     ("steinfels", load_steinfels),
+    ("steinfels-staging", load_steinfels_staging),
     ("weinboerse", load_weinboerse),
 ]
 
@@ -1368,11 +1520,45 @@ def _apply_premium_policy(conn):
             (rate, rate, fees, rate, fees, provider))
 
 
-def _fill_lot_date(conn):
-    """Backfill lots.lot_date from auctions.auction_date where missing (D3).
+_DMY_DATE = re.compile(r"^(\d{2})\.(\d{2})\.(\d{4})$")
 
-    Only fills NULL lot_date; existing values are never overwritten.
+
+def _normalize_lot_date(conn):
+    """Rewrite ``dd.mm.yyyy`` lot dates to ISO ``yyyy-mm-dd``.
+
+    Some fetchers (steinfels) emit German-formatted dates; string min/max and
+    time-series work need a single ISO format. Unparseable values (e.g.
+    31.02.2020) are left untouched and counted. Returns ``(converted, invalid)``.
     """
+    converted = invalid = 0
+    rows = conn.execute(
+        "SELECT DISTINCT lot_date FROM lots WHERE lot_date LIKE '__.__.____'"
+    ).fetchall()
+    for (raw,) in rows:
+        m = _DMY_DATE.match(raw)
+        try:
+            iso = datetime.date(int(m.group(3)), int(m.group(2)),
+                                int(m.group(1))).isoformat()
+        except (AttributeError, ValueError):
+            invalid += conn.execute(
+                "SELECT COUNT(*) FROM lots WHERE lot_date = ?", (raw,)
+            ).fetchone()[0]
+            continue
+        converted += conn.execute(
+            "UPDATE lots SET lot_date = ? WHERE lot_date = ?",
+            (iso, raw)).rowcount
+    if invalid:
+        print(f"WARN: {invalid} lots with unparseable dd.mm.yyyy lot_date")
+    return converted, invalid
+
+
+def _fill_lot_date(conn):
+    """Normalize lot_date to ISO, then backfill from auctions.auction_date (D3).
+
+    Only fills NULL lot_date; existing values are never overwritten (apart
+    from the format normalization above).
+    """
+    _normalize_lot_date(conn)
     conn.execute(
         "UPDATE lots SET lot_date ="
         " (SELECT auction_date FROM auctions WHERE auctions.id = lots.auction_id)"
