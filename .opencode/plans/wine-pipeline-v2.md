@@ -122,13 +122,26 @@ mit Header-Mapping pro Sheet, `nonRecordLines` übersprungen. Nicht ein `wb.acti
 
 Noch nicht verarbeitete Quellen (vom Auftraggeber bereitgestellt):
 
-- [ ] `data/vinoStagingFileSteinfels.xlsx` (2 Events: 2002 + 2016).
-- [ ] `data/vinoStagingFile2015-2008.xlsx` (42 Wermuth-Events 2008–2015).
-- [ ] `VinoImporter/validatedOutput/output_WermuthSA_*.csv` (2014–2018) — ggf.
-      Überschneidung mit dem 42-Sheet-File prüfen (Dubletten vermeiden).
-- [ ] Steinfels-PDF-Quellen (`priceData/import/steinfels/source/*.pdf`) — sofern
-      nicht durch `results_*.xlsx` abgedeckt.
-- [ ] `VinoImporter/import/Steinfels/315.pdf`.
+- [x] `data/vinoStagingFileSteinfels.xlsx` (2 Events: 2002 + 2016) — via
+      `load_steinfels_staging`.
+- [x] `data/vinoStagingFile2015-2008.xlsx` (42 Wermuth-Events 2008–2015) — via
+      `load_wermuth`.
+- [x] `VinoImporter/validatedOutput/output_WermuthSA_*.csv` (2014–2018) — via
+      `load_wermuth_validated`. **Die hier geforderte
+      Überschneidungsprüfung wurde ursprünglich NICHT gemacht** (beide Loader
+      liefen, ohne gegeneinander zu prüfen) — direkt an der Live-Master-DB
+      verifiziert und gefixt, s. Commits "wire up producer/wine matching"
+      (Kapitel 4.2–4.3-Eintrag) ff.: 4 echte Terminüberschneidungen
+      (2014-12-04, 2015-03-14, 2015-06-06, 2015-11-14, identische Lot-Nummern/
+      Weine/Preise unter unterschiedlichen `auction_id`s) + zwei openpyxl-
+      Artefakte (Used-Range-Überhang → hunderte Blank-Rows; eine
+      „Total: X CHF"-Zeile pro Sheet ohne Weinnamen) in `load_wermuth` /
+      `load_steinfels_staging`. Alle drei gefixt, zweifach gegen die reale DB
+      verifiziert (Rebuild → Rebuild): 2.787.793 → 2.784.499 → 2.783.740 Lots,
+      0 doppelte wermuth-sa-Termine, 0 AMBIGUOUS, `integrity_check` ok.
+- [ ] Steinfels-PDF-Quellen (`priceData/import/steinfels/source/*.pdf`, 10
+      Dateien) — sofern nicht durch `results_*.xlsx` abgedeckt.
+- [ ] `VinoImporter/import/Steinfels/315.pdf` + `379_05032016_Resultate.pdf`.
 
 **Prüfschritt (ausführen, sobald Samsung gemountet — aktuell nicht gemountet):**
 Abgleich, welche Events schon in der Master-DB sind, statt Annahme:
@@ -365,9 +378,12 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
 ## Progress
 
 - [x] Kapitel 2: Prüfschritt + Rebuild gegen Master-DB erledigt.
-  `load_steinfels_staging` (2 Events: 832 + 515 Lots), `load_wermuth_validated`
-  (13 CSVs → 10.688 Lots). lots 2.775.758 → **2.787.793**; `is_ohk` befüllt
-  (27.330 true / 25.762 false). Backup `.bak-historic`.
+  `load_steinfels_staging` + `load_wermuth_validated` eingebunden; der im
+  Rumpf geforderte Dubletten-Check gegen `load_wermuth` fehlte zunächst und
+  wurde nachträglich an der echten DB verifiziert + gefixt (4 echte
+  Terminüberschneidungen + 2 openpyxl-Artefakte — Details + finale Zahlen
+  in Kapitel 2 oben). `is_ohk` befüllt. Backups: `.bak-historic`,
+  `.bak-pre-wermuth-fix`.
 - [ ] Kapitel 3: Referenzlisten (producers.csv, units.csv, ohk.csv; idealwine-Policy)
 - [x] Kapitel 4.0 (Gerüst): `build_gold_set.py` + `gold_lots.csv` (495 Kandidaten,
   stratifiziert, inkl. Edge-Case-Queries) + `test_gold_set.py` (Regressionstest,
@@ -444,9 +460,10 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
   cru/gcc/premier/1er): mit dem korrekten Alias-Coverage-Ranking (Fund 1)
   sind sie kein Risiko mehr, sondern senken die Falsch-Positiv-Rate
   nachweisbar (6/406 → 2/406 auf dem Gold-Set) ohne neue Regressionen.
-  **Rebuild gegen Master-DB steht noch aus** (Samsung nicht gemountet) —
-  Coverage-/AMBIGUOUS-Deltas nach diesem Fix neu messen; Vorher-Werte aus
-  Kapitel 4.1 sind durch die Produzenten-Normalisierung überholt.
+  **Rebuild gegen Master-DB nachgeholt** (Samsung war zwischenzeitlich
+  gemountet) — 0 AMBIGUOUS (unverändert ggü. Kapitel 4.1), unresolved SINGLE
+  8.690 (Kapitel 4.1: 8.689 — stabil, keine Regression). Details zum Rebuild
+  selbst (inkl. des dabei gefundenen Wermuth-Dubletten-Bugs) s. Kapitel 2.
   **Restrisiko (nicht blind fixen, siehe „Offene Entscheidungen"):** die 2
   verbleibenden Gold-Set-Falsch-Positive sind beide Appellations-/
   Klassifikations-Text ohne echten Produzentenbezug, der zufällig ein
