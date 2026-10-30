@@ -1195,6 +1195,12 @@ def load_steinfels(b, limit):
     base = os.path.join(REPO, "priceData", "import", "steinfels", "prepared")
     files = sorted(glob.glob(os.path.join(base, "**", "results_*.xlsx"),
                              recursive=True))
+    # results_316.xlsx (531 lots, an early OCR pass of the 04.05.2002
+    # auction) duplicates load_steinfels_staging's "Steinfels_04.05.2002"
+    # event (832 lots, same lots -- e.g. lot 1 "Valandraud" 1998 CHF 1850 in
+    # both). The staging extraction is the more complete one; skip the
+    # standalone file so the auction isn't double-counted.
+    files = [f for f in files if os.path.basename(f) != "results_316.xlsx"]
     n = 0
     for f in files:
         wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
@@ -1216,6 +1222,11 @@ def load_steinfels(b, limit):
                 header = [str(c) if c is not None else "" for c in row]
                 continue
             rec = dict(zip(header, row))
+            # Most prepared/*.xlsx store the deciliter value directly under
+            # "Unit"; 315/316 are the exception, with "Unit" holding the raw
+            # label (e.g. "Flaschen") and "Unit_DL" the converted number.
+            bottle_size_dl = (to_float(_v(rec, "Unit_DL"))
+                               or to_float(_v(rec, "Unit")))
             b.add_lot(a_id, {
                 "lot_no": str(_v(rec, "Lot")),
                 "wine": _v(rec, "Wine"),
@@ -1223,7 +1234,7 @@ def load_steinfels(b, limit):
                 "region": _clean(_v(rec, "Region")),
                 "vintage": to_int(_v(rec, "Year")),
                 "quantity": to_int(_v(rec, "Quantity")),
-                "bottle_size_dl": to_float(_v(rec, "Unit_DL")),
+                "bottle_size_dl": bottle_size_dl,
                 "hammer_price": to_float(_v(rec, "Price_CHF")),
                 "price_basis": "HAMMER", "currency": "CHF",
             })
