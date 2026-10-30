@@ -17,10 +17,13 @@ import glob
 import json
 import os
 import re
+import hashlib
 import sqlite3
 import sys
+import zipfile
 
 import openpyxl
+from bs4 import BeautifulSoup
 
 # Source of raw auction data. Override via env vars:
 #   ARCHIVE_PATH=/path/to/archive DB_PATH=/path/to/output.sqlite python3 build_db.py
@@ -1407,6 +1410,393 @@ def load_winebarrel(b, limit):
         })
 
 
+# --- sylvies (Belgian wine auctions) ---------------------------------------- #
+#
+# Two disjoint sources, loaded by two separate functions sharing the
+# "sylvies" provider (same pattern as load_wermuth / load_wermuth_validated):
+#
+# - load_sylvies_html: 6 months of 2012, archived as the site's raw HTML
+#   (a zip of paginated "Resultatfile<N>.html" per month). Full fidelity --
+#   every lot's complete field set, including every wine in a mixed lot.
+# - load_sylvies_txt: every other month 2012-2026, archived only as the
+#   STDOUT of running sylviesParser.py/sylviesParser2024.py live against
+#   the site (the raw HTML itself was never saved). That scraper has two
+#   confirmed bugs baked permanently into this capture (the original HTML
+#   is gone, so neither is recoverable here):
+#     1. `result_element.find_next("p")` is unscoped: for an unsold lot
+#        (no <p> after "Result" in the DOM, just a bare text node), it
+#        skips into the NEXT auction_item and grabs its lot number --
+#        confirmed on a full file: 100% of bare-digit "Result" values
+#        equal the following block's lot number. Harmless once known:
+#        any Result that isn't "€ <amount>" means no sale, full stop.
+#     2. `item.find("div", class_="lot_name")` (singular) only ever reads
+#        the FIRST wine of a multi-wine lot (~31% of lots in the one 2012
+#        month sampled against both formats) -- the rest of that lot is
+#        silently dropped. Unrecoverable from this capture; mixed_lot
+#        cannot be set here (stays 0/unknown), not because the lot wasn't
+#        mixed, but because this source can no longer tell.
+#   Separately: 3 file pairs across the full 2012-2026 archive are
+#   byte-identical content saved under two different month names (a
+#   capture mistake, not a real double auction) -- deduped by content
+#   hash, not filename.
+
+_SYLVIES_MONTHS = {
+    "januar": 1, "january": 1, "februar": 2, "february": 2,
+    "märz": 3, "marz": 3, "march": 3, "april": 4, "mai": 5, "may": 5,
+    "juni": 6, "june": 6, "juli": 7, "july": 7, "august": 8,
+    "september": 9, "oktober": 10, "october": 10, "november": 11,
+    "dezember": 12, "december": 12,
+}
+_SYLVIES_MONTH_FILE = re.compile(r"^([A-Za-zäöüÄÖÜ]+)(\d{4,5})$")
+# Three 2018 files have a typo'd 5-digit year ("August20218.txt" instead
+# of "August2018.txt") -- the only copy of that month, not a duplicate of
+# a correctly-named file, so skipping them would lose real data.
+_SYLVIES_YEAR_TYPOS = {"20218": "2018"}
+
+
+def _sylvies_month_key(basename):
+    """'Februar2024.txt' / 'February2012.zip' -> ('2024', 2), or None."""
+    m = _SYLVIES_MONTH_FILE.match(os.path.splitext(basename)[0])
+    if not m:
+        return None
+    year = _SYLVIES_YEAR_TYPOS.get(m.group(2), m.group(2))
+    if len(year) != 4:
+        return None
+    month = _SYLVIES_MONTHS.get(m.group(1).lower())
+    return (year, month) if month else None
+
+
+_SYLVIES_YEAR = re.compile(r"^(\d{4})\s+(.+)$")
+
+
+def _sylvies_extract_vintage(name):
+    name = (name or "").strip()
+    m = _SYLVIES_YEAR.match(name)
+    return (int(m.group(1)), m.group(2).strip()) if m else (None, name or None)
+
+
+# Bottling/provenance shorthand, not a producer name -- "Mc" (mise en
+# bouteille au château: bottled by the château itself, whose name is
+# already the wine field for these lots), bare "Neg"/"Dom" (an unnamed
+# négociant/domaine), "Dist" (distributeur). By far the single most
+# common value in this field (89,664 of ~267k lots are bare "Mc") --
+# storing it as producer would flood the producer index with a
+# meaningless 2-letter bucket. "Neg. Jean Theil" etc. (a NAMED
+# négociant) is unaffected -- only the bare code is excluded.
+_SYLVIES_PROVENANCE_CODE = {"mc", "neg", "neg.", "dom", "dom.", "dist",
+                           "dist."}
+
+
+def _sylvies_split_description(desc):
+    """'Italy | la Stoppa' -> (region, producer); order confirmed on the
+    source HTML. Not always a true country/region (e.g. '1er Cru |
+    Harmand Geoffroy' puts a classification tier there instead) --
+    stored as-is, same raw-passthrough policy as every other loader."""
+    desc = (desc or "").strip()
+    if " | " not in desc:
+        return desc or None, None
+    region, producer = (p.strip() or None for p in desc.split(" | ", 1))
+    if producer and producer.lower() in _SYLVIES_PROVENANCE_CODE:
+        producer = None
+    return region, producer
+
+
+# "<N> x <size>[,.]<decimals> L[tr]" (explicit liters, e.g. "12 x 0,5 Ltr")
+# takes priority over the named-format table when both could apply --
+# consistent with the weinboerse loader's "explicit size wins" rule.
+_SYLVIES_BOTTLE_LITER = re.compile(
+    r"^(\d+)\s*x\s*(\d+(?:[.,]\d+)?)\s*l(?:tr)?\.?,?\s*(\S+)?",
+    re.IGNORECASE)
+_SYLVIES_BOTTLE_NAMED = re.compile(
+    r"^(\d+)\s+(bott+le|magnum|magum|demi|dmagnum|imperial|"
+    # "(s)" (not just a trailing "s"): the literal source text is
+    # "Bottle(s)" -- without this alternative, "s?" only ever matches
+    # zero characters (the next real char is "(", not "s"), and the
+    # unconsumed ", Oc" marker falls through into the WRONG regex group.
+    r"jeroboam|jéroboam|jroboam)(?:s|\(s\))?\.?,?\s*(\S+)?", re.IGNORECASE)
+_SYLVIES_UNIT_DL = {
+    "bottle": 7.5, "botttle": 7.5, "magnum": 15.0, "magum": 15.0,
+    "demi": 3.75, "dmagnum": 30.0, "imperial": 60.0, "jeroboam": 50.0,
+    "jéroboam": 50.0, "jroboam": 50.0,
+}
+
+
+def _sylvies_parse_bottle(text):
+    """'<N> Bottle(s)[, Oc]' / '<N> x <size> Ltr[, Owc]' -> (quantity,
+    bottle_size_dl, is_ohk). Markers beyond Oc/Owc (a handful of stray
+    digits/words from drift in the source text) are left unflagged --
+    an allowlist, not a blocklist, so an unrecognized marker can't cause
+    a false OHK positive."""
+    text = (text or "").strip()
+    m = _SYLVIES_BOTTLE_LITER.match(text)
+    if m:
+        qty = int(m.group(1))
+        dl = float(m.group(2).replace(",", ".")) * 10
+        return qty, dl, _sylvies_is_ohk_marker(m.group(3))
+    m = _SYLVIES_BOTTLE_NAMED.match(text)
+    if m:
+        qty = int(m.group(1))
+        dl = _SYLVIES_UNIT_DL.get(m.group(2).lower())
+        return qty, dl, _sylvies_is_ohk_marker(m.group(3))
+    return None, None, False
+
+
+def _sylvies_is_ohk_marker(marker):
+    # "Owc-1"/"Oc-2" etc. (a numbered-case suffix) is by far the MORE
+    # common form in this archive, not a rare variant -- 44,557 dash-
+    # suffixed hits vs. the plain "Oc"/"Owc" count. Only the part before
+    # the dash is the actual case-type marker.
+    marker = (marker or "").strip(",.").lower().split("-")[0]
+    return marker in ("oc", "owc")
+
+
+_SYLVIES_ESTIMATE = re.compile(
+    r"€\s*([\d.,]+)\s*-\s*€\s*([\d.,]+)")
+_SYLVIES_PRICE = re.compile(r"^€\s*([\d.,]+)")
+
+
+def _sylvies_parse_estimate(text):
+    m = _SYLVIES_ESTIMATE.search(text or "")
+    if not m:
+        return None, None
+    return to_float(m.group(1)), to_float(m.group(2))
+
+
+def _sylvies_parse_result(text):
+    """Anything other than a clean '€ <amount>' means no sale -- covers
+    the literal "not been sold" text, the scraper's bare-next-lot-number
+    bug (see module note above), and the rare untyped garbage alike;
+    all three correctly resolve to "no price," not three different
+    things to special-case."""
+    m = _SYLVIES_PRICE.match((text or "").strip())
+    if m:
+        return to_float(m.group(1)), 1
+    return None, 0
+
+
+def load_sylvies_html(b, limit):
+    """2012's 6 full-fidelity months: raw HTML, zipped, one page per
+    'Resultatfile<N>.html'. Every lot_item in a multi-wine lot is read
+    (unlike the txt capture, whose scraper only ever read the first)."""
+    files = sorted(glob.glob(os.path.join(ARCHIVE, "sylvies", "*.zip")))
+    n = 0
+    for f in files:
+        key = _sylvies_month_key(os.path.basename(f))
+        if key is None:
+            continue
+        year, month = key
+        b.set_source(f)
+        a_id = b.add_auction("sylvies", f"sylvies_{year}-{month:02d}",
+                             f"sylvies {year}-{month:02d}",
+                             f"{year}-{month:02d}-01", "EUR", "HAMMER")
+        with zipfile.ZipFile(f) as zf:
+            for name in zf.namelist():
+                if not name.endswith(".html"):
+                    continue
+                html = zf.read(name).decode("utf-8", errors="replace")
+                soup = BeautifulSoup(html, "html.parser")
+                for it in soup.find_all("div", class_="auction_item"):
+                    row = _sylvies_parse_html_item(it)
+                    if row:
+                        b.add_lot(a_id, row)
+        n += 1
+        if limit and n >= limit:
+            break
+
+
+def _sylvies_parse_html_item(item):
+    lot_nr_el = item.find("p", class_="lot_nr")
+    lot_no = lot_nr_el.get_text(strip=True) if lot_nr_el else None
+    if not lot_no:
+        return None
+
+    subs = []
+    for li in item.find_all(
+            "div", class_=lambda c: c and c.startswith("lot_item")):
+        name_el = li.find("div", class_="lot_name")
+        desc_el = li.find("div", class_="lot_description")
+        bottle_el = li.find("div", class_="lot_bottle")
+        bt_el = li.find("div", class_="lot_bottle_type")
+        vintage, wine = _sylvies_extract_vintage(
+            name_el.get_text(strip=True) if name_el else None)
+        region, producer = _sylvies_split_description(
+            desc_el.get_text(strip=True) if desc_el else None)
+        qty, dl, is_ohk = _sylvies_parse_bottle(
+            bottle_el.get_text(strip=True) if bottle_el else None)
+        subs.append({
+            "wine": wine, "vintage": vintage, "region": region,
+            "producer": producer, "quantity": qty, "bottle_size_dl": dl,
+            "is_ohk": is_ohk,
+            "condition_text": (bt_el.get_text(strip=True) if bt_el else
+                               None) or None,
+        })
+    if not subs:
+        return None
+
+    est_el = item.find("div", class_="lot_estimate")
+    estimate_low = estimate_high = None
+    if est_el:
+        p = est_el.find_next_sibling("p")
+        if p:
+            estimate_low, estimate_high = _sylvies_parse_estimate(
+                p.get_text(strip=True))
+    bid_el = item.find("div", class_="lot_my_bid")
+    result_text = None
+    if bid_el and bid_el.parent:
+        # The unsold case is a bare text node (no <p>) right after this
+        # div, inside the SAME parent -- read the whole parent's text,
+        # not find_next("p"), which would run past it into other lots.
+        result_text = re.sub(r"^\s*Result\s*", "",
+                              bid_el.parent.get_text(strip=True),
+                              flags=re.IGNORECASE)
+    hammer, sold = _sylvies_parse_result(result_text)
+
+    if len(subs) == 1:
+        s = subs[0]
+        return {
+            "lot_no": lot_no, "wine": s["wine"], "vintage": s["vintage"],
+            "region": s["region"], "producer": s["producer"],
+            "quantity": s["quantity"], "bottle_size_dl": s["bottle_size_dl"],
+            "is_ohk": 1 if s["is_ohk"] else 0,
+            "condition_text": s["condition_text"], "mixed_lot": None,
+            "hammer_price": hammer, "sold": sold, "price_basis":
+            "HAMMER" if sold else "UNKNOWN", "currency": "EUR",
+            "estimate_low": estimate_low, "estimate_high": estimate_high,
+        }
+
+    producers = {s["producer"] for s in subs if s["producer"]}
+    regions = {s["region"] for s in subs if s["region"]}
+    quantities = [s["quantity"] for s in subs if s["quantity"]]
+    return {
+        "lot_no": lot_no,
+        "wine": "; ".join(
+            f"{s['vintage']} {s['wine']}" if s["vintage"] else s["wine"]
+            for s in subs if s["wine"]),
+        "vintage": None,
+        "producer": producers.pop() if len(producers) == 1 else None,
+        "region": regions.pop() if len(regions) == 1 else None,
+        "quantity": sum(quantities) if quantities else None,
+        "bottle_size_dl": None,
+        "is_ohk": 1 if any(s["is_ohk"] for s in subs) else 0,
+        "condition_text": "; ".join(
+            s["condition_text"] for s in subs if s["condition_text"]
+        ) or None,
+        "mixed_lot": 1,
+        "hammer_price": hammer, "sold": sold,
+        "price_basis": "HAMMER" if sold else "UNKNOWN", "currency": "EUR",
+        "estimate_low": estimate_low, "estimate_high": estimate_high,
+    }
+
+
+def _sylvies_html_covered_months(conn):
+    """(year, month) keys already loaded by load_sylvies_html, so the txt
+    capture of the same month (lower fidelity -- see module note) is
+    skipped rather than double-loading it. Mirrors
+    ``_wermuth_xlsx_dates``."""
+    rows = conn.execute(
+        "SELECT a.auction_id FROM auctions a JOIN providers p"
+        " ON a.provider_id = p.id WHERE p.name = 'sylvies'").fetchall()
+    covered = set()
+    for (aid,) in rows:
+        m = re.match(r"^sylvies_(\d{4})-(\d{2})$", aid or "")
+        if m:
+            covered.add((m.group(1), int(m.group(2))))
+    return covered
+
+
+def load_sylvies_txt(b, limit):
+    """Every month 2012-2026 not already covered by load_sylvies_html --
+    the STDOUT capture of running the (buggy) sylviesParser live. See the
+    module note above for the two bugs baked into this source."""
+    files = sorted(glob.glob(
+        os.path.join(ARCHIVE, "sylvies", "**", "*.txt"), recursive=True))
+    covered = _sylvies_html_covered_months(b.conn)
+    seen_hashes = set()
+    n = 0
+    for f in files:
+        with open(f, "rb") as fh:
+            raw = fh.read()
+        digest = hashlib.sha256(raw).hexdigest()
+        # Hash BEFORE the key/covered check, not after: one of a
+        # duplicate-content pair is always a zip-covered 2012 month
+        # (skipped below), and if that check ran first, the skipped
+        # file would never reach seen_hashes -- its byte-identical
+        # twin under a different (wrong) month label would then load
+        # as if it were a real, separate auction.
+        if digest in seen_hashes:
+            continue
+        seen_hashes.add(digest)
+        key = _sylvies_month_key(os.path.basename(f))
+        if key is None:
+            print(f"WARN load_sylvies_txt: unrecognized filename {f}")
+            continue
+        if key in covered:
+            continue
+        year, month = key
+        b.set_source(f)
+        a_id = b.add_auction("sylvies", f"sylvies_{year}-{month:02d}",
+                             f"sylvies {year}-{month:02d}",
+                             f"{year}-{month:02d}-01", "EUR", "HAMMER")
+        text = raw.decode("utf-8", errors="replace")
+        # Per-block dedup, not just a whole-file one: 2 files (2021/
+        # October, 2021/December) are their own content twice over end
+        # to end (a capture artifact -- the whole scrape run saved
+        # twice into one file), and at least one lot elsewhere repeats
+        # just once within an otherwise-unique file (a page re-fetched
+        # on retry, printed twice). Same mechanism either way -- a
+        # scrape/save step ran part of its output twice -- so one
+        # dedup catches both instead of two separate special cases.
+        seen_blocks = set()
+        for block in text.split("-" * 40):
+            stripped = block.strip()
+            if not stripped or stripped in seen_blocks:
+                continue
+            seen_blocks.add(stripped)
+            row = _sylvies_parse_txt_block(block)
+            if row:
+                b.add_lot(a_id, row)
+        n += 1
+        if limit and n >= limit:
+            break
+
+
+def _sylvies_txt_field(block, name):
+    # [ \t]*, not \s*: \s matches newline too, so a blank field ("Lot
+    # Bottletype: " followed immediately by a newline) would otherwise
+    # let the match skip past it and capture the START OF THE NEXT LINE
+    # instead of the empty value (confirmed: this leaked "Estimate: € ..."
+    # text into condition_text on every lot with no condition notes).
+    m = re.search(rf"{re.escape(name)}:[ \t]*(.*)", block)
+    return m.group(1).strip() if m else None
+
+
+def _sylvies_parse_txt_block(block):
+    lot_no = _sylvies_txt_field(block, "Lot Number")
+    if not lot_no:
+        return None
+    vintage, wine = _sylvies_extract_vintage(
+        _sylvies_txt_field(block, "Lot Name"))
+    region, producer = _sylvies_split_description(
+        _sylvies_txt_field(block, "Lot Description"))
+    qty, dl, is_ohk = _sylvies_parse_bottle(
+        _sylvies_txt_field(block, "Lot Bottle"))
+    estimate_low, estimate_high = _sylvies_parse_estimate(
+        _sylvies_txt_field(block, "Estimate") or "")
+    hammer, sold = _sylvies_parse_result(_sylvies_txt_field(block, "Result"))
+    is_vat = bool(re.search(r"\bVAT LOT\b|\bBTW LOT\b", block, re.IGNORECASE))
+
+    return {
+        "lot_no": lot_no, "wine": wine, "vintage": vintage,
+        "region": region, "producer": producer, "quantity": qty,
+        "bottle_size_dl": dl, "is_ohk": 1 if is_ohk else 0,
+        "condition_text": _sylvies_txt_field(block, "Lot Bottletype") or None,
+        "mixed_lot": None, "hammer_price": hammer, "sold": sold,
+        "price_basis": "HAMMER" if sold else "UNKNOWN", "currency": "EUR",
+        "estimate_low": estimate_low, "estimate_high": estimate_high,
+        "note": "VAT LOT" if is_vat else None,
+    }
+
+
 def load_idealwine(b, limit):
     n = 0
     for f in _json_files("IDealwine_normalized"):
@@ -1756,6 +2146,8 @@ HOUSES = [
     ("steinfels", load_steinfels),
     ("steinfels-staging", load_steinfels_staging),
     ("weinboerse", load_weinboerse),
+    ("sylvies-html", load_sylvies_html),
+    ("sylvies-txt", load_sylvies_txt),
 ]
 
 

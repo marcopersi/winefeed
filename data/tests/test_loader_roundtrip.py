@@ -322,6 +322,34 @@ class TestLoaderRoundtrip(unittest.TestCase):
             conn.close()
         self.assertEqual(count, 1)
 
+    def test_sylvies_txt_dedupes_a_block_repeated_within_one_file(self):
+        """A lot block repeated once inside an otherwise-unique file (a
+        page re-fetched on retry, printed twice -- confirmed on the real
+        archive: lot 1972 in 2018/May20218.txt) must only load once."""
+        block = ("\nLot Number: 1\nLot Name: 2007 Some Wine\n"
+                 "Lot Description: 1er Cru | Someone\n"
+                 "Lot Bottle: 3 Bottle\nLot Bottletype: \n"
+                 "Estimate: € 130 - € 180\nResult: € 170\n"
+                 "Lot My Bid: N/A\n")
+        text = block + "-" * 40 + block
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "sylvies"), exist_ok=True)
+            with open(os.path.join(d, "sylvies", "March2030.txt"),
+                      "w", encoding="utf-8") as fh:
+                fh.write(text)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_sylvies_txt(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            count = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+            conn.close()
+        self.assertEqual(count, 1)
+
     def test_weinboerse_fetcher_output_supersedes_historical_dump(self):
         """Once the CI fetcher has written its own file for a catalog, the
         frozen historical dump's copy of that SAME auction must be
