@@ -392,6 +392,25 @@ class TestLoaderRoundtrip(unittest.TestCase):
             conn.close()
         self.assertEqual(n_auctions, 0)
 
+    def test_weinauktionator(self):
+        # Real shape (data/parse_results.py::parse_weinauktionator_xlsx's
+        # actual output, verified against all 30 archived xlsx files) --
+        # auction.id is always None; load_weinauktionator derives the real
+        # id from the filename ("results_<id>") instead.
+        data = {
+            "auction": {"id": None, "name": "Auktionsergebnisse: Test",
+                       "date": "2021-08-01", "source": "weinauktionator"},
+            "lots": [{"lot_no": "01868", "region": "Bordeaux",
+                      "wine": "Château Cheval Blanc, Ch. Cheval Blanc 1976",
+                      "hammer_price": 250.0,
+                      "format": "1 x 0.750 Château Cheval Blanc, "
+                                "Ch. Cheval Blanc 1976"}],
+        }
+        count, hammer, wine = _run_loader(
+            "weinauktionator", "weinauktionator_results_8.json", data,
+            "load_weinauktionator")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
     def test_dobiaschofsky(self):
         data = {"auction": {"id": "wein", "name": None, "date": None},
                 "lots": [{"lot_nr": "12550", "name": "Domaine de la Romanee",
