@@ -267,6 +267,16 @@ CREATE TABLE build_metrics (
   PRIMARY KEY (build_id, provider, metric)
 );
 
+-- Market FX rates (EODHD, cached by fetch_fx.py): units of `currency` per
+-- 1 EUR on `date` (calendar days with a quote only; consumers look up as-of).
+CREATE TABLE fx_rates (
+  currency TEXT NOT NULL,
+  date     TEXT NOT NULL CHECK (date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  per_eur  REAL NOT NULL CHECK (per_eur > 0 AND per_eur < 1e6),
+  source   TEXT NOT NULL,
+  PRIMARY KEY (currency, date)
+) WITHOUT ROWID;
+
 CREATE INDEX idx_lots_auction ON lots(auction_id);
 CREATE INDEX idx_lots_wine ON lots(wine);
 CREATE INDEX idx_lots_hammer ON lots(hammer_price);
@@ -2217,6 +2227,7 @@ def _build(conn, args):
     np_ = conn.execute("SELECT count(*) FROM providers").fetchone()[0]
     print(f"\nproviders={np_} auctions={na} lots={nl}")
 
+    _load_fx_rates(conn)
     _annotate_fx(conn)
     _apply_premium_policy(conn)
     _apply_tax(conn)
@@ -2227,6 +2238,55 @@ def _build(conn, args):
         resolve_wines(conn)
 
     _record_build_metadata(conn)
+
+
+from fetch_fx import FX_CACHE  # noqa: E402  (single default for cache dir)
+
+
+def _load_fx_rates(conn, cache_dir=None):
+    """Load cached EODHD rates (``fetch_fx.py``) into ``fx_rates``; offline.
+
+    Every ``EUR<CCY>.json`` is validated (ISO date, finite positive rate,
+    ticker matches filename); a malformed file aborts the build rather than
+    silently producing wrong conversions. A missing cache only warns -- the
+    table stays empty and rows get no market ``fx_rate`` downstream.
+    Returns the number of rows loaded.
+    """
+    cache_dir = cache_dir or FX_CACHE
+    files = sorted(glob.glob(os.path.join(cache_dir, "EUR*.json")))
+    if not files:
+        print(f"WARN: no FX cache in {cache_dir} (run data/fetch_fx.py)")
+        return 0
+    conn.execute("DELETE FROM fx_rates")  # the cache is the source of truth
+    loaded = 0
+    for path in files:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                doc = json.load(fh)
+            ccy = doc["currency"]
+            if os.path.basename(path) != f"EUR{ccy}.json":
+                raise ValueError(f"currency {ccy!r} does not match filename")
+            if not doc["rows"]:
+                raise ValueError("no rows")
+            rows, seen = [], set()
+            for d, rate in doc["rows"]:
+                if datetime.date.fromisoformat(d).isoformat() != d:
+                    raise ValueError(f"non-canonical date {d!r}")
+                if d in seen:
+                    raise ValueError(f"duplicate date {d}")
+                seen.add(d)
+                if (isinstance(rate, bool)
+                        or not isinstance(rate, (int, float))
+                        or not 0 < rate < 1e6):
+                    raise ValueError(f"bad rate {rate!r} on {d}")
+                rows.append((ccy, d, float(rate), doc.get("source", "EODHD")))
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            raise ValueError(f"{path}: {type(e).__name__}: {e}") from e
+        conn.executemany(
+            "INSERT INTO fx_rates(currency, date, per_eur, source)"
+            " VALUES (?, ?, ?, ?)", rows)
+        loaded += len(rows)
+    return loaded
 
 
 # Legal euro fix rates for pre-euro currencies (D3): 1 EUR = rate units.
