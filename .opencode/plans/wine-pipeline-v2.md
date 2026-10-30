@@ -231,15 +231,62 @@ Weinbörse-Review entdeckt, nicht Teil der ursprünglichen Bestandsaufnahme):
       kein Loader. Es liegt dort bereits ein `sylviesParser.py` /
       `sylviesParser2022.py` — beide nur stdout-Scraping-Prototypen ohne
       Persistenz, keine DB-Anbindung.
-- [ ] **weinauktionator**: **aktiver CI-Leak**, nicht nur ein
-      Backlog-Problem — `ingest.yml` holt `weinauktionator` monatlich,
-      `load_weinauktionator` sucht aber `*.json`, während das Archiv
-      (60 Dateien, 2021ff.) nur `.xlsx`/`.pdf` enthält. Läuft ohne Fehler
-      durch, importiert 0 Lots, erzeugt nicht mal eine Provider-Zeile.
-      Zuerst prüfen, ob `data/orchestrate.py`s `_filename`-Konvention
-      (`weinauktionator_results_<id>.json`) je tatsächlich einen Parse
-      Step durchlaufen hat, oder ob die 60 Dateien vor Fetcher-Existenz
-      händisch abgelegt wurden.
+- [x] **weinauktionator** — **war kein CI-Leak, nur ein Backlog, der die
+      Pipeline nie durchlaufen hat.** Die Pipeline selbst
+      (`WeinauktionatorFetcher` → `orchestrate._store_parsed` →
+      `parse_weinauktionator_xlsx` → flaches JSON → `load_weinauktionator`)
+      ist korrekt — geprüft gegen alle 30 archivierten `.xlsx`-Dateien
+      (nicht 60: 30 `.xlsx` + 30 `.pdf`, dieselben Auktionen in zwei
+      Formaten), 0 Parse-Fehler, 99,3 % `lot_kind=SINGLE`. Grund für „0
+      Lots": die 30 `.xlsx`-Dateien (alle mit identischem mtime-Batch
+      16.08.2026 — ein einziger händischer Download, nicht Fetcher-Output)
+      wurden nie durch `parse_weinauktionator_xlsx` geschickt; der Fetcher
+      persistiert ohnehin nie die rohe xlsx, nur das Parse-Ergebnis. Fix:
+      `data/backfill_weinauktionator_json.py` (neu, Präzedenz:
+      `extract_steinfels_318.py`) — ruft denselben Live-Parser auf 30
+      Dateien auf, schreibt das JSON **flach** (exakt `_write_json`s
+      Konvention, keine Unterordner — eine erste, naive Version landete
+      in Unterordnern und hätte beim ersten echten CI-Refetch jede
+      Auktion doppelt geladen, derselbe Bugklasse wie unten). Rebuild
+      verifiziert: 2.796.217 → 2.804.014 Lots (+7.797), 30
+      Weinauktionator-Auktionen, 0 Phantom-Auktionen, 0 AMBIGUOUS, die
+      bestehenden 8.690 SINGLE-ohne-`wine_ref_id` unverändert,
+      `buyer_premium`/`tax_amount` jetzt erstmals für diese 5.150
+      verkauften Lots abgeleitet, `integrity_check` ok. **Nicht
+      vollständig:** Auktions-IDs 23 und 27 fehlen im Archiv (abgesagt
+      oder nie heruntergeladen) — ein künftiger CI-Lauf kann diese plus
+      neuere Auktionen ergänzen.
+- [ ] **Cross-cutting: zwei getrennte, nie abgeglichene Archive.**
+      Beim weinauktionator-Review entdeckt, betrifft potenziell alle 12
+      CI-Häuser: `ingest.yml` schreibt NICHT in den Samsung-Pfad, sondern
+      in ein GitHub-Actions-**Artifact** (`auction-archive`,
+      `runner.temp`), das `process.yml` danach lädt, um sein eigenes
+      DB-Artifact zu bauen. Das Manifest (`data/ingest_manifest.json`)
+      zeigt einen echten CI-Lauf am 11.10.2026, der Weinauktionator
+      34–39 gefetcht hat — in dieses Artifact, nicht auf die
+      Samsung-Disk (dort lagen 34–39 bereits seit dem 16.08.2026-Batch,
+      rein zufällig). Das bedeutet: **das CI-`process.yml`-DB-Artifact
+      ist strukturell unvollständig** — es enthält nie die
+      händisch-auf-Samsung-platzierten Quellen (Weinbörse-840-Resultfiles,
+      die 30 Weinauktionator-JSONs, Steinfels-xlsx unter `priceData/`,
+      beide `vinoStagingFile*.xlsx`). Umgekehrt landet alles, was CI
+      monatlich frisch fetcht, nie auf der Samsung-Disk, die dieser
+      Bauplan und `build_db.py` lokal als „die" Produktions-DB behandeln.
+      **Entscheidung beim Auftraggeber nötig** (keine davon ist rein
+      technisch, alle sind grösser als ein einzelnes Haus):
+      (a) CI-Artifact periodisch herunterladen und auf Samsung mergen,
+      (b) das CI-DB-Artifact als kanonisch behandeln und den
+      Samsung-Workflow auslaufen lassen, oder (c) neue Archiv-Dateien aus
+      `ingest.yml` direkt ins Repo committen statt als Artifact.
+- [ ] **Generischer Dublettenschutz für „zwei Quellen, eine Auktion"** —
+      vierter Fall dieser Bugklasse in dieser Session (Wermuth xlsx/CSV,
+      Steinfels 316/Staging, Weinbörse Dump/Fetcher, jetzt
+      Weinauktionator Backfill-Pfad). Jedes Haus mit zwei Quellen
+      (Dump + Fetcher, xlsx + CSV) braucht ein Äquivalent zu
+      `_wermuth_xlsx_dates`, und ein `--only <house>`-Lauf sollte
+      `COUNT(DISTINCT lot_no) == COUNT(*)` pro Auktion als Gate prüfen.
+      Noch nicht umgesetzt — Kandidat für einen späteren generischen Pass
+      statt Haus-für-Haus-Wiederholung.
 
 **Prüfschritt (ausführen, sobald Samsung gemountet — aktuell nicht gemountet):**
 Abgleich, welche Events schon in der Master-DB sind, statt Annahme:
