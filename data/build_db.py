@@ -2306,25 +2306,30 @@ def _normalize_lot_date(conn):
 
     Some fetchers (steinfels) emit German-formatted dates; string min/max and
     time-series work need a single ISO format. Unparseable values (e.g.
-    31.02.2020) are left untouched and counted. Returns ``(converted, invalid)``.
+    31.02.2020) are left untouched and counted. One scan of ``lots`` (no index
+    on lot_date). Returns ``(converted, invalid)``.
     """
-    converted = invalid = 0
-    rows = conn.execute(
-        "SELECT DISTINCT lot_date FROM lots WHERE lot_date LIKE '__.__.____'"
-    ).fetchall()
-    for (raw,) in rows:
+    mapping = {}
+    for (raw,) in conn.execute(
+            "SELECT DISTINCT lot_date FROM lots WHERE lot_date LIKE '__.__.____'"
+    ).fetchall():
         m = _DMY_DATE.match(raw)
         try:
-            iso = datetime.date(int(m.group(3)), int(m.group(2)),
-                                int(m.group(1))).isoformat()
+            mapping[raw] = datetime.date(int(m.group(3)), int(m.group(2)),
+                                         int(m.group(1))).isoformat()
         except (AttributeError, ValueError):
-            invalid += conn.execute(
-                "SELECT COUNT(*) FROM lots WHERE lot_date = ?", (raw,)
-            ).fetchone()[0]
-            continue
-        converted += conn.execute(
-            "UPDATE lots SET lot_date = ? WHERE lot_date = ?",
-            (iso, raw)).rowcount
+            pass
+    conn.execute("CREATE TEMP TABLE IF NOT EXISTS dmy_map("
+                 "raw TEXT PRIMARY KEY, iso TEXT NOT NULL)")
+    conn.execute("DELETE FROM dmy_map")
+    conn.executemany("INSERT INTO dmy_map VALUES (?, ?)", mapping.items())
+    converted = conn.execute(
+        "UPDATE lots SET lot_date = (SELECT iso FROM dmy_map WHERE raw = lot_date)"
+        " WHERE lot_date IN (SELECT raw FROM dmy_map)").rowcount
+    conn.execute("DROP TABLE dmy_map")
+    invalid = conn.execute(
+        "SELECT COUNT(*) FROM lots WHERE lot_date LIKE '__.__.____'"
+    ).fetchone()[0]
     if invalid:
         print(f"WARN: {invalid} lots with unparseable dd.mm.yyyy lot_date")
     return converted, invalid
