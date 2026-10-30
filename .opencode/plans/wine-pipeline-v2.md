@@ -170,6 +170,76 @@ Noch nicht verarbeitete Quellen (vom Auftraggeber bereitgestellt):
       gefüllt, `integrity_check` ok.
 - [x] `VinoImporter/import/Steinfels/315.pdf` + `379_05032016_Resultate.pdf`
       — s.o., beide bereits abgedeckt, keine neue Arbeit nötig.
+- [x] **Weinbörse** (`priceData`-Archiv `Weinboerse/**/Resultfile*.json`,
+      840 Dateien, 2020–2026): `load_weinboerse` zeigte **1 Auktion / 0
+      Lots** — sah nach „erledigt" aus, war aber leer. Ursache:
+      `load_weinboerse` rief `_load_weinauktion_json` mit dem **falschen
+      JSON-Schema** auf (erwartet `{auction, lots}`; der reale Export ist
+      `{"@related": {auctions, catalogs, parts}, "items": [...]}`) **und**
+      dem falschen Verzeichnis-Case (`weinboerse` vs. real `Weinboerse` —
+      funktioniert nur auf macOS case-insensitive, nicht auf Linux-CI).
+      Neuer Parser für das Freitext-`description`-HTML-Feld geschrieben
+      (Produzent/Kategorie-Split, Region+Farbe aus der Kategorie,
+      Menge+Gebinde inkl. Bruch-Notation `"12 3/8 Flaschen"` = 12×0.375L,
+      explizite Literangaben `"1 Jeroboam 5L"` überschreiben den
+      Format-Default, OHK-Erkennung, Mixed-Lot-Heuristik die echte
+      Zweitweine von Zustands-Rauschen wie `"4x befleckt, 1x defekt"`
+      unterscheidet) — 12.312/12.312 Lots geparst, 0 Fehler, zwei
+      Advisor-Runden mit echten Funden (OHK-Regex ohne Wortgrenze traf
+      `"Ockfener Bockstein"`/`"...MEDOC"`; Mixed-Lot-Heuristik verwechselte
+      Zustandscodes wie `"HS/TS"` mit echten Zweitweinen; am Ende noch ein
+      `re.IGNORECASE`-Regression, die `"Pays d'Oc"` fälschlich als OHK
+      markiert hätte — alle per Test abgesichert).
+      **Zwei weitere, unabhängige Altbugs gefunden:** `_load_weinauktion_json`
+      erzeugte für jede Datei ohne `{auction, lots}`-Schema eine
+      Phantom-Auktion mit `auction_id="None"` (0 Lots) statt die Datei zu
+      überspringen — betraf **auch Steinfels** (daher „10
+      Steinfels-Auktionen" oben **jetzt 11**, nach Entfernen des Phantoms;
+      Lots unverändert). `ingest/fetchers/weinauktion.py`s `_map_lot` warf
+      das rohe `description`-HTML weg und behielt nur einen geflatteten
+      Blob ohne Produzent/Menge/OHK — jetzt zusätzlich erhalten (vom
+      Loader aktuell ungenutzt, für einen späteren volleren Reparse).
+      **Für den laufenden CI-Monats-Job** (`ingest.yml` holt `weinboerse`
+      bereits monatlich) zwei Dinge ergänzt: der Fallback-Aufruf auf
+      `_load_weinauktion_json(b, "weinboerse", …)` für künftig gefetchte
+      Dateien (ging beim Neuschreiben des Loaders verloren, da sonst nie
+      wieder etwas einträfe) und ein Dedup-Schutz gegen Doppel-Import,
+      falls der Fetcher eine Auktion erneut holt, die der historische Dump
+      schon abdeckt (Katalog-IDs partitionieren sich nicht sauber von den
+      Auktions-IDs — 168→167, 202→200 im realen Archiv). Rebuild
+      verifiziert: 2.783.905 → 2.796.217 Lots (+12.312), 15
+      Weinbörse-Auktionen, 0 Phantom-Auktionen (global), 0 AMBIGUOUS, die
+      bestehenden 8.690 SINGLE-ohne-`wine_ref_id` unverändert,
+      `integrity_check` ok, 0 falsch-positive `is_ohk`-Treffer (per Skript
+      gegen alle Rohbeschreibungen verifiziert).
+      **Lehre:** der ursprüngliche `test_loader_roundtrip.py::test_weinboerse`
+      bestand, weil seine Fixture zufällig zum (ungenutzten)
+      Fetcher-Output-Schema passte, nicht zum tatsächlich archivierten
+      Rohformat — ein grüner Loader-Test beweist nicht, dass der Loader
+      die *reale* Quelle liest. Für Denz/sylvies/weinauktionator (s.u.)
+      vor dem Schreiben eines Loaders immer zuerst eine echte Stichprobe
+      aus dem Archiv parsen, nicht nur gegen eine erfundene Fixture testen.
+
+**Noch offene, bisher nirgends dokumentierte Lücken** (beim
+Weinbörse-Review entdeckt, nicht Teil der ursprünglichen Bestandsaufnahme):
+
+- [ ] **Denz** (`WeinAuktionspreise/Denz/`, PDFs 2003–2026): kein Loader in
+      `build_db.py`, keine Einträge in der Provider-Tabelle. In Kapitel 1
+      nur als „offene Frage" erwähnt (`VinoImporter`-PDF-Parser), nie
+      begonnen.
+- [ ] **sylvies** (`WeinAuktionspreise/sylvies/`, Zip-Archive 2012–2026):
+      kein Loader. Es liegt dort bereits ein `sylviesParser.py` /
+      `sylviesParser2022.py` — beide nur stdout-Scraping-Prototypen ohne
+      Persistenz, keine DB-Anbindung.
+- [ ] **weinauktionator**: **aktiver CI-Leak**, nicht nur ein
+      Backlog-Problem — `ingest.yml` holt `weinauktionator` monatlich,
+      `load_weinauktionator` sucht aber `*.json`, während das Archiv
+      (60 Dateien, 2021ff.) nur `.xlsx`/`.pdf` enthält. Läuft ohne Fehler
+      durch, importiert 0 Lots, erzeugt nicht mal eine Provider-Zeile.
+      Zuerst prüfen, ob `data/orchestrate.py`s `_filename`-Konvention
+      (`weinauktionator_results_<id>.json`) je tatsächlich einen Parse
+      Step durchlaufen hat, oder ob die 60 Dateien vor Fetcher-Existenz
+      händisch abgelegt wurden.
 
 **Prüfschritt (ausführen, sobald Samsung gemountet — aktuell nicht gemountet):**
 Abgleich, welche Events schon in der Master-DB sind, statt Annahme:
