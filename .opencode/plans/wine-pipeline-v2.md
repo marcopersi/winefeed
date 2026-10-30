@@ -139,9 +139,37 @@ Noch nicht verarbeitete Quellen (vom Auftraggeber bereitgestellt):
       `load_steinfels_staging`. Alle drei gefixt, zweifach gegen die reale DB
       verifiziert (Rebuild → Rebuild): 2.787.793 → 2.784.499 → 2.783.740 Lots,
       0 doppelte wermuth-sa-Termine, 0 AMBIGUOUS, `integrity_check` ok.
-- [ ] Steinfels-PDF-Quellen (`priceData/import/steinfels/source/*.pdf`, 10
-      Dateien) — sofern nicht durch `results_*.xlsx` abgedeckt.
-- [ ] `VinoImporter/import/Steinfels/315.pdf` + `379_05032016_Resultate.pdf`.
+- [x] Steinfels-PDF-Quellen (`priceData/import/steinfels/source/*.pdf`, 10
+      Dateien) — Abgleich gegen `results_*.xlsx`/Staging ergab: 315, 317
+      (als `317_direct`), 319, 320–324 bereits abgedeckt; 379 bereits über
+      `load_steinfels_staging` abgedeckt (Event `Steinfels_05.03.2016`,
+      identisch mit `VinoImporter/import/Steinfels/379_05032016_Resultate.pdf`);
+      `VinoImporter/import/Steinfels/315.pdf` ist dasselbe PDF wie
+      `source/2002/315.pdf`, ebenfalls bereits abgedeckt. **318 war die
+      einzige echte Lücke** — `results_318.xlsx` existierte nicht, keine
+      DB-Auktion. Grund: 318.pdf hat keine Textebene (3060 Vektorkurven/
+      Seite, keine echten Zeichen im Body) im Gegensatz zu allen anderen
+      2002/2003-Dateien — nie extrahiert worden (der archivierte
+      `parser_318.py`-Stub war ein nicht lauffähiger Platzhalter mit
+      ungültigem `2003.320`-Import). Gefixt via OCR-Extraktion
+      (`data/extract_steinfels_318.py`: 300dpi-Render + tesseract, Korrektur
+      der schrift-systematischen OCR-Verwechslungen dieser PDF — 696/702
+      Zeilen geparst, 99.1%) → `results_318.xlsx`, vom bestehenden
+      `load_steinfels()`-Glob-Loader ohne Codeänderung aufgenommen.
+      **Zwei weitere Altbugs dabei gefunden und gefixt:** `results_316.xlsx`
+      (531 Lots) dupliziert das Staging-Event `Steinfels_04.05.2002` (832
+      Lots) — identischer Lot 1 ("Valandraud" 1998, CHF 1850) in beiden,
+      Staging-Version vollständiger; Datei beim Laden übersprungen.
+      `bottle_size_dl` wurde aus einer Spalte `Unit_DL` gelesen, die nur in
+      315/316 existiert — 317/319–324 speichern denselben Dezilitern-Wert
+      direkt unter `Unit`, war also für 7 von 9 Dateien dauerhaft `NULL`;
+      jetzt werden beide Spaltennamen geprüft. Rebuild verifiziert:
+      2.783.740 → 2.783.905 Lots (+165 = +696 aus 318, −531 aus 316-Dedup),
+      694/696 neue 318-Lots auf einen canonical wine aufgelöst, 0
+      AMBIGUOUS, `bottle_size_dl` jetzt für alle 10 Steinfels-Auktionen
+      gefüllt, `integrity_check` ok.
+- [x] `VinoImporter/import/Steinfels/315.pdf` + `379_05032016_Resultate.pdf`
+      — s.o., beide bereits abgedeckt, keine neue Arbeit nötig.
 
 **Prüfschritt (ausführen, sobald Samsung gemountet — aktuell nicht gemountet):**
 Abgleich, welche Events schon in der Master-DB sind, statt Annahme:
