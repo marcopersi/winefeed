@@ -950,10 +950,21 @@ def load_koppe(b, limit):
 
 
 def _load_weinauktion_json(b, provider, limit):
-    """Load the weinauktion-platform API JSON (steinfels / weinboerse)."""
+    """Load the weinauktion-platform API JSON (steinfels / weinboerse).
+
+    Only matches ``run_ingest.py``-fetched files (``{auction, lots}``,
+    both always present per ``orchestrate._is_valid``) -- NOT this house's
+    own raw paginated export (``@related``/``items``), which has neither
+    key: ``d.get("auction", {})`` would silently be ``{}``, creating one
+    phantom "None"-id auction per file instead of 0 (confirmed: this is
+    exactly how the original, broken weinboerse loader produced its
+    "1 auction / 0 lots" symptom).
+    """
     n = 0
     for f in _json_files(provider):
         d = load_json(f)
+        if not d.get("auction") or not d.get("lots"):
+            continue
         b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
@@ -978,8 +989,345 @@ def _load_weinauktion_json(b, provider, limit):
     return n
 
 
+# Quantity line: "<N> [<frac> ]<unit word>[ <N.N>L]". The fraction (e.g.
+# "12 3/8 Flaschen") is a bottle-SIZE modifier (3/8 of a liter = a 0.375L
+# half-bottle), not a quantity modifier; the trailing "<N>L"/"<N.N>L" (e.g.
+# "1 Impérial 6L", "1 Jeroboam 5L") is an explicit size that overrides the
+# named-format default below -- large-format names are not fixed volumes
+# across houses/regions (a Bordeaux vs. Champagne Jeroboam differ), so the
+# explicit liters, when given, is authoritative over the name alone.
+_WB_QTY_LINE = re.compile(
+    r"^(\d+)\s+(?:(\d+)/(\d+)\s+)?([A-Za-zÀ-ÿ.]+)"
+    r"(?:\s+(\d+(?:[.,]\d+)?)\s*L?)?$", re.IGNORECASE)
+_WB_NAMED_DL = {
+    "flasche": 7.5, "flaschen": 7.5, "fl": 7.5, "halbliter": 5.0,
+    "magnum": 15.0, "mg": 15.0, "doppelmagnum": 30.0, "dmg": 30.0,
+    "jeroboam": 45.0, "imperiale": 60.0, "impériale": 60.0,
+    "imperial": 60.0, "impérial": 60.0, "bal": 120.0, "balthazar": 120.0,
+    "div": None,
+}
+_WB_JAHRGANG = re.compile(r"^Jahrgang:\s*(.+)$", re.IGNORECASE)
+_WB_YEAR = re.compile(r"^\d{4}$")
+# Case-sensitive on purpose: the source always writes these markers
+# uppercase, and case-insensitive matching turns "Pays d'Oc" (Languedoc)
+# into a false OHK hit ("Oc" at the end, both \b boundaries hold).
+_WB_OHK = re.compile(
+    r"(?:,|\s+in)?\s*(?:\d+er\s+)?\b(?:OHK|OC|OWC|CBO)\b\.?"
+    r"(?:\s*\([^)]*\))?\s*$")
+_WB_OHK_PREFIX = re.compile(
+    r"^(?:\d+er\s+)?\b(?:OHK|OC|OWC|CBO)\b\.?\s*,?\s*(.*)$")
+_WB_MULTI_WINE = re.compile(r"(\d+)x\s+([^,]+?)(?=,|$)")
+_WB_SCORE = re.compile(r"^RP\s*[\d.+\-]+$", re.IGNORECASE)
+_WB_CM = re.compile(r"^\d+(?:[.,]\d+)?\s*cm$", re.IGNORECASE)
+# Condition/fill-level shorthand that mimics the "<N>x <wine>" mixed-wine
+# pattern (e.g. "4x befleckt, 1x defekt" = "4 bottles stained, 1 defective
+# label", not two different wines) -- excluded from the mixed-lot count so
+# a condition-heavy single-wine lot isn't mistaken for a multi-wine one.
+_WB_CONDITION_WORDS = {
+    "befleckt", "defekt", "geschürft", "angegraut", "kellergrau",
+    "zerknittert", "oxidiert", "verfärbt", "beschädigt", "hs", "ts", "vts",
+    "ms", "in", "hf", "etikett", "etiketten", "kapsel", "kapseln",
+}
+
+
+_WB_LEADING_SIZE = re.compile(r"^\d+(?:[.,]\d+)?\s*L\s+", re.IGNORECASE)
+
+
+def _wb_is_real_subwine(group):
+    # A sub-item is sometimes "<N>x <size>L <Wine>, ..." (e.g. "1x 0.75L
+    # Pinot Noir Monolith, Obrecht") -- strip the size before judging
+    # whether what follows looks like a real wine name.
+    g = _WB_LEADING_SIZE.sub("", group.strip())
+    if not g or not g[0].isupper():
+        return False
+    first_word = re.split(r"[\s/]", g, maxsplit=1)[0].lower().rstrip(".,")
+    return first_word not in _WB_CONDITION_WORDS
+# "Mixed Lots / MIXED LOT", "WinePROOF / WinePROOF", any "CHOIX DE
+# <region>" (a themed assortment, e.g. "CHOIX DE BORDEAUX") and its German
+# equivalent "AUSWAHL <region>" (e.g. "AUSWAHL GRAUBÜNDEN") are not real
+# producers -- the house's own catalog category or a third-party
+# authentication-service label, repeated as a placeholder where no single
+# producer applies (a genuine multi-wine assortment, or the real producer
+# is embedded in the wine text itself, e.g. "DRC, Echézeaux Grand Cru, mit
+# GA Safety Tag...").
+_WB_PLACEHOLDER_PRODUCER = re.compile(
+    r"^(MIXED LOT|WINEPROOF|CHOIX DE .+|AUSWAHL\b.*)$", re.IGNORECASE)
+
+
+def _wb_strip_html(s):
+    return re.sub(r"<[^>]+>", " ", s).strip()
+
+
+def _wb_parse_qty_line(seg):
+    """'<N> [<frac> ]<unit>[ <N>L]' -> (quantity, bottle_size_dl) or None."""
+    m = _WB_QTY_LINE.match(seg)
+    if not m:
+        return None
+    qty_s, frac_num, frac_den, unit, liters = m.groups()
+    quantity = int(qty_s)
+    if frac_num:
+        dl = (int(frac_num) / int(frac_den)) * 10
+    elif liters:
+        dl = float(liters.replace(",", ".")) * 10
+    else:
+        dl = _WB_NAMED_DL.get(unit.lower().rstrip("."))
+    return quantity, dl
+
+
+def _wb_parse_description(desc, key, errors):
+    """Parse a Weinbörse lot description into structured fields.
+
+    Two source formats share this field, distinguished by their line
+    separator (confirmed empirically: mutually exclusive except one lot
+    whose internal sub-item lines borrow the other style -- harmless, both
+    separators are normalized away before splitting):
+
+    - Most lots (``<br />``): an optional '<category> / <PRODUCER>' header
+      line, the wine name (optional trailing ', OHK' / ', 6er OC' marker,
+      or -- for a compound "Mixed Lots" assortment -- several such lines
+      joined), an optional 'Jahrgang: <year>' line (absent, or a
+      mixed-vintage list like "1x 2011, 6x 2012..." for a same-wine
+      multi-vintage lot), a '<N> <unit>' quantity line, then a
+      'Schätzpreis: ...' line duplicating the structured
+      basePrice/upperBasePrice fields.
+    - A Champagne-catalog export (bare ``<br>``, no '<category> /' line at
+      all): producer alone as the first line, wine name, a *bare* 4-digit
+      vintage (no 'Jahrgang:' prefix), the quantity line, then an optional
+      trailing critic-score ('RP97') or condition note ('1.5cm', '1er OHK
+      (befleckt und angegraut)').
+    """
+    is_bare_style = "<br />" not in (desc or "")
+    segs = [_wb_strip_html(s) for s in re.split(r"<br\s*/?>", desc or "")]
+    segs = [s for s in segs if s]
+
+    producer = None
+    region = None
+    color = None
+    if segs and " / " in segs[0]:
+        # rsplit, not split: a US lot's header is "USA / Kalifornien /
+        # HEITZ" (country / region / producer) -- the producer is always
+        # the text after the LAST slash, not the first.
+        region, producer = segs[0].rsplit(" / ", 1)
+        region = region.strip() or None
+        producer = producer.strip() or None
+        if region:
+            m_color = re.match(r"^(.*?)\s+(rot|weiss|weiß)$", region,
+                                re.IGNORECASE)
+            if m_color:
+                region = m_color.group(1).strip() or None
+                color = "Rot" if m_color.group(2).lower() == "rot" else "Weiß"
+        segs = segs[1:]
+    elif is_bare_style and segs:
+        producer = segs[0] or None
+        segs = segs[1:]
+
+    mixed_lot = 0
+    if producer and _WB_PLACEHOLDER_PRODUCER.match(producer.strip()):
+        if producer.strip().upper() == "MIXED LOT":
+            mixed_lot = 1
+        producer = None
+
+    vintage = None
+    quantity = None
+    bottle_size_dl = None
+    is_ohk = False
+    wine_parts = []
+    for seg in segs:
+        if seg.lower().startswith("schätzpreis"):
+            continue
+        if _WB_SCORE.match(seg) or _WB_CM.match(seg):
+            continue
+        if seg.lower().startswith("winebutler"):
+            # A tasting-note blurb ("Winebutler: Der 2009er Château...")
+            # appended after the structured fields on some bare-style
+            # lots -- marketing prose, never wine-identifying data, and
+            # always last, so stop collecting entirely once it starts.
+            break
+        m = _WB_JAHRGANG.match(seg)
+        if m:
+            vtext = m.group(1).strip()
+            if _WB_YEAR.match(vtext):
+                vintage = int(vtext)
+            # else: mixed-vintage list for one wine -- not worth a
+            # per-vintage split, leave vintage unset rather than guess.
+            continue
+        if vintage is None and _WB_YEAR.match(seg):
+            vintage = int(seg)
+            continue
+        m = _wb_parse_qty_line(seg)
+        if m:
+            quantity, bottle_size_dl = m
+            continue
+        # OHK/OC as a condition-note PREFIX ("OHK ohne Deckel, Etikett
+        # ..."), as opposed to the more common wine-name SUFFIX ("Volnay
+        # 1er Champans, OC") handled below once the full name is joined.
+        m = _WB_OHK_PREFIX.match(seg)
+        if m:
+            is_ohk = True
+            rest = m.group(1).strip()
+            if rest:
+                wine_parts.append(rest)
+            continue
+        wine_parts.append(seg)
+
+    wine_name = " ".join(wine_parts).strip()
+    if not wine_name:
+        # First-growth-style Bordeaux lots: the château name alone is the
+        # wine, no separate wine-name line is given at all (confirmed on
+        # the source: "Bordeaux rot / CHATEAU ANGELUS<br /><br />Jahrgang:
+        # ...") -- fall back to the producer rather than drop a real,
+        # priced lot over a formatting quirk.
+        if producer:
+            wine_name = producer
+        else:
+            errors.append(f"NO_WINE_NAME{key}: {desc!r}")
+            return None
+
+    m = _WB_OHK.search(wine_name)
+    if m:
+        is_ohk = True
+        wine_name = wine_name[:m.start()].strip()
+
+    if not mixed_lot:
+        multi = _WB_MULTI_WINE.findall(wine_name)
+        real = [g for _, g in multi if _wb_is_real_subwine(g)]
+        if len(real) >= 2:
+            mixed_lot = 1
+
+    if quantity is None:
+        errors.append(f"NO_QUANTITY{key}: {desc!r}")
+
+    return {
+        "wine": wine_name, "producer": producer, "vintage": vintage,
+        "quantity": quantity, "bottle_size_dl": bottle_size_dl,
+        "is_ohk": is_ohk, "mixed_lot": mixed_lot,
+        "region": region, "color": color,
+    }
+
+
 def load_weinboerse(b, limit):
-    _load_weinauktion_json(b, "weinboerse", limit)
+    """Weinbörse Zürich: paginated JSON export (20 items/page, 2020-2026).
+
+    Not the old weinauktion-platform API shape ``_load_weinauktion_json``
+    expects -- each page is ``{"@related": {auctions, catalogs, parts,
+    ...}, "items": [...]}``, with an item linked to its auction via
+    auctionCatalogPartId -> parts[].auctionCatalogId -> catalogs[].auctionId
+    -> auctions[]. A page embeds only the slice of that graph its own items
+    need, not a global directory, so this does two passes: collect the
+    graph from every file first, then resolve+load items.
+
+    Items repeat verbatim across re-scraped pages -- same
+    (auctionCatalogPartId, id) key, byte-identical content every time
+    (confirmed empirically: unique full-record hashes == unique keys) --
+    so a seen-set dedup is required or lots would be inserted many times
+    over (one key observed 71 times).
+    """
+    files = _json_files("Weinboerse", "**/Resultfile*.json")
+
+    auctions, catalogs, parts = {}, {}, {}
+    for f in files:
+        rel = load_json(f).get("@related", {})
+        for a in rel.get("auctions", []):
+            auctions[a["id"]] = a
+        for c in rel.get("catalogs", []):
+            catalogs[c["id"]] = c
+        for p in rel.get("parts", []):
+            parts[p["id"]] = p
+    part_to_auction = {
+        pid: catalogs[p["auctionCatalogId"]]["auctionId"]
+        for pid, p in parts.items() if p.get("auctionCatalogId") in catalogs
+    }
+
+    # Auctions the CI fetcher has already written as a file of its own
+    # (lowercase "weinboerse/<catalog_id>.json", the ``{auction, lots}``
+    # shape -- see ``_load_weinauktion_json`` below). The fetcher's catalog
+    # ids do not cleanly partition from this dump's (168->167, 202->200,
+    # 235->233, 236->234 collapse to the SAME auction), so without this,
+    # the first CI run would double-load every auction it refetches on top
+    # of the frozen historical dump. Mirrors ``_wermuth_xlsx_dates``: the
+    # fresher source (here, the live fetch) wins, the frozen dump fills in
+    # whatever it hasn't covered yet.
+    fetched_auction_ids = set()
+    for f in _json_files("weinboerse"):
+        if os.path.basename(f).lower().startswith("resultfile"):
+            continue
+        cat_id = os.path.splitext(os.path.basename(f))[0]
+        cat = catalogs.get(int(cat_id)) if cat_id.isdigit() else None
+        if cat:
+            fetched_auction_ids.add(cat["auctionId"])
+
+    errors = []
+    seen = set()
+    auction_db_id = {}
+    n = 0
+    for f in files:
+        d = load_json(f)
+        b.set_source(f)
+        for it in d.get("items", []):
+            key = (it.get("auctionCatalogPartId"), it.get("id"))
+            if key in seen:
+                continue
+            seen.add(key)
+            if part_to_auction.get(key[0]) in fetched_auction_ids:
+                continue
+
+            aid = part_to_auction.get(key[0])
+            a = auctions.get(aid)
+            if a is None:
+                errors.append(f"NO_AUCTION{key}")
+                continue
+            if aid not in auction_db_id:
+                auction_db_id[aid] = b.add_auction(
+                    "weinboerse", str(aid), a.get("title"),
+                    parse_date(a.get("startDate")),
+                    a.get("currency") or "CHF", "HAMMER")
+            a_id = auction_db_id[aid]
+
+            parsed = _wb_parse_description(it.get("description"), key, errors)
+            if parsed is None:
+                continue
+
+            sold = 1 if it.get("state") == "sold" else 0
+            b.add_lot(a_id, {
+                "lot_no": str(it.get("number")),
+                "source_lot_key": f"{key[0]}:{key[1]}",
+                "wine": parsed["wine"], "producer": parsed["producer"],
+                "vintage": parsed["vintage"], "quantity": parsed["quantity"],
+                "bottle_size_dl": parsed["bottle_size_dl"],
+                "region": parsed["region"], "color": parsed["color"],
+                "is_ohk": 1 if parsed["is_ohk"] else 0,
+                "mixed_lot": parsed["mixed_lot"] or None,
+                "estimate_low": to_float(it.get("basePrice")),
+                "estimate_high": to_float(it.get("upperBasePrice")),
+                "hammer_price": to_float(it.get("hammerPrice")) if sold else None,
+                "price_basis": "HAMMER" if sold else "UNKNOWN",
+                "currency": a.get("currency") or "CHF",
+                "sold": sold,
+                "description": it.get("description"),
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+    if errors:
+        print(f"WARN load_weinboerse: {len(errors)} issues"
+              f" (first 5: {errors[:5]})")
+
+    # The historical bulk dump above (this house's own paginated export,
+    # "Weinboerse/**/Resultfile*.json") is a one-time, now-frozen snapshot.
+    # Going forward, the CI ``WeinauktionFetcher`` (same live API, see
+    # ingest/fetchers/weinauktion.py) writes NEW auctions to the lowercase
+    # "weinboerse/<auction_id>.json" directory in the simpler {auction,
+    # lots} shape -- a genuinely different, non-overlapping directory on a
+    # case-sensitive filesystem (CI), even though the two names collide
+    # into one folder locally on case-insensitive macOS. Without this
+    # call, every month's newly-fetched auction would silently never load.
+    remaining = None if limit is None else max(0, limit - n)
+    # `_load_weinauktion_json`'s own `if limit and n >= limit` treats 0 as
+    # falsy (unlimited), so a used-up budget must skip the call outright
+    # rather than pass 0 through.
+    if remaining is None or remaining > 0:
+        _load_weinauktion_json(b, "weinboerse", remaining)
 
 
 def load_dobiaschofsky(b, limit):

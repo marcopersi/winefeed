@@ -69,10 +69,22 @@ class TestWeinauktion(unittest.TestCase):
         self.assertEqual(lot["estimate_low"], 20.0)
         self.assertEqual(lot["vintage"], "2015")
         self.assertEqual(lot["sold"], 1)
+        self.assertIsNone(lot["description"])  # no raw description on this fixture
         # pagination requested page 1 and 2
         lot_urls = [u for u in session.requests if "/api/lots" in u]
         self.assertIn("$page=1", lot_urls[0])
         self.assertIn("$page=2", lot_urls[1])
+
+
+    def test_map_lot_preserves_raw_description(self):
+        """The flattened 'wine' text loses structure a fuller re-parse
+        could recover later -- the raw HTML must survive this layer."""
+        lot = WeinauktionFetcher._map_lot(
+            {"number": "1", "description": "Clos de la Roche gr.c., OHK"
+                                            "<br />Jahrgang: 2011"},
+            "CHF")
+        self.assertEqual(lot["description"],
+                         "Clos de la Roche gr.c., OHK<br />Jahrgang: 2011")
 
 
 if __name__ == "__main__":
