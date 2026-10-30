@@ -227,10 +227,58 @@ Weinbörse-Review entdeckt, nicht Teil der ursprünglichen Bestandsaufnahme):
       `build_db.py`, keine Einträge in der Provider-Tabelle. In Kapitel 1
       nur als „offene Frage" erwähnt (`VinoImporter`-PDF-Parser), nie
       begonnen.
-- [ ] **sylvies** (`WeinAuktionspreise/sylvies/`, Zip-Archive 2012–2026):
-      kein Loader. Es liegt dort bereits ein `sylviesParser.py` /
-      `sylviesParser2022.py` — beide nur stdout-Scraping-Prototypen ohne
-      Persistenz, keine DB-Anbindung.
+- [x] **sylvies** — grösste Einzelquelle dieser Session (~266.000 Lots,
+      15 Jahre), in zwei grundverschiedenen Archivformaten:
+      `load_sylvies_html` (6 volle Monate 2012, gezippte Roh-HTML-Seiten
+      — jeder Wein eines Mixed-Lots wird gelesen) und `load_sylvies_txt`
+      (alle übrigen Monate 2012–2026 — nur noch der mitgeloggte stdout
+      eines live laufenden `sylviesParser.py`/`sylviesParser2024.py`
+      vorhanden, das rohe HTML ist weg). Zwei Bugs dieses Scrapers sind
+      dadurch dauerhaft in der Textform eingebrannt: `find_next("p")`
+      ohne Scoping liest bei einem unverkauften Los die Losnummer des
+      NÄCHSTEN Loses statt „nicht verkauft" (zu 100 % deterministisch
+      als „nicht verkauft" auflösbar — beide Fälle ergeben ohnehin
+      `hammer_price=NULL`); `item.find(...)` (singular) liest nur den
+      ERSTEN Wein eines Mixed-Lots — für die Text-Jahre nicht
+      wiederherstellbar, `mixed_lot` bleibt dort unbekannt statt `0`.
+      **Domänen-Fund, relevant auch für künftige Häuser:** `Mc`/`Neg`/
+      `Dom`/`Dist` im „Produzent"-Feld sind **Abfüll-/Herkunfts-Codes**
+      (mise en bouteille au château / Négociant / Domaine / Distributeur),
+      keine Produzentennamen — `Mc` allein ~89.664 von ~266.000 Lots;
+      genullt statt gespeichert, vom Resolver danach unabhängig über den
+      Weintext korrekt rekonstruiert (z. B. „Château Palmer") — bestätigt,
+      dass die Entscheidung richtig war. **Drei echte, erst bei Tests mit
+      realen Strings gefundene Bugs:** `[ \t]*` statt `\s*` in der
+      Feld-Regex (`\s` überspringt auch den Zeilenumbruch — ein leeres
+      `Lot Bottletype:`-Feld liess den Treffer in die NÄCHSTE Zeile
+      („Estimate: …") durchrutschen); das reale Format ist
+      `"Bottle(s)"` mit Klammern, nicht `"Bottles"` — die alte Regex
+      verschluckte dadurch den halben String inklusive des
+      OHK-Markers; der OHK-Marker steht meist als `"Owc-1"`/`"Oc-2"`
+      (Bindestrich-Suffix, 44.557 Treffer), nicht bloss `"Owc"`/`"Oc"`
+      — vor dem Fix war `is_ohk` grob halbiert. **Dateibezogene Funde:**
+      3 Dateipaare teilen sich identischen Inhalt unter falschem
+      Monatsnamen — Hash-Dedup **vor**, nicht nach, dem
+      Monats-Abdeckungs-Check (sonst vergiftet die übersprungene
+      Zip-abgedeckte Datei nie den Hash, und ihr Zwilling lädt unter
+      falschem Monat). **Nicht auflösbar:** bei den Paaren
+      2023-10/2023-12 und 2024-02/2024-04 ist je EINE der beiden echten
+      Auktionen nicht im Archiv enthalten (welche, ist aus der Capture
+      nicht feststellbar) — explizit nicht geraten. 3 Dateien aus 2018
+      hatten einen Tippfehler-Jahr (`"August20218.txt"` statt
+      `"August2018.txt"`) — korrigiert, da einzige Kopie des Monats.
+      Ein einzelner Lot-Block wiederholte sich innerhalb einer sonst
+      einzigartigen Datei (vermutlich ein wiederholt abgerufener Scrape
+      nach Retry) — ein generischer Block-Hash-Dedup pro Datei fängt
+      das zusammen mit den zwei komplett doppelt gespeicherten Dateien
+      in einem Mechanismus. Rebuild verifiziert: 2.804.014 → 3.070.189
+      Lots (+266.175), 93 sylvies-Auktionen, 0 doppelte Lot-Nummern
+      innerhalb einer Auktion, 0 Phantom-Auktionen, 0 AMBIGUOUS, die
+      bestehenden 8.690 SINGLE-ohne-`wine_ref_id` unverändert,
+      `integrity_check` ok. **Offen:** `PREMIUM_POLICY`/`TAX_POLICY`
+      kennt `sylvies` noch nicht — 266.000 Lots ohne `buyer_premium`/
+      `total_price`; braucht die echte Rate aus
+      `docs/premium-policy.md`, nicht geschätzt.
 - [x] **weinauktionator** — **war kein CI-Leak, nur ein Backlog, der die
       Pipeline nie durchlaufen hat.** Die Pipeline selbst
       (`WeinauktionatorFetcher` → `orchestrate._store_parsed` →
