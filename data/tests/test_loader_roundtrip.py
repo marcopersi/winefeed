@@ -573,6 +573,37 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(
             rows, [("Chambertin", 460.0), ("Pommard", 0.0)])
 
+    def test_dedupe_munich_lots(self):
+        """Confirmed real cases in the MunichWineCompany archive: an
+        exact byte-for-byte repeat (auction-111.json lot "81") is
+        dropped to one row; a lot scraped both before and after the
+        sale closed -- same wine/count_fill/description, one copy with
+        price_text="" and hammer_price=None, the other populated
+        (auction-89.json lot "101") -- keeps only the populated copy;
+        and a reused lot_no that genuinely differs (auction-65.json's
+        "9999" catch-all across four unrelated wines) is left alone."""
+        exact_dup = {"lot_no": "81", "name": "Pichon Baron", "count_fill": "3",
+                     "description": "d", "hammer_price": 490.0,
+                     "price_text": "x"}
+        before_close = {"lot_no": "101", "name": "Pichon Baron 1989",
+                         "count_fill": "3", "description": "d",
+                         "hammer_price": None, "price_text": ""}
+        after_close = {"lot_no": "101", "name": "Pichon Baron 1989",
+                        "count_fill": "3", "description": "d",
+                        "hammer_price": 440.0, "price_text": "x"}
+        sentinel_a = {"lot_no": "9999", "name": "Wine A", "count_fill": "1",
+                      "description": "a", "hammer_price": 50.0}
+        sentinel_b = {"lot_no": "9999", "name": "Wine B", "count_fill": "6",
+                      "description": "b", "hammer_price": 80.0}
+        deduped = build_db._dedupe_munich_lots(
+            [exact_dup, dict(exact_dup), before_close, after_close,
+             sentinel_a, sentinel_b])
+        self.assertEqual(len(deduped), 4)
+        lot_101 = [l for l in deduped if l["lot_no"] == "101"]
+        self.assertEqual(lot_101, [after_close])
+        lot_9999 = [l for l in deduped if l["lot_no"] == "9999"]
+        self.assertEqual(len(lot_9999), 2)
+
     def test_backfill_wine_ref_uses_alias_key(self):
         conn = sqlite3.connect(":memory:")
         conn.executescript(build_db.SCHEMA)

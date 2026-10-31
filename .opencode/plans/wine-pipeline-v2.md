@@ -505,10 +505,30 @@ vorgesehen — der Import muss diese füllen, damit ein Re-Run idempotent bleibt
       Produktions-Rebuild (reitet mit der nächsten ohnehin fälligen
       Rebuild mit, siehe koppe oben).
 
-      Verbleibend, noch nicht einzeln untersucht: munich-wine-company
-      143, winefields 39, zacky 16, wermuth-sa 1, besch-cannes 1. Bevor
-      das Gate zu einem echten Build-Abbruch (`problems.append` statt
-      `print`) hochgestuft werden kann, müssen diese noch geprüft werden
+      **munich-wine-company (gefixt):** eine Datei pro Sale (36 Dateien,
+      0 Sale-IDs mit >1 Datei). Zwei getrennte Scraper-Artefakte direkt
+      im Archiv selbst: 143 Zeilen sind byte-identische Wiederholungen
+      (z. B. `auction-111.json` Lot "81", komplett inkl. Beschreibung
+      zweimal); zusätzlich 19 Fälle, wo derselbe Lot zweimal gescraped
+      wurde — einmal vor und einmal nach Zuschlag, sonst identisch
+      (`price_text`/`hammer_text`/`hammer_price` leer vs. befüllt, z. B.
+      `auction-89.json` Lot "101"). Beides bisher unter "source_dups"
+      versteckt (da `hammer_price` differiert), tatsächlich aber dieselbe
+      Lücke wie Christies/Steinfels. Fix: `_dedupe_munich_lots` gruppiert
+      pro Auktion nach (lot_no, name, count_fill, description) und
+      bevorzugt die Kopie mit befülltem `hammer_price`. Echte
+      Mehrfachbelegungen bleiben erhalten (Sentinel-Lot "9999" in
+      `auction-65.json`/`auction-97.json` mit 4 bzw. 2 verschiedenen
+      Weinen; Lot "153" in `auction-124.json` mit zwei Jahrgängen im
+      Namenstext). Scratch-verifiziert: 4.312 → 4.150 Zeilen, 0 load_dups,
+      5 echte source_dups. Test: `test_dedupe_munich_lots`. Noch kein
+      Produktions-Rebuild (reitet mit der nächsten ohnehin fälligen
+      Rebuild mit, siehe koppe/steinfels oben).
+
+      Verbleibend, noch nicht einzeln untersucht: winefields 39, zacky
+      16, wermuth-sa 1, besch-cannes 1. Bevor das Gate zu einem echten
+      Build-Abbruch (`problems.append` statt `print`) hochgestuft
+      werden kann, müssen diese noch geprüft werden
       (jeweils: Dateien-pro-Sale prüfen, dann Rohdaten der einzelnen
       Fälle ansehen — kein Raten).
 

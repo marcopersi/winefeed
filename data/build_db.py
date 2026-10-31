@@ -1451,6 +1451,33 @@ def load_dobiaschofsky(b, limit):
             break
 
 
+def _dedupe_munich_lots(lots):
+    """The raw archive has two scrape artifacts, both confirmed on real
+    auctions: some lots are repeated byte-for-byte verbatim (143 rows
+    across the archive, e.g. auction-111.json lot "81"), and others are
+    scraped twice at different auction states -- once before the sale
+    closed (price_text="", hammer_price=None) and once after (both
+    populated), otherwise identical (19 cases, e.g. auction-89.json lot
+    "101"). Keeping one row per (lot_no, name, count_fill, description),
+    preferring the copy with a populated hammer_price, fixes both without
+    touching genuinely different lots that happen to share a lot_no --
+    e.g. auction-65.json's "9999" catch-all (four unrelated wines) or
+    auction-124.json lot "153" (two different vintages in the name
+    text) keep their own key and are left alone."""
+    best = {}
+    order = []
+    for lot in lots:
+        key = (lot.get("lot_no"), lot.get("name"), lot.get("count_fill"),
+               lot.get("description"))
+        if key not in best:
+            best[key] = lot
+            order.append(key)
+        elif (best[key].get("hammer_price") is None
+              and lot.get("hammer_price") is not None):
+            best[key] = lot
+    return [best[k] for k in order]
+
+
 def load_munich_wine_company(b, limit):
     n = 0
     for f in _json_files("MunichWineCompany"):
@@ -1463,7 +1490,7 @@ def load_munich_wine_company(b, limit):
             "munich-wine-company", aid, a.get("title"),
             parse_date(a.get("date")), cur, "HAMMER",
             None, a.get("snapshot_timestamp"))
-        for lot in d.get("lots", []):
+        for lot in _dedupe_munich_lots(d.get("lots", [])):
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_no")),
                 "wine": lot.get("name"), "producer": lot.get("brand") or None,
