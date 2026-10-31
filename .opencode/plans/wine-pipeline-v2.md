@@ -223,10 +223,60 @@ Noch nicht verarbeitete Quellen (vom Auftraggeber bereitgestellt):
 **Noch offene, bisher nirgends dokumentierte Lücken** (beim
 Weinbörse-Review entdeckt, nicht Teil der ursprünglichen Bestandsaufnahme):
 
-- [ ] **Denz** (`WeinAuktionspreise/Denz/`, PDFs 2003–2026): kein Loader in
-      `build_db.py`, keine Einträge in der Provider-Tabelle. In Kapitel 1
-      nur als „offene Frage" erwähnt (`VinoImporter`-PDF-Parser), nie
-      begonnen.
+- [x] **Denz — ist gar kein eigenständiges Haus, sondern das PDF/HTML-
+      Archiv von Wermuth (2003–2026), nur unter diesem Ordnernamen
+      abgelegt.** Beweis: interner Fusszeilen-Pfad `.../Wein/Wermuth/
+      2003/WZ_156.html`, Dateinamen wie `Wermuth_WZ-156.pdf`, und eine
+      Charity-Auktion im Archiv trägt den Kopf „WERMUTH AUKTIONEN… LES
+      GRANDS VINS WERMUTH S.A., ZÜRICH". Mit dem Auftraggeber abgestimmt:
+      in den bestehenden `wermuth-sa`-Provider geladen (`load_denz_wermuth`,
+      `auction_id` = `denz-<WZ-Nummer>`), kein neuer Provider. Zwei
+      Archiv-Epochen: ~2003–2011 Katalog-PDF (Wein/Region als „sticky"
+      Header über mehreren Losen, nur Schätzpreis) + separate
+      Ergebnis-HTML-Tabelle (Los+Preis, kein Weintext), verknüpft über
+      die WZ-Katalognummer; ~2012–2026 ein einzelnes PDF mit Wein,
+      Schätzung UND Zuschlag in einer Zeile. Zwei Dutzend+ Datei-
+      namenskonventionen über 23 Jahre machen ein festes Glob unmöglich
+      — Dateien werden per Inhalt des Namens klassifiziert
+      („resultat"/„ergebnisliste"/„nachverkauf"), nicht per festem Muster.
+      Bereits durch die Excel/CSV-Wermuth-Quellen abgedeckte Daten
+      (2008-02-28..2018-03-13, 51 Auktionen) werden per exaktem Auktions-
+      datum übersprungen, nur die Lücken (2003–2007, ab 2018) kommen neu
+      dazu. **Mehrere reale Bugs, alle durch Tests mit echten Strings
+      gefunden:** ein `\b`, das zwischen Ziffer und `_` nie greift (`265_
+      Resultate Web.pdf` fiel auf den ganzen Dateinamen als Katalognummer
+      zurück — eine reale Auktion wäre unter zwei `auction_id`s gelandet);
+      der Flaschengrössen-Bruch nur mit Bindestrich statt auch mit
+      Leerzeichen vor der Einheit („12 3/8 Flaschen"); eine Bordeaux-
+      Klassifikation („5e grand cru classé") landete im Produzenten-Feld,
+      weil sie im selben Komma-Slot wie ein echter Produzent steht; ein
+      PDF-Encoding-Defekt („Côte" → „CÃ´te", nur auf einer Datei,
+      global mit `-enc UTF-8` behoben); eine Fusszeile ohne Form-Feed
+      oder „file:///"-Präfix (der allererste Durchlauf im Dokument) sickerte
+      in den Weinnamen; der Appellations-Code klebt auf manchen Dateien
+      ohne Komma am Weinnamen („Château Rol Valentin          AC/ MC,
+      St. Emilion"). Rebuild verifiziert: 2.804.014 → 3.080.651 Lots
+      (durch sylvies zwischendurch; denz allein +10.462), 35 neue
+      Auktionen (86 total für wermuth-sa), 0 doppelte Lot-Nummern
+      innerhalb einer Auktion, 0 Phantom-Auktionen, globales AMBIGUOUS
+      und die bestehenden SINGLE-ohne-`wine_ref_id` unverändert,
+      `integrity_check` ok.
+      **Offene Kleinigkeiten (bewusst nicht in diesem Commit):**
+      8 Auktionen ohne auflösbares Datum (Katalog jetzt `.xlsx` ohne
+      Datumsspalte, oder gar keine Begleitdatei mehr vorhanden — welche
+      WZ-Nummern genau, steht im Commit `e212565`); der `MS`-Fülllstand-
+      Marker (ullage, „mid shoulder") wird aktuell verworfen statt in
+      `condition_text` übernommen, selbe Vokabel wie bei sylvies; kein
+      `PREMIUM_POLICY`/`TAX_POLICY`-Eintrag für `wermuth-sa`s neue
+      Denz-Lots (die bestehenden Einträge für `wermuth-sa` galten schon
+      vor Denz, decken aber nicht zwingend den vollen Zeitraum ab — zu
+      prüfen). **Fund für die Normalisierung (Kapitel 4):**
+      `WeinAuktionspreise/Denz/Verarbeitete Dokumente.rtf` ist ein
+      händisches Abgleichsprotokoll — jemand hat 2003–2006 und Teile von
+      2015 bereits gegen die Original-PDFs verifiziert (z. B. „2003 -
+      WZ-156 —> tutto perfetto"). Das ist eine fertige Gold-Set-Quelle für
+      §4.0, nicht neu zu erheben — nur gegen das importierte Ergebnis
+      für WZ-156/157/159/160/161/163 abzugleichen.
 - [x] **sylvies** — grösste Einzelquelle dieser Session (~266.000 Lots,
       15 Jahre), in zwei grundverschiedenen Archivformaten:
       `load_sylvies_html` (6 volle Monate 2012, gezippte Roh-HTML-Seiten
@@ -327,12 +377,23 @@ Weinbörse-Review entdeckt, nicht Teil der ursprünglichen Bestandsaufnahme):
       Samsung-Workflow auslaufen lassen, oder (c) neue Archiv-Dateien aus
       `ingest.yml` direkt ins Repo committen statt als Artifact.
 - [ ] **Generischer Dublettenschutz für „zwei Quellen, eine Auktion"** —
-      vierter Fall dieser Bugklasse in dieser Session (Wermuth xlsx/CSV,
-      Steinfels 316/Staging, Weinbörse Dump/Fetcher, jetzt
-      Weinauktionator Backfill-Pfad). Jedes Haus mit zwei Quellen
+      fünfter Fall dieser Bugklasse in dieser Session (Wermuth xlsx/CSV,
+      Steinfels 316/Staging, Weinbörse Dump/Fetcher, Weinauktionator
+      Backfill-Pfad, jetzt Denz/Wermuth). Jedes Haus mit zwei Quellen
       (Dump + Fetcher, xlsx + CSV) braucht ein Äquivalent zu
       `_wermuth_xlsx_dates`, und ein `--only <house>`-Lauf sollte
       `COUNT(DISTINCT lot_no) == COUNT(*)` pro Auktion als Gate prüfen.
+      **Achtung bei der Umsetzung:** dieses Gate hat einen bekannten
+      False-Positive — in `load_wermuth`/`load_wermuth_validated` (xlsx/
+      CSV) existieren 10 Fälle, in denen dieselbe Lot-Nummer zweimal
+      vorkommt, aber mit *zwei unterschiedlichen Weinen* (z. B. Lot 299
+      am 19.10.2013: einmal "Contador", einmal "Giusto di Notri", beide
+      zum selben Preis) — das ist ein echter Fehler in der Quelldatei
+      selbst (Lot-Nummer versehentlich wiederverwendet), kein Parser-Bug
+      und keine Dublette im Sinne dieses Checks. Das Gate müsste solche
+      Fälle (gleiche Lot-Nummer, aber unterschiedlicher `wine`-Text)
+      weiterhin als Fehler melden, aber getrennt von echten Lade-
+      Dubletten (gleiche Lot-Nummer, identischer Inhalt, zweimal geladen).
       Noch nicht umgesetzt — Kandidat für einen späteren generischen Pass
       statt Haus-für-Haus-Wiederholung.
 
