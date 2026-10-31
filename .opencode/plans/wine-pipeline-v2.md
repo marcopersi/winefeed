@@ -525,12 +525,95 @@ vorgesehen — der Import muss diese füllen, damit ein Re-Run idempotent bleibt
       Produktions-Rebuild (reitet mit der nächsten ohnehin fälligen
       Rebuild mit, siehe koppe/steinfels oben).
 
-      Verbleibend, noch nicht einzeln untersucht: winefields 39, zacky
-      16, wermuth-sa 1, besch-cannes 1. Bevor das Gate zu einem echten
-      Build-Abbruch (`problems.append` statt `print`) hochgestuft
-      werden kann, müssen diese noch geprüft werden
-      (jeweils: Dateien-pro-Sale prüfen, dann Rohdaten der einzelnen
-      Fälle ansehen — kein Raten).
+      **Blinder Fleck im generischen Check selbst, betraf potenziell
+      alle Häuser (gefixt):** der Vergleich nutzte die rohe
+      `lots.vintage`-Spalte. Bei Häusern, die den Jahrgang nicht als
+      eigenes Feld laden, sondern im Freitext-Titel eingebettet lassen
+      (winefields, zacky, munich-wine-company), bleibt `vintage` beim
+      Laden NULL — erst `build_wines.py`s `_separate_vintage` extrahiert
+      ihn nach `vintage_final` und bereinigt `wine` davon (läuft in
+      `main()` vor `_validate_gates`, also bereits verfügbar, wenn das
+      Gate real greift). Bestätigt an winefields Auktion 244 Lot "170":
+      7 Rohzeilen für "Kopke Vintage Port"/"Kopke Colheita Port" fielen
+      unter `vintage` alle auf ein Tupel zusammen; mit `vintage_final`
+      trennen sie sich korrekt in 1960/1997×3/1999×2 — exakt dieselbe
+      False-Positive-Klasse wie der langtons-vintage-Fall, nur vom Check
+      selbst verursacht statt vom Loader. Fix: `COALESCE(vintage_final,
+      vintage)` statt `vintage` allein (Tests ohne `build_wines`-Lauf
+      bleiben unverändert, da `vintage_final` dort NULL ist und auf
+      `vintage` zurückfällt).
+
+      **is_ohk zusätzlich ins Vergleichstupel aufgenommen** (sechstes
+      Feld, nach vintage/quantity/region/condition_text): bestätigter
+      Fall wermuth-sa 13.03.2018 Lot "331" ("Trebbian d'Abruzzo" 2009,
+      gleiche Menge/Schätzung/Preis, nur durch Original-Holzkiste
+      ja/nein unterschieden) — damit wermuth-sa jetzt bei 0 load_dups.
+
+      **zacky (gefixt, grösserer Fund als ein Dedup-Fall):** 87 von 332
+      Archiv-Dateien kollidieren auf dieselbe numerische `id` — aber
+      NICHT, weil dieselbe Auktion zweimal gescraped wurde (anders als
+      bei Christies/steinfels/munich). Es sind zwei komplett
+      unabhängige Scrape-Generationen: eine ältere Wayback-Archivierung
+      mit Zachys' eigener `auctionid` (235 Dateien, id 19–287) und eine
+      spätere, viel reichhaltigere „structured"-Generation mit eigener
+      `sale_no` (z. B. "2409i") UND einer eigenen kleinen fortlaufenden
+      `id` (97 Dateien, id 56–169) — diese zweite `id` ist ein Artefakt
+      des neueren Scrapers, keine echte Zachys-Auktionsnummer, und
+      kollidiert bei 87 von 97 Dateien mit einer völlig unabhängigen
+      Wayback-Auktion (Beispiel: id "72" ist sowohl "zCollections, June
+      9-14th" 2020 (25 Lots, Wayback) als auch "zCollections, New York,
+      August 19 - September 1" 2024 (957 Lots, structured) — beide
+      wurden bisher zu einem Auktionsdatensatz verschmolzen). `sale_no`
+      ist bei allen 97 structured-Dateien vorhanden, untereinander
+      eindeutig und kollidiert nie mit einer Wayback-ID. Fix: `aid =
+      str(a.get("sale_no") or a.get("id"))`. Scratch-verifiziert: 332
+      Dateien → 332 getrennte Auktionen (vorher 245), 0 load_dups,
+      0 source_dups (der einzige verbliebene Fall war Teil der
+      Kollision). Test:
+      `test_zacky_prefers_sale_no_over_colliding_wayback_id`. Noch kein
+      Produktions-Rebuild.
+
+      **winefields (geprüft, bewusst nicht gefixt):** eine Datei pro
+      Sale (148 Dateien, 0 Kollisionen). Die 34 verbleibenden Fälle
+      (nach vintage_final/is_ohk-Fix von 39 auf 34) sind in diesem Haus
+      strukturell anders als bei den bisher gefixten Häusern: `lot_no`
+      ist für winefields oft ein Gruppen-Schlüssel, kein Zeilen-
+      Schlüssel — bestätigt an Auktion 1-4W5RCJ Lot "17" (27
+      verschiedene Portweine unter derselben Nummer) und Lot "170" (8
+      verschiedene, s. o.) — genau wie bei langtons' Sammellos-
+      Konvention. Für die wenigen Fälle mit wirklich identischem Inhalt
+      (z. B. Lot "113" in Auktion 1-2P1FS2, zwei Zeilen "Bâtard-
+      Montrachet Grand Cru 2007" zu 2400.00, Titel unterscheidet sich
+      nur durch ein Leerzeichen) fehlt — anders als bei munich (eindeu-
+      tige Beschreibungs-ID) oder steinfels (zwei Datumsformate) — ein
+      Feld, das beweist, dass es sich um dieselbe Zeile zweimal handelt
+      statt um zwei echte Parallel-Lose mit zufällig identischen
+      Konditionen (in Portwein-Auktionen mit vielen gleichartigen
+      Fässern/Kisten plausibel). Löschen würde im Zweifel echte
+      Preisbeobachtungen verlieren — das Gegenteil von „möglichst
+      wenig misses". Bewusst als Residual dokumentiert, nicht gefixt.
+
+      **besch-cannes (geprüft, bewusst nicht gefixt):** 1 Datei pro
+      Sale. Der einzige verbleibende Fall (Auktion 236 Lot "422") sind
+      zwei echte, unterschiedliche Sub-Lose ("422-2"/"422-3" laut
+      Rohtext, 12 Flaschen Château Léoville Las Cases 2000 je), die der
+      Loader nicht unterscheiden kann, weil `appellation` für beide
+      `None` ist (der Weinname steckt nur im langen `description`-Text,
+      der nicht geparst wird) — eine Parse-Lücke, kein Dubletten-Bug.
+      Nicht gefixt (würde Freitext-Parsing erfordern, ausserhalb des
+      Scopes dieses Durchgangs).
+
+      **Gate-Status:** alle 10 Häuser mit `lot_no` sind jetzt einzeln
+      geprüft. Echte Loader-Bugs (koppe, steinfels, munich-wine-company,
+      zacky) sind im Code gefixt, scratch-verifiziert, aber noch nicht
+      in der Produktions-DB (ein gemeinsamer Rebuild steht aus). Harte
+      Residuals bleiben bei christies-ähnlichem Muster nur bei langtons
+      (7), winefields (34) und besch-cannes (1) — alle mit konkretem
+      Beleg dokumentiert, warum sie kein Loader-Bug sind. Das Gate kann
+      nach dem Rebuild von `print` auf einen echten Build-Abbruch nur
+      umgestellt werden, wenn diese 42 Residual-Fälle explizit als
+      bekannte Ausnahme behandelt werden (z. B. eine Allowlist
+      `(provider, auction_id, lot_no)`), nicht als Schwellenwert.
 
 ## 3. Referenzlisten (Grundlage der Normalisierung)
 

@@ -901,7 +901,19 @@ def load_zacky(b, limit):
         d = load_json(f)
         b.set_source(f)
         a = d.get("auction", {})
-        aid = str(a.get("id"))
+        # Two scrape generations, both confirmed real: an older wayback
+        # archive using Zachys' own small-integer auctionid (235 files,
+        # id 19-287), and a later, richer "structured" scrape that
+        # carries its own sale_no (e.g. "2409i") plus a small sequential
+        # id (97 files, id 56-169) -- that id is an artifact of the newer
+        # scrape, not a Zachys auction id, and collides with an unrelated
+        # wayback-generation sale for 87 of the 97 files (e.g. id "72" is
+        # both "zCollections, June 9-14th" 2020, 25 lots, wayback, and
+        # "zCollections, New York, August 19 - September 1" 2024, 957
+        # lots, structured) -- both got merged into one auction record.
+        # sale_no is present, unique, and collision-free with every
+        # wayback id across the whole archive; prefer it when present.
+        aid = str(a.get("sale_no") or a.get("id"))
         cur = a.get("currency")
         a_id = b.add_auction(
             "zacky", aid, a.get("name"), ym_date(a.get("year"), a.get("month")),
@@ -3050,9 +3062,9 @@ def _validate_gates(conn):
         # which is separate, not-yet-scheduled work. Promote this to
         # `problems.append(...)` once that cleanup lands.
         print(f"WARN: duplicate-lot-number LOAD bug (same auction_id, "
-              f"lot_no, wine, vintage, quantity, region AND condition_text "
-              f"more than once): {load_dups} case(s) -- not gated yet, "
-              f"see _validate_gates")
+              f"lot_no, wine, vintage, quantity, region, condition_text "
+              f"AND is_ohk more than once): {load_dups} case(s) -- not "
+              f"gated yet, see _validate_gates")
     if source_dups:
         print(f"WARN: {source_dups} case(s) of the same lot_no shared by "
               f"genuinely different rows within one auction -- either a "
@@ -3090,21 +3102,40 @@ def _check_duplicate_lot_numbers(conn):
     - condition_text: sale 1763 lot "838" -- four ROCKFORD Black Sparkling
       Shiraz sub-lots, same wine/vintage/quantity/price, told apart only
       by disgorgement date in the notes.
+    - is_ohk: wermuth-sa 13.03.2018 lot "331" -- "Trebbian d'Abruzzo"
+      2009, same quantity/estimate/price, told apart only by whether the
+      case is in its original wooden box (``is_ohk``).
     A small residual still lands in load_dups for langtons (e.g. sale
     1810 lot "2030"): rows that are byte-identical in every one of these
     fields too. Those are genuine raw-archive row repeats (no further
     field distinguishes them) rather than a loader bug -- the loader
-    reads each sale from exactly one file, one row per raw lot entry."""
+    reads each sale from exactly one file, one row per raw lot entry.
+
+    Uses COALESCE(vintage_final, vintage), not the raw loader column
+    alone: several houses (winefields, zacky, munich-wine-company) embed
+    the vintage in the free-text title instead of a separate field, so
+    ``vintage`` is NULL at load time -- it's ``build_wines.py``'s
+    ``_separate_vintage`` that extracts it into ``vintage_final`` and
+    strips it out of ``wine``. Confirmed real case: winefields auction
+    244 lot "170" has 7 raw rows for "Kopke Vintage Port"/"Kopke Colheita
+    Port" that collapse onto one content tuple under the raw ``vintage``
+    column (always NULL) -- comparing ``vintage_final`` instead resolves
+    them into the correct 1960/1997/1997/1997/1999/1999 groups, the same
+    class of false positive vintage already fixed for langtons. This
+    check runs (via ``_validate_gates``, in ``main()``) after
+    ``resolve_wines`` has populated ``vintage_final``, so the column is
+    available; call sites that run it earlier see NULL and fall back to
+    the raw ``vintage`` column, same as before."""
     rows = conn.execute(
-        "SELECT auction_id, lot_no, wine, vintage, quantity, region,"
-        " condition_text, hammer_price"
+        "SELECT auction_id, lot_no, wine, COALESCE(vintage_final, vintage),"
+        " quantity, region, condition_text, is_ohk, hammer_price"
         " FROM lots WHERE lot_no IS NOT NULL").fetchall()
     seen = {}
     load_dups = source_dups = 0
-    for auction_id, lot_no, wine, vintage, quantity, region, cond, hammer \
-            in rows:
+    for auction_id, lot_no, wine, vintage, quantity, region, cond, ohk, \
+            hammer in rows:
         key = (auction_id, lot_no)
-        content = (wine, vintage, quantity, region, cond, hammer)
+        content = (wine, vintage, quantity, region, cond, ohk, hammer)
         if key not in seen:
             seen[key] = {content}
         elif content in seen[key]:

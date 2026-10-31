@@ -573,6 +573,49 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(
             rows, [("Chambertin", 460.0), ("Pommard", 0.0)])
 
+    def test_zacky_prefers_sale_no_over_colliding_wayback_id(self):
+        """Confirmed real case: the wayback-generation archive (id 19-287,
+        Zachys' own auctionid) and the later, richer "structured"
+        generation (its own small sequential id, 56-169, plus a stable
+        sale_no) collide on id "72" for 87 of 97 structured files --
+        two unrelated real auctions get merged into one. sale_no is
+        unique and never collides with a wayback id; preferring it keeps
+        the two auctions apart."""
+        wayback = {"auction": {"id": 72, "name": "zCollections, June",
+                                "source": "wayback", "year": 2020,
+                                "month": 6},
+                   "lots": [{"lot_no": "1", "name": "Ausone 2000",
+                             "final_price": 930.0}]}
+        structured = {"auction": {"id": 72, "name": "zCollections, August",
+                                   "sale_no": "2409i"},
+                      "lots": [{"lot_no": "1", "name": "Cheval Blanc 1970",
+                                "final_price": 300.0}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Zacky"), exist_ok=True)
+            with open(os.path.join(d, "Zacky", "auction-72-old.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(wayback, fh)
+            with open(os.path.join(d, "Zacky", "auction-72-new.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(structured, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_zacky(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            conn.commit()
+            rows = conn.execute(
+                "SELECT auction_id, title FROM auctions ORDER BY auction_id"
+            ).fetchall()
+            conn.close()
+        self.assertEqual(
+            rows, [("2409i", "zCollections, August"),
+                   ("72", "zCollections, June")])
+
     def test_dedupe_munich_lots(self):
         """Confirmed real cases in the MunichWineCompany archive: an
         exact byte-for-byte repeat (auction-111.json lot "81") is
