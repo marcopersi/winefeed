@@ -484,12 +484,33 @@ vorgesehen — der Import muss diese füllen, damit ein Re-Run idempotent bleibt
       **Alle anderen Häuser unverändert durch die vintage/quantity/
       region/condition_text-Erweiterung** (geprüft: baghera 0, finarte 0
       bleiben 0; steinfels 585, munich-wine-company 143, winefields 39,
-      zacky 16, wermuth-sa 1, besch-cannes 1 bleiben exakt gleich — noch
-      nicht einzeln untersucht, nächster Schritt ist steinfels).
-      Bevor das Gate zu einem echten Build-Abbruch (`problems.append`
-      statt `print`) hochgestuft werden kann, müssen diese verbleibenden
-      Häuser noch geprüft werden (jeweils: Dateien-pro-Sale prüfen, dann
-      Rohdaten der einzelnen Fälle ansehen — kein Raten).
+      zacky 16, wermuth-sa 1, besch-cannes 1 bleiben exakt gleich).
+
+      **steinfels (gefixt):** alle 585 Fälle stecken in genau einer
+      Auktion, `Steinfels_04.05.2002`, geladen aus
+      `data/vinoStagingFileSteinfels.xlsx` (Marcos eigenes, noch
+      unversioniertes WIP — bewusst nicht von mir committet). Ein
+      Worksheet, einmal
+      gelesen — kein `load_steinfels_staging`-Bug. Aber direkt im
+      Rohblatt sind 57 von 241 Lot-Nummern mehrfach vorhanden (18× exakt
+      11, 37× exakt 12 Kopien, byte-identisch — z. B. Lot 248 "Pommard
+      Château de Pommard" 1970, 12 Flaschen, 11× wortgleich wiederholt),
+      ein Transkriptions-Artefakt in dieser einen Quelldatei. Auf Wunsch
+      von Marco im Loader gefixt statt in der Quelldatei: Dedup auf
+      (lot_no, wine, vintage, quantity, region, price) pro Event, erste
+      Vorkommen behalten. Scratch-verifiziert: 832 → 711 Zeilen für
+      dieses Event, 0 load_dups, 6 echte source_dups (unterschiedliche
+      Lots, die sich eine Lot-Nummer teilen) bleiben erhalten. Test:
+      `test_steinfels_staging_dedupes_exact_row_repeats`. Noch kein
+      Produktions-Rebuild (reitet mit der nächsten ohnehin fälligen
+      Rebuild mit, siehe koppe oben).
+
+      Verbleibend, noch nicht einzeln untersucht: munich-wine-company
+      143, winefields 39, zacky 16, wermuth-sa 1, besch-cannes 1. Bevor
+      das Gate zu einem echten Build-Abbruch (`problems.append` statt
+      `print`) hochgestuft werden kann, müssen diese noch geprüft werden
+      (jeweils: Dateien-pro-Sale prüfen, dann Rohdaten der einzelnen
+      Fälle ansehen — kein Raten).
 
 ## 3. Referenzlisten (Grundlage der Normalisierung)
 

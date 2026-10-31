@@ -2110,7 +2110,23 @@ def load_steinfels_staging(b, limit):
             lots.append(rec)
         a_id = b.add_auction("steinfels", event or ws.title, ws.title,
                              date, "CHF", "HAMMER")
+        # The 04.05.2002 sheet has 57 lot numbers whose row is repeated
+        # verbatim 11 or 12 times in the raw file itself (confirmed: one
+        # worksheet, read once -- not a loader bug, a transcription
+        # artifact in this staging workbook). Keep only the first
+        # occurrence per (lot_no, wine, vintage, quantity, region, price).
+        seen = set()
+        deduped = []
         for rec in lots:
+            key = (str(_v(rec, "providerOfferingId")), _v(rec, "name"),
+                   to_int(_v(rec, "vintage")), to_int(_v(rec, "noOfBottles")),
+                   _clean(_v(rec, "region")),
+                   to_float(_v(rec, "realizedPrice")))
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(rec)
+        for rec in deduped:
             rp = _v(rec, "realizedPrice")
             b.add_lot(a_id, {
                 "lot_no": str(_v(rec, "providerOfferingId")),

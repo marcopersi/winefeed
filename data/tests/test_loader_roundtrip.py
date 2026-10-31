@@ -523,6 +523,56 @@ class TestLoaderRoundtrip(unittest.TestCase):
             "Dobiaschofsky", "auktion-wein.json", data, "load_dobiaschofsky")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
 
+    def test_steinfels_staging_dedupes_exact_row_repeats(self):
+        """Confirmed real case: the 04.05.2002 sheet in
+        vinoStagingFileSteinfels.xlsx repeats some lots' rows verbatim
+        11-12 times (a transcription artifact in that one worksheet, not
+        a loader bug -- one sheet, read once). The loader keeps only the
+        first occurrence per (lot_no, wine, vintage, quantity, region,
+        price) and leaves a genuinely different row sharing a lot_no
+        alone."""
+        import openpyxl
+
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "data"), exist_ok=True)
+            path = os.path.join(d, "data", "vinoStagingFileSteinfels.xlsx")
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Steinfels_04.05.2002"
+            header = ["name", "origin", "producer", "region", "vintage",
+                      "deciliters", "eventIdentifier", "isOHK", "noOfBottles",
+                      "providerOfferingId", "note", "offeringDate",
+                      "priceMin", "priceMax", "realizedPrice", "provider"]
+            ws.append(header)
+            repeated = ["Pommard", "null", "null", "null", "1970", "7.5",
+                        "null", "true", "12", "248", "null", "04.05.2002",
+                        "null", "null", "0", "Steinfels"]
+            for _ in range(11):
+                ws.append(repeated)
+            distinct_same_lot_no = ["Chambertin", "null", "null", "null",
+                                     "1983", "7.5", "null", "true", "4",
+                                     "248", "null", "04.05.2002", "null",
+                                     "null", "460", "Steinfels"]
+            ws.append(distinct_same_lot_no)
+            wb.save(path)
+
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old_repo = build_db.REPO
+            build_db.REPO = d
+            try:
+                build_db.load_steinfels_staging(builder, None)
+            finally:
+                build_db.REPO = old_repo
+            conn.commit()
+            rows = conn.execute(
+                "SELECT wine, hammer_price FROM lots ORDER BY wine"
+            ).fetchall()
+            conn.close()
+        self.assertEqual(
+            rows, [("Chambertin", 460.0), ("Pommard", 0.0)])
+
     def test_backfill_wine_ref_uses_alias_key(self):
         conn = sqlite3.connect(":memory:")
         conn.executescript(build_db.SCHEMA)
