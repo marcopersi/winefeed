@@ -19,6 +19,7 @@ import os
 import re
 import hashlib
 import sqlite3
+import subprocess
 import sys
 import zipfile
 
@@ -2129,6 +2130,451 @@ def load_wermuth_validated(b, limit):
               f" covered by the xlsx import")
 
 
+# --- Denz archive (Wermuth PDF/HTML catalogs+results, 2003-2026) ----------- #
+#
+# Despite the folder name "Denz", every file here is a Wermuth auction
+# document -- "Wermuth_WZ-156.pdf", internal footer path ".../Wein/
+# Wermuth/2003/WZ_156.html" -- loaded into the SAME "wermuth-sa" provider
+# as load_wermuth/load_wermuth_validated above, not a new house.
+#
+# Two eras, forced by what actually survives in the archive:
+# - ~2003-2011: a pre-sale catalog PDF (wine name/region as a STICKY
+#   header shared by however many numbered lot lines follow, estimate
+#   only) plus a SEPARATE results HTML table (lot number + price only,
+#   no wine text at all) -- joined by lot/catalog number.
+# - ~2012-2026: a single self-contained "*Resultate*.pdf": wine
+#   description, estimate AND the realized price ("Zuschlag") in one row,
+#   no join needed.
+#
+# Decades of ad-hoc filenames (two dozen+ distinct conventions observed,
+# e.g. "280_Nachverkaufsliste.pdf", "WZ-255_14112015_Resultate_
+# ManuallyImproved.pdf", "Resultate_Denz_Auktion_263.pdf") make a strict
+# glob unreliable; files are classified by what their name CONTAINS
+# ("resultat"/"ergebnisliste"/"nachverkauf", case-insensitive) rather
+# than a fixed pattern. "Nachverkaufsliste" (after-sale list) is loaded
+# alongside the main "Resultate" file for the same catalog, not instead
+# of it -- it covers lots that didn't sell at the auction itself.
+#
+# Dates 2008-02-28 through 2018-03-13 (51 auctions) are already covered
+# by the xlsx/CSV Wermuth sources above -- skipped by auction date, the
+# same dedup pattern load_wermuth_validated uses against load_wermuth.
+
+_WERMUTH_UNIT_DL = {
+    "flasche": 7.5, "flaschen": 7.5,
+    "magnumflasche": 15.0, "magnumflaschen": 15.0, "magnum": 15.0,
+    "doppelmagnum": 30.0, "doppelmagnumflasche": 30.0,
+    "jeroboam": 50.0, "jeroboamflasche": 50.0,
+}
+_WERMUTH_UNIT_PAT = (r"Dutzend\s+Flaschen|Flaschen?|Magnumflaschen?|Magnum|"
+                     r"Doppelmagnum(?:flaschen?)?|Jeroboam(?:flaschen?)?")
+_WERMUTH_RESULT_RE = re.compile(r"(?:SFr\.?|CHF)\s*([\d'’.,]+)\s*$",
+                                re.IGNORECASE)
+_WERMUTH_ESTIMATE_RE = re.compile(
+    r"(?:Sfr\.?|CHF)\s*([\d'’.,]+)\s*-\s*([\d'’.,]+)\s*$", re.IGNORECASE)
+_WERMUTH_PRO_UNIT_RE = re.compile(r"\bpro\s+\S+\s*$", re.IGNORECASE)
+_WERMUTH_OHK_RE = re.compile(
+    r",?\s*(?:in\s+)?(?:\d+er\s+)?\b(OHK|OC|MS)\b\.?\s*$", re.IGNORECASE)
+_WERMUTH_VINTAGE_RE = re.compile(r",?\s*(\d{4})\s*$")
+_WERMUTH_QTY_UNIT_RE = re.compile(
+    # The bottle-size fraction (half-/eighth-bottles) appears both
+    # space- and hyphen-joined to the unit word across this archive --
+    # "12 3/8 Flaschen" and "12 3/8-Flaschen" are both real. Missing
+    # either joiner here used to make the whole fraction fall through
+    # unmatched, so the regex instead matched a bare "8 Flaschen" at the
+    # tail (misreading the fraction's denominator as the quantity) and
+    # left "12 3/" stuck in the wine/producer text.
+    r"(\d+)\s*(?:(\d+)/(\d+)[\s-])?(" + _WERMUTH_UNIT_PAT + r")\s*,?\s*$",
+    re.IGNORECASE)
+
+
+def _wermuth_money(tok):
+    return to_float(tok.replace("’", "").replace("'", ""))
+
+
+def _wermuth_parse_tail(text):
+    """Strip, right to left, whatever of '<wine desc> <qty> <unit>,
+    <vintage>[, OHK] pro <X> Sfr. <low>-<high> SFr. <result>' is present.
+    A catalog line has no result; an early-era line has no wine desc
+    (it's a sticky header elsewhere) -- same parser handles both, each
+    simply leaving its missing piece as None/empty."""
+    m = _WERMUTH_RESULT_RE.search(text)
+    hammer = None
+    if m:
+        hammer = _wermuth_money(m.group(1))
+        text = text[:m.start()].strip()
+    m = _WERMUTH_ESTIMATE_RE.search(text)
+    est_low = est_high = None
+    if m:
+        est_low, est_high = _wermuth_money(m.group(1)), _wermuth_money(m.group(2))
+        text = text[:m.start()].strip()
+        if est_low is not None and est_high is not None and est_high < est_low:
+            # A narrow PDF column truncates the high estimate's last
+            # digit in the original source (confirmed: "Sfr. 2100-300"
+            # is the literal text, not a parse error) -- not
+            # recoverable, and a backwards range is worse than none.
+            est_low = est_high = None
+    m = _WERMUTH_PRO_UNIT_RE.search(text)
+    if m:
+        text = text[:m.start()].strip()
+    is_ohk = False
+    m = _WERMUTH_OHK_RE.search(text)
+    if m:
+        is_ohk = m.group(1).upper() in ("OHK", "OC")
+        text = text[:m.start()].strip()
+    vintage = None
+    m = _WERMUTH_VINTAGE_RE.search(text)
+    if m:
+        vintage = int(m.group(1))
+        text = text[:m.start()].strip()
+    quantity = bottle_size_dl = None
+    m = _WERMUTH_QTY_UNIT_RE.search(text)
+    if m:
+        quantity = int(m.group(1))
+        if m.group(2):
+            bottle_size_dl = (int(m.group(2)) / int(m.group(3))) * 10
+        else:
+            unit = m.group(4).lower()
+            if "dutzend" in unit:
+                quantity *= 12
+                bottle_size_dl = 7.5
+            else:
+                bottle_size_dl = _WERMUTH_UNIT_DL.get(unit)
+        text = text[:m.start()].strip()
+    return (text.strip(), quantity, bottle_size_dl, vintage, is_ohk,
+            est_low, est_high, hammer)
+
+
+_WERMUTH_ESTATE_PREFIX = re.compile(
+    r"^(Château|Chateau|Clos|Domaine|Weingut)\b", re.IGNORECASE)
+# A Bordeaux classification rank ("5e grand cru classé", "cru bourgeois",
+# "grand cru exceptionnel", a bare "3e grand" where the rest wrapped onto
+# the PDF's next line and was lost) -- never a producer, even though it
+# sits in the same trailing comma slot a real producer name would.
+_WERMUTH_CLASSIFICATION_WORD = re.compile(
+    r"grand\s+cru|cru\s+class|cru\s+bourgeois|cru\s+exceptionnel|^\d+e?r?\b",
+    re.IGNORECASE)
+_WERMUTH_TRAILING_TOTAL = re.compile(r"\s+Total$")
+_WERMUTH_MIXLOT_PREFIX = re.compile(r"^Mix[-\s]?[Ll]ot\b", re.IGNORECASE)
+# Usually "<wine>, <code>, <region>..." (comma before the code) -- but on
+# some files the comma before the code is simply missing ("Château Rol
+# Valentin                      AC/ MC, St. Em ilion, grand cru"),
+# gluing the appellation code onto the end of the wine name itself.
+_WERMUTH_EMBEDDED_CODE_RE = re.compile(
+    r"\s+((?:AC|AOC|MO|DOCG?|VdT|IGT|DO)(?:\s*/\s*[A-Z]{1,6})?)\s*$")
+
+
+def _wermuth_split_wine_desc(desc):
+    """'Dom Pérignon, AC/MO, Champagne, Moët & Chandon' -> (wine, producer,
+    region, classification); order confirmed on the source. A bare
+    château name (no commas at all) has no separate producer given --
+    the château itself is implicitly the producer."""
+    desc = _WERMUTH_TRAILING_TOTAL.sub("", desc).strip()
+    parts = [p.strip() for p in desc.split(",") if p.strip()]
+    if parts:
+        m = _WERMUTH_EMBEDDED_CODE_RE.search(parts[0])
+        if m and len(parts[0][:m.start()].strip()) >= 3:
+            code = re.sub(r"\s*/\s*", "/", m.group(1))
+            parts[0] = parts[0][:m.start()].strip()
+            parts.insert(1, code)
+    wine = parts[0] if parts else None
+    producer = parts[-1] if len(parts) >= 3 else None
+    region = parts[-2] if len(parts) >= 3 else None
+    classification = ", ".join(parts[1:-2]) if len(parts) >= 4 else None
+    if producer and _WERMUTH_CLASSIFICATION_WORD.search(producer):
+        classification = (f"{classification}, {producer}" if classification
+                          else producer)
+        producer = None
+    if producer is None and wine and _WERMUTH_ESTATE_PREFIX.match(wine):
+        producer = wine
+    return wine, producer, region, classification
+
+
+_WERMUTH_SKIP_LINE = re.compile(
+    # "Seite"/"file:///"/"^WZ[-\s]"/"^\x0c": repeating page header/footer.
+    # ".html": the SAME page-footer's very first occurrence has no
+    # leading form-feed to anchor on (it's the top of the file, not a
+    # page break) and no "file:///" prefix either on some PDFs -- just
+    # the bare "<date>  <file>.html" -- so catch it by what never
+    # otherwise appears in a wine line instead.
+    # "<t[dr]>": one PDF's text layer is literally unrendered HTML
+    # markup for a few lines (print-to-PDF artifact), not real text.
+    r"^\s*$|Seite|file:///|^WZ[-\s]|^\x0c|\.html\b|</?t[dr]>")
+_WERMUTH_HEADER2_RE = re.compile(
+    r"^[A-Z]{1,6}(?:\s*/\s*[A-Z]{1,6})?,\s*(.+)$")
+
+
+def _wermuth_parse_catalog_pdf(text):
+    """Pre-sale catalog: a wine-name line, an optional '<code>, <region>
+    [, <classification>][, <producer>]' line, then one or more numbered
+    lot lines that inherit that sticky header until the next wine name."""
+    wine = producer = region = classification = None
+    for raw in text.split("\n"):
+        line = raw.strip()
+        if not line or _WERMUTH_SKIP_LINE.search(line):
+            continue
+        lot_m = re.match(r"^(\d+)\s+(.+)$", line)
+        if lot_m:
+            rest, qty, dl, vintage, is_ohk, est_low, est_high, _ = (
+                _wermuth_parse_tail(lot_m.group(2)))
+            if qty is None:
+                continue  # not actually a lot line (e.g. a page number)
+            yield {
+                "lot_no": lot_m.group(1), "wine": wine, "producer": producer,
+                "region": region, "classification": classification,
+                "quantity": qty, "bottle_size_dl": dl, "vintage": vintage,
+                "is_ohk": is_ohk, "estimate_low": est_low,
+                "estimate_high": est_high,
+                "mixed_lot": (1 if wine and _WERMUTH_MIXLOT_PREFIX.match(wine)
+                              else None),
+            }
+            continue
+        h2 = _WERMUTH_HEADER2_RE.match(line)
+        if h2:
+            parts = [p.strip() for p in line.split(",") if p.strip()]
+            region = parts[1] if len(parts) >= 2 else None
+            producer = parts[-1] if len(parts) >= 3 else None
+            classification = (", ".join(parts[2:-1])
+                              if len(parts) >= 4 else None)
+            if producer and _WERMUTH_CLASSIFICATION_WORD.search(producer):
+                classification = (f"{classification}, {producer}"
+                                  if classification else producer)
+                producer = None
+            if producer is None and wine and _WERMUTH_ESTATE_PREFIX.match(wine):
+                producer = wine
+            continue
+        wine = _WERMUTH_TRAILING_TOTAL.sub("", line).strip()
+        producer = region = classification = None
+        if _WERMUTH_ESTATE_PREFIX.match(wine):
+            producer = wine
+
+
+def _wermuth_parse_result_pdf(text):
+    """Self-contained ~2012+ result PDF: one fully-formed lot per line."""
+    for raw in text.split("\n"):
+        line = raw.strip()
+        if not line or _WERMUTH_SKIP_LINE.search(line):
+            continue
+        lot_m = re.match(r"^(\d+)\s+(.+)$", line)
+        if not lot_m:
+            continue
+        desc, qty, dl, vintage, is_ohk, est_low, est_high, hammer = (
+            _wermuth_parse_tail(lot_m.group(2)))
+        if qty is None or hammer is None or not desc:
+            continue
+        wine, producer, region, classification = _wermuth_split_wine_desc(desc)
+        yield {
+            "lot_no": lot_m.group(1), "wine": wine, "producer": producer,
+            "region": region, "classification": classification,
+            "quantity": qty, "bottle_size_dl": dl, "vintage": vintage,
+            "is_ohk": is_ohk, "estimate_low": est_low,
+            "estimate_high": est_high, "hammer_price": hammer,
+            "mixed_lot": (1 if wine and _WERMUTH_MIXLOT_PREFIX.match(wine)
+                          else None),
+        }
+
+
+def _wermuth_parse_results_html(html_text):
+    """Early-era results table: Lot | Preis | Menge | Total -> {lot_no:
+    hammer_price}, keyed off the lot-level Total (not the per-unit
+    Preis)."""
+    soup = BeautifulSoup(html_text, "html.parser")
+    out = {}
+    for tr in soup.find_all("tr")[1:]:
+        cells = [td.get_text(strip=True) for td in tr.find_all("td")]
+        if len(cells) < 4:
+            continue
+        total = to_float(cells[3])
+        if total:
+            out[cells[0]] = total
+    return out
+
+
+_GERMAN_MONTHS = {
+    "januar": 1, "februar": 2, "märz": 3, "april": 4, "mai": 5, "juni": 6,
+    "juli": 7, "august": 8, "september": 9, "oktober": 10, "november": 11,
+    "dezember": 12,
+}
+_WERMUTH_DATE_TEXT_RE = re.compile(
+    r"\b(\d{1,2})\.\s*(Januar|Februar|März|April|Mai|Juni|Juli|August|"
+    r"September|Oktober|November|Dezember)\s+(\d{4})\b", re.IGNORECASE)
+
+
+def _wermuth_date_from_text(text):
+    m = _WERMUTH_DATE_TEXT_RE.search(text)
+    if not m:
+        return None
+    month = _GERMAN_MONTHS[m.group(2).lower()]
+    return f"{int(m.group(3)):04d}-{month:02d}-{int(m.group(1)):02d}"
+
+
+def _wermuth_date_from_filename(path):
+    m = re.search(r"(\d{2})(\d{2})(\d{4})", os.path.basename(path))
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+
+
+def _wermuth_catalog_number(path):
+    name = os.path.basename(path)
+    m = re.search(r"WZ[-_\s]?(\d+)", name, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    m = re.search(r"Auktion[-_\s]?(\d{2,3})(?=[-_\s.]|$)", name, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    # Not \b: "265_Resultate Web.pdf" has a digit run directly followed
+    # by "_", and \w (which \b straddles) includes the underscore, so a
+    # word-boundary assertion never holds there -- every bare-leading-
+    # number filename ("261-Resultate.pdf", "280_Nachverkaufsliste.pdf")
+    # silently failed to match and fell back to using the whole filename
+    # as the catalog number instead, splitting one real auction across
+    # two different auction_ids (one per filename convention).
+    m = re.match(r"^(\d{2,3})(?=[-_\s.]|$)", name)
+    return m.group(1) if m else None
+
+
+def _wermuth_pdf_text(pdf_path):
+    # -enc UTF-8 is not pdftotext's default -- without it, a PDF whose
+    # internal font encoding isn't already UTF-8 comes out mis-decoded
+    # (confirmed: "Côte" -> "CÃ´te" on some files, correct on others,
+    # depending on that PDF's own font metadata).
+    out = subprocess.run(
+        ["pdftotext", "-layout", "-enc", "UTF-8", pdf_path, "-"],
+        capture_output=True, encoding="utf-8", check=True)
+    return out.stdout
+
+
+def load_denz_wermuth(b, limit):
+    covered_dates = _wermuth_xlsx_dates(b.conn)  # all wermuth-sa dates so far
+    base = os.path.join(ARCHIVE, "Denz")
+    seen_hashes = set()
+    processed_wz = set()
+    n = 0
+    for year_dir in sorted(glob.glob(os.path.join(base, "*"))):
+        if not os.path.isdir(year_dir):
+            continue
+        files = sorted(glob.glob(os.path.join(year_dir, "**", "*.pdf"),
+                                 recursive=True))
+        htmls = sorted(glob.glob(os.path.join(year_dir, "**", "*.html"),
+                                 recursive=True))
+        result_pdfs = [f for f in files if re.search(
+            r"resultat|ergebnisliste|nachverkauf", os.path.basename(f),
+            re.IGNORECASE)]
+        catalog_pdfs = [f for f in files if f not in result_pdfs]
+        result_htmls = [f for f in htmls if re.search(
+            r"resultat", os.path.basename(f), re.IGNORECASE)]
+        # A self-contained result PDF (2012+) never prints the auction
+        # date anywhere in its own text -- confirmed empirically, not
+        # just a parse miss. Resolve the date from WHATEVER file shares
+        # its catalog number, not just the one file that happens to
+        # supply the lots: filename-date-bearing files ("WZ-264_
+        # 13032018_Resultate.pdf") and bare ones ("264-Resultate.pdf",
+        # no date anywhere) both exist for the same real auction, and
+        # alphabetical sort can put either one first.
+        files_by_wz = {}
+        for f in files:
+            fwz = _wermuth_catalog_number(f)
+            if fwz:
+                files_by_wz.setdefault(fwz, []).append(f)
+
+        def _resolve_date(wz):
+            for cand in files_by_wz.get(wz, []):
+                d = _wermuth_date_from_filename(cand)
+                if d:
+                    return d
+            for cand in files_by_wz.get(wz, []):
+                d = _wermuth_date_from_text(_wermuth_pdf_text(cand))
+                if d:
+                    return d
+            return None
+
+        # ~2012+: self-contained result PDFs.
+        for f in result_pdfs:
+            with open(f, "rb") as fh:
+                raw = fh.read()
+            digest = hashlib.sha256(raw).hexdigest()
+            if digest in seen_hashes:
+                continue
+            seen_hashes.add(digest)
+            wz = _wermuth_catalog_number(f) or os.path.basename(f)
+            if wz in processed_wz:
+                # Decades of ad-hoc re-exports mean the SAME auction
+                # often exists under 2-3 differently-named files (e.g.
+                # "WZ-265_05052018_Resultate.pdf" and the separately
+                # re-published "265_Resultate Web.pdf") -- not caught by
+                # the exact-bytes hash dedup above since the files
+                # genuinely aren't byte-identical. First file for a
+                # given catalog number wins; later ones are skipped
+                # outright rather than loaded under the same auction_id
+                # a second time (which would just double every lot).
+                continue
+            text = _wermuth_pdf_text(f)
+            lots = list(_wermuth_parse_result_pdf(text))
+            if not lots:
+                continue
+            date = _resolve_date(wz)
+            if date and date in covered_dates:
+                continue
+            processed_wz.add(wz)
+            b.set_source(f)
+            a_id = b.add_auction("wermuth-sa", f"denz-{wz}", f"WZ-{wz}",
+                                 date, "CHF", "HAMMER")
+            seen_lots = set()
+            for lot in lots:
+                if lot["lot_no"] in seen_lots:
+                    continue
+                seen_lots.add(lot["lot_no"])
+                b.add_lot(a_id, {**lot, "price_basis": "HAMMER",
+                                 "currency": "CHF", "sold": 1})
+            n += 1
+            if limit and n >= limit:
+                return
+
+        # ~2003-2011: catalog PDF + separate results HTML, joined by the
+        # shared catalog (WZ) number. A catalog with no matching results
+        # file is skipped -- no price data survives for it.
+        for cat in catalog_pdfs:
+            wz = _wermuth_catalog_number(cat)
+            if wz is None or wz in processed_wz:
+                continue
+            html_match = next(
+                (h for h in result_htmls
+                 if _wermuth_catalog_number(h) == wz), None)
+            if html_match is None:
+                continue
+            with open(cat, "rb") as fh:
+                cat_raw = fh.read()
+            digest = hashlib.sha256(cat_raw).hexdigest()
+            if digest in seen_hashes:
+                continue
+            seen_hashes.add(digest)
+            cat_text = _wermuth_pdf_text(cat)
+            lots = list(_wermuth_parse_catalog_pdf(cat_text))
+            if not lots:
+                continue
+            date = _resolve_date(wz)
+            if date and date in covered_dates:
+                continue
+            processed_wz.add(wz)
+            with open(html_match, encoding="utf-8", errors="replace") as fh:
+                prices = _wermuth_parse_results_html(fh.read())
+            a_id = b.add_auction("wermuth-sa", f"denz-{wz}", f"WZ-{wz}",
+                                 date, "CHF", "HAMMER")
+            b.set_source(cat)
+            seen_lots = set()
+            for lot in lots:
+                if lot["lot_no"] in seen_lots:
+                    continue
+                seen_lots.add(lot["lot_no"])
+                hammer = prices.get(lot["lot_no"])
+                b.add_lot(a_id, {
+                    **lot, "hammer_price": hammer,
+                    "price_basis": "HAMMER" if hammer else "UNKNOWN",
+                    "currency": "CHF", "sold": 1 if hammer else 0,
+                })
+            n += 1
+            if limit and n >= limit:
+                return
+
+
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
@@ -2153,6 +2599,7 @@ HOUSES = [
     ("weinauktionator", load_weinauktionator),
     ("wermuth-sa", load_wermuth),
     ("wermuth-validated", load_wermuth_validated),
+    ("denz-wermuth", load_denz_wermuth),
     ("steinfels", load_steinfels),
     ("steinfels-staging", load_steinfels_staging),
     ("weinboerse", load_weinboerse),
