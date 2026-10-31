@@ -785,35 +785,107 @@ def load_sothebys(b, limit):
             break
 
 
+_CHRISTIES_MONTHS = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5,
+    "june": 6, "july": 7, "august": 8, "september": 9, "october": 10,
+    "november": 11, "december": 12,
+    # A handful of files carry German month names instead of English.
+    "januar": 1, "februar": 2, "märz": 3, "mai": 5, "juni": 6, "juli": 7,
+    "oktober": 10, "dezember": 12,
+}
+# "13 December" or a multi-day sale "12 – 13 December" (take the first day).
+_CHRISTIES_DATE_DISPLAY_RE = re.compile(
+    r"^(\d{1,2})(?:\s*[-–]\s*\d{1,2})?\s+([A-Za-zÀ-ÿ]+)$")
+# Two archive-wide, always-the-same typos in the older scrape's location
+# field (fixed in the richer re-scrape, but not every auction has one).
+_CHRISTIES_LOCATION_FIX = {"NewYork": "New York", "HongKong": "Hong Kong"}
+
+
+def _christies_parse_date_display(dd, year):
+    if not dd or not year:
+        return None
+    m = _CHRISTIES_DATE_DISPLAY_RE.match(dd.strip())
+    if not m:
+        return None
+    month = _CHRISTIES_MONTHS.get(m.group(2).lower())
+    if not month:
+        return None
+    return f"{int(year):04d}-{month:02d}-{int(m.group(1)):02d}"
+
+
+def _christies_directory():
+    """event_id -> directory entry, from the one file excluded from the
+    main glob (it's an index, not an auction) -- `start_date` there is a
+    clean ISO timestamp for ~97% of auctions, more reliable than parsing
+    `date_display` text out of each auction's own file."""
+    path = os.path.join(ARCHIVE, "Christies", "wine_auctions_directory.json")
+    if not os.path.exists(path):
+        return {}
+    return {str(e.get("event_id")): e for e in load_json(path)}
+
+
 def load_christies(b, limit):
-    n = 0
+    directory = _christies_directory()
+    # The archive keeps BOTH the project's original flat-path scrape and
+    # a later, richer re-scrape of the same sale organized into a year/
+    # month subfolder (exact date, sale_total, full lot descriptions) --
+    # kept side by side on purpose (re-scraping risks a Cloudflare block,
+    # so old scrapes are never deleted), not two different auctions.
+    # Confirmed on "20043": identical 1074 lots, same prices, richer
+    # metadata only in the year/month copy. Group by sale id, keep one
+    # file per id, preferring the subfolder path when both exist.
+    by_id = {}
     for f in _json_files("Christies"):
         d = load_json(f)
-        b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("event_id") or a.get("sale_id"))
+        has_subdir = re.search(r"/Christies/\d{4}/", f) is not None
+        prev = by_id.get(aid)
+        if prev is None or (has_subdir and not prev[1]):
+            by_id[aid] = (f, has_subdir, d)
+
+    n = 0
+    for aid in sorted(by_id):
+        f, _, d = by_id[aid]
+        b.set_source(f)
+        a = d.get("auction", {})
+        dir_entry = directory.get(aid, {})
+        date = None
+        start = dir_entry.get("start_date")
+        if start:
+            date = start[:10]
+        if not date:
+            date = _christies_parse_date_display(
+                a.get("date_display") or dir_entry.get("date_display"),
+                a.get("year") or dir_entry.get("year"))
+        if not date:
+            date = ym_date(a.get("year"), a.get("month"))
+        location = a.get("location") or dir_entry.get("location")
+        location = _CHRISTIES_LOCATION_FIX.get(location, location)
         a_id = b.add_auction(
-            "christies", aid, a.get("title"),
-            ym_date(a.get("year"), a.get("month")), None, "HAMMER",
-            a.get("landing_url"), location=a.get("location"))
+            "christies", aid, a.get("title"), date, None, "HAMMER",
+            a.get("landing_url"), location=location)
         for lot in d.get("lots", []):
             sold = 1 if (lot.get("price_realised") and
                          not lot.get("lot_withdrawn")) else 0
             price = to_float(lot.get("price_realised"))
+            currency = lot.get("currency")
+            # Christie's "price realised" is gross (incl. buyer's
+            # premium); back out the net hammer and keep the gross as
+            # realised_price. Historic NLG (pre-euro Amsterdam) lots used
+            # 20.825%, not the 25% wine rate -- 6,188 lots carry currency
+            # 'NLG' and were silently getting the wrong rate.
+            premium_rate = 1.20825 if currency == "NLG" else 1.25
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_number")),
                 "wine": lot.get("title"),
                 "estimate_low": to_float(lot.get("estimate_low")),
                 "estimate_high": to_float(lot.get("estimate_high")),
-                # Christie's "price realised" is gross (incl. 25% wine buyer's
-                # premium); back out the net hammer and keep the gross as
-                # realised_price. Historic NLG lots used 20.825% — approximated
-                # with 25% here.
-                "hammer_price": round(price / 1.25, 2)
+                "hammer_price": round(price / premium_rate, 2)
                 if price is not None else None,
                 "realised_price": price,
                 "price_basis": "HAMMER",
-                "currency": lot.get("currency"),
+                "currency": currency,
                 "sold": sold,
                 "description": lot.get("description"),
                 "source_url": lot.get("url"),
@@ -2917,8 +2989,54 @@ def _validate_gates(conn):
         " AND vintage_final IS NOT NULL").fetchone()[0]
     if conflict_final:
         problems.append(f"conflict lots with vintage_final: {conflict_final}")
+    load_dups, source_dups = _check_duplicate_lot_numbers(conn)
+    if load_dups:
+        # Not a hard gate YET: 8 houses besides christies (now fixed)
+        # still carry this same bug in smaller numbers (koppe, langtons,
+        # steinfels, munich-wine-company, winefields, zacky, wermuth-sa,
+        # besch-cannes -- 4,049 rows total) -- raising here would break
+        # every build until all of them are cleaned up too, which is
+        # separate, not-yet-scheduled work. Promote this to
+        # `problems.append(...)` once that cleanup lands.
+        print(f"WARN: duplicate-lot-number LOAD bug (same auction_id, "
+              f"lot_no, wine AND hammer_price more than once): "
+              f"{load_dups} case(s) -- not gated yet, see _validate_gates")
+    if source_dups:
+        print(f"WARN: {source_dups} case(s) of the same lot_no reused for "
+              f"two different wines within one auction -- a source data "
+              f"error (confirmed example: load_wermuth lot 299 on "
+              f"19.10.2013, 'Contador' vs 'Giusto di Notri'), not a loader "
+              f"bug. Not gated; needs a per-house fix, not a build failure.")
     if problems:
         raise RuntimeError("validation gates failed: " + "; ".join(problems))
+
+
+def _check_duplicate_lot_numbers(conn):
+    """(load_dups, source_dups): same (auction_id, lot_no) seen more than
+    once, split by whether the repeated rows are byte-for-byte the same
+    lot (a loader double-loading it -- the bug this session hit 5 times,
+    in weinboerse/weinauktionator/sylvies/steinfels/denz-wermuth, always
+    from a second source or a second file naming the same real auction)
+    or genuinely different wines under a reused lot_no (a data error
+    already in the xlsx/CSV Wermuth sources, not introduced by any
+    loader -- see docs/premium-policy.md's sibling note and the
+    wine-pipeline-v2.md entry on this gate)."""
+    rows = conn.execute(
+        "SELECT auction_id, lot_no, wine, hammer_price FROM lots"
+        " WHERE lot_no IS NOT NULL").fetchall()
+    seen = {}
+    load_dups = source_dups = 0
+    for auction_id, lot_no, wine, hammer in rows:
+        key = (auction_id, lot_no)
+        content = (wine, hammer)
+        if key not in seen:
+            seen[key] = {content}
+        elif content in seen[key]:
+            load_dups += 1
+        else:
+            seen[key].add(content)
+            source_dups += 1
+    return load_dups, source_dups
 
 
 def _record_build_metadata(conn):

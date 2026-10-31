@@ -439,6 +439,80 @@ class TestLoaderRoundtrip(unittest.TestCase):
             "load_weinauktionator")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
 
+    def test_christies_prefers_the_richer_year_month_subfolder_file(self):
+        """The archive keeps both the original flat-path scrape and a
+        later, richer re-scrape of the SAME sale under a year/month
+        subfolder (exact date_display, sale_total) -- not two different
+        auctions. Confirmed on real sale 20043: identical lot content,
+        the subfolder copy just has more metadata. Only one must load."""
+        old = {"auction": {"event_id": "20043", "title": "Fine and Rare "
+                           "Wines", "year": 2006, "month": 3,
+                           "location": "NewYork"},
+               "lots": [{"lot_number": "1", "title": "Dom Pérignon",
+                         "price_realised": "1292.0", "currency": "USD",
+                         "lot_withdrawn": False}]}
+        new = {"auction": {"event_id": "20043", "title": "Fine and Rare "
+                           "Wines", "year": 2006, "month": 3,
+                           "location": "New York", "date_display":
+                           "11 March"},
+               "lots": [{"lot_number": "1", "title": "Dom Pérignon",
+                         "price_realised": "1292.0", "currency": "USD",
+                         "lot_withdrawn": False}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Christies", "2006", "03_März"),
+                       exist_ok=True)
+            with open(os.path.join(d, "Christies", "20043.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(old, fh)
+            with open(os.path.join(d, "Christies", "2006", "03_März",
+                                   "20043.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(new, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old_archive = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_christies(builder, None)
+            finally:
+                build_db.ARCHIVE = old_archive
+            count = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+            location, date = conn.execute(
+                "SELECT location, auction_date FROM auctions").fetchone()
+            conn.close()
+        self.assertEqual(count, 1)
+        self.assertEqual(location, "New York")
+        self.assertEqual(date, "2006-03-11")
+
+    def test_christies_nlg_premium_rate_not_the_flat_25_percent(self):
+        """Historic NLG (pre-euro Amsterdam) lots used 20.825%, not the
+        25% wine rate -- 6,188 lots in the real archive carry currency
+        'NLG' and were silently getting the wrong rate."""
+        data = {"auction": {"event_id": "1", "title": "t", "year": 1995,
+                            "month": 1},
+                "lots": [{"lot_number": "1", "title": "Wine",
+                          "price_realised": "936.0", "currency": "NLG",
+                          "lot_withdrawn": False}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Christies"), exist_ok=True)
+            with open(os.path.join(d, "Christies", "1.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_christies(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            hammer = conn.execute(
+                "SELECT hammer_price FROM lots").fetchone()[0]
+            conn.close()
+        self.assertEqual(hammer, 774.67)  # 936 / 1.20825, not / 1.25
+
     def test_dobiaschofsky(self):
         data = {"auction": {"id": "wein", "name": None, "date": None},
                 "lots": [{"lot_nr": "12550", "name": "Domaine de la Romanee",
