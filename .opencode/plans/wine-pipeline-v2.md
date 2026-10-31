@@ -412,6 +412,48 @@ GROUP BY 1,2,3 ORDER BY 1,3;
 Dublettenschutz ist durch `source_record_hash` / `source_lot_key` bereits
 vorgesehen — der Import muss diese füllen, damit ein Re-Run idempotent bleibt.
 
+- [x] **christies — sechster Fall derselben Bugklasse, diesmal der mit
+      Abstand grösste (137.983 von 617.409 Lots, ~22%).** Projekt-
+      Historie: zuerst reines Scraping (ein flacher Pfad pro Auktion,
+      `Christies/<id>.json`), später ein zweiter Durchgang mit mehr
+      Metadaten (exaktes Datum, `sale_total`, volle Lot-Beschreibungen),
+      organisiert nach Jahr/Monat (`Christies/<jahr>/<monat>/<id>.json`).
+      Beide Scrapes blieben aus Vorsicht erhalten (Cloudflare-Blockrisiko
+      bei Re-Scrapes) — `load_christies` hatte dafür aber keinen
+      File-Level-Dedup und lud beide Versionen jeder Auktion. Bestätigt
+      an Auktion 20043: identische 1.074 Lots, gleiche Preise, nur die
+      Jahr/Monat-Kopie hat die reicheren Metadaten. Fix: Gruppierung
+      nach `event_id`, pro ID genau eine Datei (Jahr/Monat-Pfad
+      bevorzugt), Datum primär aus `Christies/wine_auctions_directory.json`
+      (Index-Datei, saurberes ISO-`start_date`, 97% Abdeckung), erst
+      danach `date_display`-Text, erst danach der alte `ym_date`-
+      Fallback. Dabei auch den historischen NLG-Prämiensatz korrigiert
+      (20,825 % statt pauschal 25 % — 6.188 Lots betroffen, aus
+      `docs/premium-policy.md` bereits bekannt, aber im Code nie
+      umgesetzt). **Unerwarteter Nebeneffekt, grösser als Christies
+      selbst:** die Dublette (leicht unterschiedlicher Beschreibungstext
+      zwischen alter und neuer Datei) hat offenbar gemeinsame
+      `alias_key`-Gruppen für häufig gehandelte Weine vergiftet — nach
+      dem Fix sank die Zahl unaufgelöster `SINGLE`-Lots in ALLEN ANDEREN
+      Häusern von 8.690 auf 140 (die verbliebenen 140 sind echte
+      Parse-Artefakte wie `wine='1999/2004'`, keine Resolver-Fehler).
+      Rebuild verifiziert: 3.080.651 → 2.941.584 Lots (−139.067, exakt
+      die Dubletten), 845 christies-Auktionen (unverändert), 845/845
+      mit Datum, 838/845 mit Ort, `integrity_check` ok.
+- [ ] **Generischer Dublettenschutz jetzt als Code vorhanden, aber noch
+      kein Hard-Gate** (`_check_duplicate_lot_numbers`, in
+      `_validate_gates` nur als `WARN` verdrahtet). Unterscheidet
+      echte Lade-Dubletten (gleiche `auction_id`/`lot_no`/`wine`/
+      `hammer_price` mehrfach — ein Loader-Bug) von Quelldaten-Fehlern
+      (gleiche `lot_no`, aber zwei unterschiedliche Weine — kein
+      Loader-Bug, siehe Wermuth-xlsx-Lot-299-Fall). Nach christies bleiben
+      noch 4.049 echte Lade-Duplikate in 8 weiteren Häusern (koppe 1.908,
+      langtons 1.330, steinfels 585, munich-wine-company 143, winefields
+      41, zacky 37, wermuth-sa 3, besch-cannes 2) — jedes davon muss
+      geprüft und gefixt werden, bevor das Gate zu einem echten Build-
+      Abbruch (`problems.append` statt `print`) hochgestuft werden kann.
+      8.812 Quelldaten-Fehler (reused lot_no) bleiben bewusst ungegatet.
+
 ## 3. Referenzlisten (Grundlage der Normalisierung)
 
 **Teilweise vorhanden** — nur die echten Lücken neu anlegen:
