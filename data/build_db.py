@@ -1017,9 +1017,18 @@ def load_koppe(b, limit):
         aid = str(a.get("id"))
         a_id = b.add_auction("koppe", aid, a.get("name"),
                              parse_date(a.get("date")), "EUR", "HAMMER")
-        for lot in d.get("lots", []):
+        for idx, lot in enumerate(d.get("lots", []), start=1):
+            # The raw lot has no lot_no/position field at all (confirmed
+            # across every archived file) -- str(None) made every lot in
+            # an auction share the literal lot_no "None", which collided
+            # as a false "duplicate" whenever two genuinely different
+            # lots happened to share the same wine text and price. The
+            # list position is stable and unique per auction; it's not
+            # the real catalog number, but it's a real identifier where
+            # none existed before.
+            lot_no = lot.get("lot_no")
             b.add_lot(a_id, {
-                "lot_no": str(lot.get("lot_no")),
+                "lot_no": str(lot_no) if lot_no is not None else str(idx),
                 "wine": lot.get("name"),
                 "region": lot.get("region"),
                 "vintage": to_int(lot.get("vintage")),
@@ -2991,22 +3000,24 @@ def _validate_gates(conn):
         problems.append(f"conflict lots with vintage_final: {conflict_final}")
     load_dups, source_dups = _check_duplicate_lot_numbers(conn)
     if load_dups:
-        # Not a hard gate YET: 8 houses besides christies (now fixed)
-        # still carry this same bug in smaller numbers (koppe, langtons,
-        # steinfels, munich-wine-company, winefields, zacky, wermuth-sa,
-        # besch-cannes -- 4,049 rows total) -- raising here would break
-        # every build until all of them are cleaned up too, which is
-        # separate, not-yet-scheduled work. Promote this to
+        # Not a hard gate YET: several houses besides christies (now
+        # fixed) still carry this same bug, or an unresolved residual
+        # (see _check_duplicate_lot_numbers's docstring) -- raising here
+        # would break every build until all of them are cleaned up too,
+        # which is separate, not-yet-scheduled work. Promote this to
         # `problems.append(...)` once that cleanup lands.
         print(f"WARN: duplicate-lot-number LOAD bug (same auction_id, "
-              f"lot_no, wine AND hammer_price more than once): "
-              f"{load_dups} case(s) -- not gated yet, see _validate_gates")
+              f"lot_no, wine, vintage, quantity, region AND condition_text "
+              f"more than once): {load_dups} case(s) -- not gated yet, "
+              f"see _validate_gates")
     if source_dups:
-        print(f"WARN: {source_dups} case(s) of the same lot_no reused for "
-              f"two different wines within one auction -- a source data "
-              f"error (confirmed example: load_wermuth lot 299 on "
-              f"19.10.2013, 'Contador' vs 'Giusto di Notri'), not a loader "
-              f"bug. Not gated; needs a per-house fix, not a build failure.")
+        print(f"WARN: {source_dups} case(s) of the same lot_no shared by "
+              f"genuinely different rows within one auction -- either a "
+              f"source data error (confirmed example: load_wermuth lot "
+              f"299 on 19.10.2013, 'Contador' vs 'Giusto di Notri') or, "
+              f"for langtons, that house's convention of grouping several "
+              f"distinct sub-lots under one lot number. Not gated; needs "
+              f"a per-house review, not a build failure.")
     if problems:
         raise RuntimeError("validation gates failed: " + "; ".join(problems))
 
@@ -3014,21 +3025,43 @@ def _validate_gates(conn):
 def _check_duplicate_lot_numbers(conn):
     """(load_dups, source_dups): same (auction_id, lot_no) seen more than
     once, split by whether the repeated rows are byte-for-byte the same
-    lot (a loader double-loading it -- the bug this session hit 5 times,
-    in weinboerse/weinauktionator/sylvies/steinfels/denz-wermuth, always
-    from a second source or a second file naming the same real auction)
-    or genuinely different wines under a reused lot_no (a data error
-    already in the xlsx/CSV Wermuth sources, not introduced by any
-    loader -- see docs/premium-policy.md's sibling note and the
-    wine-pipeline-v2.md entry on this gate)."""
+    lot (a loader double-loading it -- the bug this session hit 6 times,
+    in weinboerse/weinauktionator/sylvies/steinfels/denz-wermuth/christies,
+    always from a second source or a second file naming the same real
+    auction) or genuinely different rows sharing a reused lot_no (either
+    a data error already in the xlsx/CSV Wermuth sources -- see
+    docs/premium-policy.md's sibling note -- or, for langtons, that
+    house's own cataloging convention of grouping several distinct
+    sub-lots under one lot number).
+
+    Content includes vintage, quantity, region and condition_text, not
+    just wine+price -- each addition justified by a confirmed real
+    langtons case where that field alone told two rows apart:
+    - vintage: sale 1737 lot "1" -- three different vintages (1993/94/95)
+      of the same wine share one lot number and winning bid.
+    - quantity: sale 1746 lot "1197" -- 10 bottles vs. 2 "Stained Labels"
+      bottles, same wine/vintage/price.
+    - region: sale 1766 lot "2895" -- a mixed DRC lot with six different
+      appellations (Echezeaux, La Tache, Richebourg, ...) sharing one lot
+      number, vintage and price.
+    - condition_text: sale 1763 lot "838" -- four ROCKFORD Black Sparkling
+      Shiraz sub-lots, same wine/vintage/quantity/price, told apart only
+      by disgorgement date in the notes.
+    A small residual still lands in load_dups for langtons (e.g. sale
+    1810 lot "2030"): rows that are byte-identical in every one of these
+    fields too. Those are genuine raw-archive row repeats (no further
+    field distinguishes them) rather than a loader bug -- the loader
+    reads each sale from exactly one file, one row per raw lot entry."""
     rows = conn.execute(
-        "SELECT auction_id, lot_no, wine, hammer_price FROM lots"
-        " WHERE lot_no IS NOT NULL").fetchall()
+        "SELECT auction_id, lot_no, wine, vintage, quantity, region,"
+        " condition_text, hammer_price"
+        " FROM lots WHERE lot_no IS NOT NULL").fetchall()
     seen = {}
     load_dups = source_dups = 0
-    for auction_id, lot_no, wine, hammer in rows:
+    for auction_id, lot_no, wine, vintage, quantity, region, cond, hammer \
+            in rows:
         key = (auction_id, lot_no)
-        content = (wine, hammer)
+        content = (wine, vintage, quantity, region, cond, hammer)
         if key not in seen:
             seen[key] = {content}
         elif content in seen[key]:

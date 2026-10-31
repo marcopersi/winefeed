@@ -444,15 +444,52 @@ vorgesehen — der Import muss diese füllen, damit ein Re-Run idempotent bleibt
       kein Hard-Gate** (`_check_duplicate_lot_numbers`, in
       `_validate_gates` nur als `WARN` verdrahtet). Unterscheidet
       echte Lade-Dubletten (gleiche `auction_id`/`lot_no`/`wine`/
-      `hammer_price` mehrfach — ein Loader-Bug) von Quelldaten-Fehlern
-      (gleiche `lot_no`, aber zwei unterschiedliche Weine — kein
-      Loader-Bug, siehe Wermuth-xlsx-Lot-299-Fall). Nach christies bleiben
-      noch 4.049 echte Lade-Duplikate in 8 weiteren Häusern (koppe 1.908,
-      langtons 1.330, steinfels 585, munich-wine-company 143, winefields
-      41, zacky 37, wermuth-sa 3, besch-cannes 2) — jedes davon muss
-      geprüft und gefixt werden, bevor das Gate zu einem echten Build-
-      Abbruch (`problems.append` statt `print`) hochgestuft werden kann.
-      8.812 Quelldaten-Fehler (reused lot_no) bleiben bewusst ungegatet.
+      `vintage`/`quantity`/`region`/`condition_text`/`hammer_price`
+      mehrfach — ein Loader-Bug) von Zeilen, die sich nur die `lot_no`
+      teilen, aber sonst verschieden sind (Quelldaten-Fehler wie der
+      Wermuth-xlsx-Lot-299-Fall, oder — bei langtons — die
+      Katalog-Konvention des Hauses, mehrere eigenständige Sub-Lots unter
+      einer Lot-Nummer zu bündeln).
+
+      **koppe (code-gefixt, Rebuild steht noch aus):** Root Cause war kein
+      Lade-Bug, sondern ein fehlendes Identifier-Feld — alle ~7.800 Lots in
+      allen 7 Archiv-Dateien haben gar kein `lot_no`-Feld, wodurch
+      `str(lot.get("lot_no"))` für jedes Lot den literalen String `"None"`
+      lieferte und beliebige verschiedene Lots kollidierten. Fix in
+      `load_koppe`: 1-basierter Listenindex als Fallback. Im Scratch-Build
+      verifiziert (0/0), in der Produktions-DB noch nicht aktiv (siehe
+      „Rebuild steht noch aus" — wird mit der nächsten ohnehin fälligen
+      Produktions-Rebuild mitgenommen, kein Grund für einen Rebuild allein
+      wegen Koppe).
+
+      **langtons (geprüft, im Wesentlichen kein Loader-Bug):** pro Sale
+      genau eine Archiv-Datei (0 von >5.900 Sale-IDs mit mehr als einer
+      Datei) — die ursprünglich 1.330 "Duplikate" waren fast vollständig
+      False Positives des zu engen Vergleichs (nur `wine`+`hammer_price`).
+      Nach Erweiterung um `vintage` (Sale 1737 Lot "1": drei Jahrgänge
+      desselben Weins teilen Lot-Nummer und Gebot), `quantity` (Sale 1746
+      Lot "1197": 10 vs. 2 "Stained Labels"-Flaschen), `region` (Sale 1766
+      Lot "2895": ein DRC-Sammellos mit sechs verschiedenen Appellationen
+      unter einer Lot-Nummer) und `condition_text` (Sale 1763 Lot "838":
+      vier ROCKFORD-Sublots, unterschieden nur durch das
+      Degorgierdatum in den Notes) bleiben nur noch 7 Zeilen in 4 Lot-
+      Gruppen übrig (Sale 1737 Lot "108", Sale 1746/1763/1810 je ein
+      weiterer Fall) — Zeilen, die in der Rohdatei selbst schon
+      byte-identisch mehrfach vorkommen, ohne dass irgendein Feld sie
+      unterscheidet. Das ist **kein** `load_langtons`-Bug (ein File pro
+      Sale, eine Zeile pro Rohlot) — nicht weiter verfolgt, da ohne
+      zusätzliche Quellinformation nicht entscheidbar, ob echte
+      mehrfache Sub-Lots oder ein Scrape-Artefakt vor unserer Pipeline.
+
+      **Alle anderen Häuser unverändert durch die vintage/quantity/
+      region/condition_text-Erweiterung** (geprüft: baghera 0, finarte 0
+      bleiben 0; steinfels 585, munich-wine-company 143, winefields 39,
+      zacky 16, wermuth-sa 1, besch-cannes 1 bleiben exakt gleich — noch
+      nicht einzeln untersucht, nächster Schritt ist steinfels).
+      Bevor das Gate zu einem echten Build-Abbruch (`problems.append`
+      statt `print`) hochgestuft werden kann, müssen diese verbleibenden
+      Häuser noch geprüft werden (jeweils: Dateien-pro-Sale prüfen, dann
+      Rohdaten der einzelnen Fälle ansehen — kein Raten).
 
 ## 3. Referenzlisten (Grundlage der Normalisierung)
 
