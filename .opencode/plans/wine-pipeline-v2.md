@@ -605,14 +605,17 @@ vorgesehen — der Import muss diese füllen, damit ein Re-Run idempotent bleibt
 
       **Gate-Status:** alle 10 Häuser mit `lot_no` sind jetzt einzeln
       geprüft. Echte Loader-Bugs (koppe, steinfels, munich-wine-company,
-      zacky) sind im Code gefixt, scratch-verifiziert, aber noch nicht
-      in der Produktions-DB (ein gemeinsamer Rebuild steht aus). Harte
+      zacky) sind im Code gefixt UND per Produktions-Rebuild verifiziert
+      (Backup `wine_auction_prices.sqlite.bak-pre-koppe-steinfels-munich-
+      zacky-fix`, `integrity_check` ok, 0 FK-Verletzungen, Zahlen exakt
+      wie scratch-vorhergesagt: koppe 0/0, steinfels 0/6, munich-wine-
+      company 0/5, zacky 0/0 bei 332 statt vorher 245 Auktionen). Harte
       Residuals bleiben bei christies-ähnlichem Muster nur bei langtons
       (7), winefields (34) und besch-cannes (1) — alle mit konkretem
       Beleg dokumentiert, warum sie kein Loader-Bug sind. Das Gate kann
-      nach dem Rebuild von `print` auf einen echten Build-Abbruch nur
-      umgestellt werden, wenn diese 42 Residual-Fälle explizit als
-      bekannte Ausnahme behandelt werden (z. B. eine Allowlist
+      von `print` auf einen echten Build-Abbruch nur umgestellt werden,
+      wenn diese 42 Residual-Fälle explizit als bekannte Ausnahme
+      behandelt werden (z. B. eine Allowlist
       `(provider, auction_id, lot_no)`), nicht als Schwellenwert.
 
 ## 3. Referenzlisten (Grundlage der Normalisierung)
