@@ -325,10 +325,19 @@ Weinbörse-Review entdeckt, nicht Teil der ursprünglichen Bestandsaufnahme):
       Lots (+266.175), 93 sylvies-Auktionen, 0 doppelte Lot-Nummern
       innerhalb einer Auktion, 0 Phantom-Auktionen, 0 AMBIGUOUS, die
       bestehenden 8.690 SINGLE-ohne-`wine_ref_id` unverändert,
-      `integrity_check` ok. **Offen:** `PREMIUM_POLICY`/`TAX_POLICY`
-      kennt `sylvies` noch nicht — 266.000 Lots ohne `buyer_premium`/
-      `total_price`; braucht die echte Rate aus
-      `docs/premium-policy.md`, nicht geschätzt.
+      `integrity_check` ok. **Nachtrag — erledigt:** `PREMIUM_POLICY`
+      kennt `sylvies` jetzt (20 % Buyer's Premium exkl. MwSt, Quelle:
+      `sylvies.be`s eigene Conditions of Sale — keine geschätzte Rate).
+      Keine Lotgebühr. MwSt ist zielland-abhängig (kein fixer Satz) →
+      `tax_amount` bleibt NULL, wie bei sothebys/langtons/christies. In
+      `docs/premium-policy.md` ergänzt, Test
+      `test_sylvies_premium_is_20_percent_with_no_tax`. Rebuild
+      verifiziert: alle 236.442 sylvies-Lots mit `hammer_price` haben
+      jetzt `buyer_premium` (Verhältnis exakt 0,20), 0 mit `tax_amount`
+      (gewollt), Gesamt-Lot-Zahl unverändert (2.940.837 — reine
+      Policy-Änderung, keine Lot-Änderung), `integrity_check` ok, 0
+      FK-Verletzungen. Backup
+      `wine_auction_prices.sqlite.bak-pre-sylvies-premium`.
 - [x] **weinauktionator** — **war kein CI-Leak, nur ein Backlog, der die
       Pipeline nie durchlaufen hat.** Die Pipeline selbst
       (`WeinauktionatorFetcher` → `orchestrate._store_parsed` →
@@ -620,7 +629,7 @@ vorgesehen — der Import muss diese füllen, damit ein Re-Run idempotent bleibt
 
 ## 3. Referenzlisten (Grundlage der Normalisierung)
 
-**Teilweise vorhanden** — nur die echten Lücken neu anlegen:
+**Status (verifiziert gegen `data/reference/`, nicht gegen diese Tabelle):**
 
 | Liste | Status |
 |---|---|
@@ -628,10 +637,10 @@ vorgesehen — der Import muss diese füllen, damit ein Re-Run idempotent bleibt
 | Rebsorten | ✅ `reference/varieties.csv` |
 | Spirituosen-Ausschluss | ✅ `reference/spirits_terms.csv` |
 | Alias-Kuratierung | ✅ `reference/wine_alias_overrides.csv` |
-| **Produzenten** (`producers.csv`) | ❌ **neu** — kanonisch + Aliase; heute nur implizit in Overrides |
-| **Weine je Produzent** (`wines_by_producer.csv`) | ❌ **neu** — z. B. Bernhard Huber → Malterdinger Spätburgunder, Wildenstein R GG, Hecklinger Schlossberg R GG, Bienenberg … |
-| **Gebinde** (`units.csv`) | ◐ Logik in `bottle.py`; als gepflegte CSV externalisieren (dl + Label + Aliase) |
-| **OHK** (`ohk.csv`) | ❌ **neu** — ohk, oc, owc, cbo, caisse bois + Varianten → `is_ohk` |
+| **Produzenten** (`producers.csv`) | ✅ existiert (68.5K) — angelegt im Zuge von Kapitel 4.2/4.3, Commit `589b099`. **Diese Tabelle hat das fälschlich zweimal als „❌ neu" stehen gehabt, nachdem die Datei schon existierte** — Fehler, nicht erneut wiederholen. |
+| **Weine je Produzent** (`wines_by_producer.csv`) | ✅ existiert (115.5K) — selbes Commit, selbe Korrektur. |
+| **Gebinde** (`units.csv`) | ◐ echter Rest — Logik lebt in `bottle.py`, nicht als gepflegte CSV externalisiert (dl + Label + Aliase) |
+| **OHK** (`ohk.csv`) | ◐ echter Rest — Erkennung ad-hoc pro Loader (`isOHK`-Spalte aus Staging-Files, Regex in `load_sylvies_*` für `Owc-1`/`Oc-2` etc.), keine zentrale Begriffsliste |
 | Jahrgänge | ◐ Regex in `vintage.py` (1700–2099; CHECK bis 2100); eigene Liste unnötig |
 
 **Policy-Festlegung (jetzt explizit + im Code konsistent, s. Kapitel 4.2–4.3
@@ -844,7 +853,10 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
   Terminüberschneidungen + 2 openpyxl-Artefakte — Details + finale Zahlen
   in Kapitel 2 oben). `is_ohk` befüllt. Backups: `.bak-historic`,
   `.bak-pre-wermuth-fix`.
-- [ ] Kapitel 3: Referenzlisten (producers.csv, units.csv, ohk.csv; idealwine-Policy)
+- [x] Kapitel 3 (im Wesentlichen erledigt): `producers.csv`/`wines_by_producer.csv`
+  existieren bereits (Commit `589b099`, Kapitel 4.2/4.3). Echter Rest nur noch:
+  `units.csv`/`ohk.csv` als externalisierte, gepflegte CSV (Logik läuft bereits,
+  nur nicht als Referenzliste ausgelagert) — optional, kein Blocker für §4.
 - [x] Kapitel 4.0 (Gerüst): `build_gold_set.py` + `gold_lots.csv` (495 Kandidaten,
   stratifiziert, inkl. Edge-Case-Queries) + `test_gold_set.py` (Regressionstest,
   schlägt fehl bis ≥50 gelabelt). Offen: **Labeling der expected-Spalten** (manuell).

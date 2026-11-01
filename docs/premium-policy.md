@@ -26,6 +26,7 @@ Fetcher liefert), Buyer's Premium, Fees (Lotgebühr), MwSt/VAT, Quelle.
 | besch-cannes | HAMMER | 24 % (direkt) / 27,6 % (Interenchères) / 25,8 % (Drouot) | — | inkl. MwSt | bestätigt |
 | munich-wine-company | HAMMER | 15 % | € 5/Lot | USt | bestätigt |
 | winebarrel | — (Konsignations-Service, kein klassisches Aufgeld) | Seller-Provision 7,5–15 % (gestaffelt) | — | — | bestätigt |
+| sylvies | HAMMER | 20 % exkl. MwSt | — | zielland-abhängig, kein fixer Satz | bestätigt (sylvies.be Conditions of Sale) |
 
 ## Preis-Quelle-Invariante (D1)
 
