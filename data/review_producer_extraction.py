@@ -16,6 +16,10 @@ stay deterministic/idempotent). The overrides are later merged into
 import csv
 import os
 import sqlite3
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from wine_resolution.producer_match import ProducerMatcher  # noqa: E402
 
 DB_PATH = os.environ.get(
     "DB_PATH", "/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite")
@@ -43,10 +47,10 @@ def main():
     with_prod = conn.execute(
         "SELECT canonical_name, canonical_key, producer, producer_key"
         " FROM wines WHERE producer_key != ''").fetchall()
-    producer_keys = {pk for _, _, _, pk in with_prod}
     without_prod = conn.execute(
         "SELECT canonical_name, canonical_key FROM wines"
         " WHERE producer_key = ''").fetchall()
+    matcher = ProducerMatcher()
 
     overrides = []
     review = []
@@ -67,10 +71,17 @@ def main():
             review.append((name, producer, "producer-embedded", "mid-name"))
 
     for name, key in without_prod:
-        hits = sorted(pk for pk in producer_keys if pk in key)
-        if hits:
-            review.append((name, ", ".join(hits), "name-contains-producer",
-                           "no-field"))
+        # The naive substring check this used to do (``pk in key`` against
+        # every known producer_key) floods this with false positives from
+        # degenerate short keys (e.g. producer="0", producer="(B)" ->
+        # producer_key "0"/"b", matching almost any name) and real-but-
+        # short producer tokens matching unrelated text -- 102k of 238k
+        # wines flagged, 90%+ noise (wine-pipeline-v2.md §4.4 finding).
+        # match_producer() reuses the already Gold-Set-validated §4.2/4.3
+        # coverage-based matcher instead of inventing a new heuristic.
+        hit = matcher.match_producer(name)
+        if hit:
+            review.append((name, hit, "name-contains-producer", "no-field"))
 
     with open(OUT_OVERRIDES, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
