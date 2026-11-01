@@ -858,12 +858,20 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
 
 ## 6. FX-Problem
 
-- [ ] Volle FX-Historie (Issue #97) — Zielwährung EUR, historische Kurse
-  (AUD/USD/GBP/CHF/HKD/SGD/CNY → EUR) **zum `lot_date`**, Kurs + Kursdatum
-  speichern. Heute ist `fx_rate` nur für NLG→EUR gefüllt. Eigenes Teilprojekt.
-  **Quelle: ECB (EZB) Referenzkurse** (kostenlos, täglich, ab ~1999; SGD/HKD/CNY
-  teils nicht abgedeckt — dann Rohwährung + Label). Bis dahin zeigt das MVP
-  Rohwährung + `currency`-Label (siehe MVP-Plan §6).
+- [x] Code vollständig da, nur die Daten fehlen noch (s. Blocker unten).
+  **Quelle entschieden: EODHD** (`data/fetch_fx.py`, Commit `4a17079`), nicht
+  ECB wie hier zuvor stand — die ECB-Zeile war an dieser Stelle stehen
+  geblieben, obwohl EODHD später implementiert wurde (ECBs dokumentierte
+  Lücke bei SGD/HKD/CNY war genau der Grund, EODHD deckt alle 7 benötigten
+  Währungen ab). Infrastruktur fertig: `fx_rates`-Tabelle, `_load_fx_rates`
+  (liest den offline-Cache, Build braucht nie Netz/Token),
+  `_annotate_fx`, beide in `main()` verdrahtet. Zielwährung EUR, Kurse
+  **zum `lot_date`**. Heute ist `fx_rate` nur für NLG→EUR gefüllt
+  (gesetzlicher Fixkurs, `build_db._FX_FIX`).
+  **Blocker:** `EODHD_API_TOKEN` fehlt — `/Volumes/samsung/winefeed-data/fx`
+  existiert noch nicht, jeder Build zeigt `WARN: no FX cache`. Kann nicht von
+  mir beschafft werden (Credential). Bis dahin zeigt das MVP Rohwährung +
+  `currency`-Label (siehe MVP-Plan §6).
 
 ## 7. Search Capabilities
 
@@ -901,7 +909,9 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
   `PRODUCER_COVERAGE` pro Produzent anheben, wenn dessen kanonischer Name nach
   Stopword-Filterung nur 1 Token hat, oder gegen eine Appellations-/Region-
   Liste abgleichen, bevor ein Single-Token-Treffer akzeptiert wird.
-- ~~FX-Quelle~~ → **ECB (EZB) Referenzkurse** (entschieden).
+- ~~FX-Quelle~~ → **EODHD** (entschieden und implementiert, `data/fetch_fx.py`
+  — ersetzt die hier zuvor stehende ECB-Entscheidung, s. Kapitel 6). Blockiert
+  auf `EODHD_API_TOKEN`.
 - ~~Ratings~~ → **nein, nicht fürs MVP** (separates Issue).
 - Zukunft von `VinoDomain`/`VinoImporter`: Referenz-/Legacy-Parser behalten
   (PDF-Häuser) oder vollständig in Python ablösen?
@@ -1026,7 +1036,11 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
 - [x] Kapitel 5 (teils): Schema `is_ohk`, `note`, `price_per_bottle` + `_to_bool`;
   Loader-Anbindung in load_wermuth/load_steinfels_staging. Offen:
   price_per_bottle-Ableitung + CHECK-Constraint.
-- [ ] Kapitel 6: FX (separates Issue #97)
+- [x] Kapitel 6 (Code): `fetch_fx.py` (EODHD) + `fx_rates`-Tabelle +
+  `_load_fx_rates`/`_annotate_fx` fertig, `main()` verdrahtet (Commit
+  `4a17079`). **Blockiert auf `EODHD_API_TOKEN`** (Credential, kann nicht
+  von mir beschafft werden) — ohne Token kein Cache, ohne Cache keine
+  echten Kurse im Build.
 - [ ] Kapitel 7: Search (FTS5)
 - [ ] Kapitel 8: GUI/UX
 - [x] Bug: canonical_source-Provenienz (gefixt im Zuge von Kapitel 4.2–4.3,
