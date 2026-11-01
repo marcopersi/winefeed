@@ -53,7 +53,8 @@ def _env():
                 if "=" in line and not line.startswith("#"):
                     k, v = line.split("=", 1)
                     env[k.strip()] = v.strip()
-    prefixes = ("IDEALWINE_", "PANDOLFINI_", "SOTHEBYS_", "FINARTE_")
+    prefixes = ("IDEALWINE_", "PANDOLFINI_", "SOTHEBYS_", "FINARTE_",
+                "SYLVIES_")
     env.update({k: v for k, v in os.environ.items()
                 if k.startswith(prefixes)})
     return env

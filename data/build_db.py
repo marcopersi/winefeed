@@ -1694,11 +1694,16 @@ def load_winebarrel(b, limit):
 #   hash, not filename.
 
 _SYLVIES_MONTHS = {
-    "januar": 1, "january": 1, "februar": 2, "february": 2,
-    "märz": 3, "marz": 3, "march": 3, "april": 4, "mai": 5, "may": 5,
-    "juni": 6, "june": 6, "juli": 7, "july": 7, "august": 8,
-    "september": 9, "oktober": 10, "october": 10, "november": 11,
-    "dezember": 12, "december": 12,
+    "januar": 1, "january": 1, "jan": 1,
+    "februar": 2, "february": 2, "feb": 2,
+    "märz": 3, "marz": 3, "march": 3, "mar": 3,
+    "april": 4, "apr": 4, "mai": 5, "may": 5,
+    "juni": 6, "june": 6, "jun": 6, "juli": 7, "july": 7, "jul": 7,
+    "august": 8, "aug": 8,
+    "september": 9, "sep": 9, "sept": 9,
+    "oktober": 10, "october": 10, "oct": 10,
+    "november": 11, "nov": 11,
+    "dezember": 12, "december": 12, "dec": 12,
 }
 _SYLVIES_MONTH_FILE = re.compile(r"^([A-Za-zäöüÄÖÜ]+)(\d{4,5})$")
 # Three 2018 files have a typo'd 5-digit year ("August20218.txt" instead
@@ -1858,41 +1863,38 @@ def load_sylvies_html(b, limit):
 
 
 def _sylvies_parse_html_item(item):
+    """Extract one auction_item's raw text per field from BeautifulSoup,
+    then hand off to _sylvies_build_lot_row for the actual parsing --
+    that half is plain-text in, dict out, with no bs4 dependency, so the
+    live fetcher (ingest/fetchers/sylvies.py, same site, same HTML
+    structure, but no bs4 import there) can reuse it unchanged instead
+    of re-implementing the same vintage/description/bottle/estimate/
+    result parsing a second time."""
     lot_nr_el = item.find("p", class_="lot_nr")
     lot_no = lot_nr_el.get_text(strip=True) if lot_nr_el else None
     if not lot_no:
         return None
 
-    subs = []
+    subs_raw = []
     for li in item.find_all(
             "div", class_=lambda c: c and c.startswith("lot_item")):
         name_el = li.find("div", class_="lot_name")
         desc_el = li.find("div", class_="lot_description")
         bottle_el = li.find("div", class_="lot_bottle")
         bt_el = li.find("div", class_="lot_bottle_type")
-        vintage, wine = _sylvies_extract_vintage(
-            name_el.get_text(strip=True) if name_el else None)
-        region, producer = _sylvies_split_description(
-            desc_el.get_text(strip=True) if desc_el else None)
-        qty, dl, is_ohk = _sylvies_parse_bottle(
-            bottle_el.get_text(strip=True) if bottle_el else None)
-        subs.append({
-            "wine": wine, "vintage": vintage, "region": region,
-            "producer": producer, "quantity": qty, "bottle_size_dl": dl,
-            "is_ohk": is_ohk,
-            "condition_text": (bt_el.get_text(strip=True) if bt_el else
-                               None) or None,
+        subs_raw.append({
+            "name": name_el.get_text(strip=True) if name_el else None,
+            "description": desc_el.get_text(strip=True) if desc_el else None,
+            "bottle": bottle_el.get_text(strip=True) if bottle_el else None,
+            "bottle_type": bt_el.get_text(strip=True) if bt_el else None,
         })
-    if not subs:
-        return None
 
     est_el = item.find("div", class_="lot_estimate")
-    estimate_low = estimate_high = None
+    estimate_text = None
     if est_el:
         p = est_el.find_next_sibling("p")
         if p:
-            estimate_low, estimate_high = _sylvies_parse_estimate(
-                p.get_text(strip=True))
+            estimate_text = p.get_text(strip=True)
     bid_el = item.find("div", class_="lot_my_bid")
     result_text = None
     if bid_el and bid_el.parent:
@@ -1902,6 +1904,43 @@ def _sylvies_parse_html_item(item):
         result_text = re.sub(r"^\s*Result\s*", "",
                               bid_el.parent.get_text(strip=True),
                               flags=re.IGNORECASE)
+    return _sylvies_build_lot_row(lot_no, subs_raw, estimate_text,
+                                 result_text)
+
+
+def _sylvies_build_lot_row(lot_no, subs_raw, estimate_text, result_text):
+    """Pure-text parsing shared by load_sylvies_html (bs4) and the live
+    fetcher's loader (JSON, no bs4): vintage/description/bottle parsing
+    per sub-wine, then single-wine vs. mixed-lot aggregation -- a lot
+    with more than one lot_item is a real mixed lot (multiple distinct
+    wines sharing one lot number), not a parsing artifact."""
+    if not lot_no:
+        return None
+    subs = []
+    for raw in subs_raw:
+        # Confirmed real case (auction 145 live, lot 7): a mixed lot's
+        # markup carries one extra "lot_item"-prefixed div with every
+        # field empty -- not a 6th wine, a template artifact. Every
+        # genuine sub-wine has a name; this is the only safe signal to
+        # drop it on (not e.g. a fixed max-subs count, which would be a
+        # guess).
+        if not raw.get("name"):
+            continue
+        vintage, wine = _sylvies_extract_vintage(raw.get("name"))
+        region, producer = _sylvies_split_description(raw.get("description"))
+        qty, dl, is_ohk = _sylvies_parse_bottle(raw.get("bottle"))
+        subs.append({
+            "wine": wine, "vintage": vintage, "region": region,
+            "producer": producer, "quantity": qty, "bottle_size_dl": dl,
+            "is_ohk": is_ohk,
+            "condition_text": raw.get("bottle_type") or None,
+        })
+    if not subs:
+        return None
+
+    estimate_low = estimate_high = None
+    if estimate_text:
+        estimate_low, estimate_high = _sylvies_parse_estimate(estimate_text)
     hammer, sold = _sylvies_parse_result(result_text)
 
     if len(subs) == 1:
@@ -1941,11 +1980,87 @@ def _sylvies_parse_html_item(item):
     }
 
 
+_SYLVIES_TITLE_WORD = re.compile(r"[A-Za-zäöüÄÖÜ]+")
+_SYLVIES_TITLE_YEAR = re.compile(r"\b(\d{4})\b")
+
+
+def _sylvies_title_month_key(title):
+    """"All lots in the auction of 15 - 17 October 2026  | Sylvie's Wine
+    Auctions" -> ("2026", 10), or None.
+
+    Confirmed real case: an auction spanning two months ("31 Aug & 1 Sep
+    2012") names the SECOND month right before the year, but the
+    archive's own month-bucket convention uses the FIRST day's month
+    (confirmed: the 2012 archive has "August2012.zip", no
+    "September2012.zip" for that exact auction) -- so this takes the
+    first recognized month word in the title (full name or the
+    abbreviation these cross-month titles use, e.g. "Aug"/"Sep"), not
+    whichever word sits next to the year. The year itself is taken from
+    anywhere in the title: exactly one 4-digit number ever appears
+    there, so position doesn't matter for it."""
+    title = title or ""
+    year_m = _SYLVIES_TITLE_YEAR.search(title)
+    if not year_m:
+        return None
+    month = None
+    for word_m in _SYLVIES_TITLE_WORD.finditer(title):
+        month = _SYLVIES_MONTHS.get(word_m.group(0).lower())
+        if month:
+            break
+    if not month:
+        return None
+    return year_m.group(1), month
+
+
+def load_sylvies_fetched(b, limit):
+    """Live fetcher output (ingest/fetchers/sylvies.py, login required
+    since sylvies.be added an Azure WAF + account wall mid-2026 --
+    that's why the archive looked frozen at June 2026). Reuses
+    ``_sylvies_build_lot_row`` (shared with load_sylvies_html) for the
+    actual parsing, so a mixed lot here is read fully too -- the
+    historic txt capture's scraper bug (first-wine-only) never applied
+    to this source.
+
+    Must run before load_sylvies_txt in HOUSES: both use the same
+    "sylvies_<year>-<month>" auction_id convention, and
+    _sylvies_html_covered_months (despite its name -- it just queries
+    every already-inserted sylvies auction_id, not only html-sourced
+    ones) is what makes load_sylvies_txt skip a month this loader
+    already covered with the live fetcher's correctly-parsed mixed
+    lots, instead of double-loading it from the lower-fidelity capture.
+    """
+    n = 0
+    for f in _json_files("sylvies"):
+        d = load_json(f)
+        a = d.get("auction") or {}
+        if not a or not d.get("lots"):
+            continue
+        key = _sylvies_title_month_key(a.get("name"))
+        if key is None:
+            print(f"WARN load_sylvies_fetched: unparseable title "
+                  f"{a.get('name')!r} in {f}")
+            continue
+        year, month = key
+        b.set_source(f)
+        a_id = b.add_auction("sylvies", f"sylvies_{year}-{month:02d}",
+                             f"sylvies {year}-{month:02d}",
+                             f"{year}-{month:02d}-01", "EUR", "HAMMER")
+        for raw_lot in d["lots"]:
+            row = _sylvies_build_lot_row(
+                raw_lot.get("lot_no"), raw_lot.get("subs") or [],
+                raw_lot.get("estimate_text"), raw_lot.get("result_text"))
+            if row:
+                b.add_lot(a_id, row)
+        n += 1
+        if limit and n >= limit:
+            break
+
+
 def _sylvies_html_covered_months(conn):
-    """(year, month) keys already loaded by load_sylvies_html, so the txt
-    capture of the same month (lower fidelity -- see module note) is
-    skipped rather than double-loading it. Mirrors
-    ``_wermuth_xlsx_dates``."""
+    """(year, month) keys already loaded by load_sylvies_html or
+    load_sylvies_fetched, so the txt capture of the same month (lower
+    fidelity -- see module note) is skipped rather than double-loading
+    it. Mirrors ``_wermuth_xlsx_dates``."""
     rows = conn.execute(
         "SELECT a.auction_id FROM auctions a JOIN providers p"
         " ON a.provider_id = p.id WHERE p.name = 'sylvies'").fetchall()
@@ -2975,6 +3090,7 @@ HOUSES = [
     ("steinfels-staging", load_steinfels_staging),
     ("weinboerse", load_weinboerse),
     ("sylvies-html", load_sylvies_html),
+    ("sylvies-fetched", load_sylvies_fetched),
     ("sylvies-txt", load_sylvies_txt),
 ]
 

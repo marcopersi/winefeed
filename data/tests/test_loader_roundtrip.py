@@ -715,6 +715,131 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(rows, [("267", "Old Static Lot"),
                                 ("4183", "New Fetched Lot")])
 
+    def test_sylvies_fetched_json_parses_mixed_lot(self):
+        """Live fetcher output (ingest/fetchers/sylvies.py): a mixed lot
+        (several distinct wines sharing one lot number) must come out
+        fully -- the historic txt-captured archive's scraper only ever
+        read the first sub-wine (see load_sylvies_txt's module note),
+        this source never had that bug."""
+        data = {
+            "auction": {"id": "253",
+                       "name": "All lots in the auction of"
+                                " 15 - 17 October 2026"},
+            "lots": [{
+                "lot_no": "7",
+                "subs": [
+                    {"name": "1985 Château Grand Puy Ducasse",
+                     "description": "Pauillac | Mc",
+                     "bottle": "2 Bottle(s)", "bottle_type": "vts"},
+                    {"name": "1985 Château la Tour Carnet",
+                     "description": "Haut Médoc | Mc",
+                     "bottle": "2 Bottle(s)",
+                     "bottle_type": "1 neck, 1 vts"},
+                ],
+                "estimate_text": "€ 320 - € 480",
+                "result_text": "€ 340",
+            }],
+        }
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "sylvies"), exist_ok=True)
+            with open(os.path.join(d, "sylvies", "253.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_sylvies_fetched(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT a.auction_id, l.lot_no, l.wine, l.mixed_lot,"
+                " l.quantity, l.hammer_price FROM lots l"
+                " JOIN auctions a ON l.auction_id=a.id").fetchone()
+            conn.close()
+        self.assertEqual(row, (
+            "sylvies_2026-10", "7",
+            "1985 Château Grand Puy Ducasse; 1985 Château la Tour Carnet",
+            1, 4, 340.0))
+
+    def test_sylvies_fetched_title_uses_first_month_of_cross_month_span(self):
+        """Confirmed real case: a title spanning two months ("31 Aug & 1
+        Sep 2012") names the second month (abbreviated) right before
+        the year, but the archive's own bucketing convention uses the
+        FIRST day's month (the 2012 archive has "August2012.zip", no
+        "September2012.zip" for this exact auction) -- must key on
+        August, not September."""
+        data = {
+            "auction": {"id": "149",
+                       "name": "All lots in the auction of"
+                                " 31 Aug & 1 Sep 2012"},
+            "lots": [{"lot_no": "1", "subs": [{"name": "2010 Some Wine"}],
+                      "estimate_text": None, "result_text": None}],
+        }
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "sylvies"), exist_ok=True)
+            with open(os.path.join(d, "sylvies", "149.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_sylvies_fetched(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            auction_id = conn.execute(
+                "SELECT auction_id FROM auctions").fetchone()[0]
+            conn.close()
+        self.assertEqual(auction_id, "sylvies_2012-08")
+
+    def test_sylvies_fetched_covers_txt_month_to_avoid_double_load(self):
+        """load_sylvies_fetched must run before load_sylvies_txt so the
+        shared "sylvies_<year>-<month>" auction_id is already taken --
+        _sylvies_html_covered_months then makes load_sylvies_txt skip
+        that month instead of double-loading it from the lower-fidelity
+        capture (same mechanism as the html-vs-txt dedup it already
+        did)."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "sylvies"), exist_ok=True)
+            with open(os.path.join(d, "sylvies", "253.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "253",
+                               "name": "All lots in the auction of"
+                                        " 15 - 17 October 2026"},
+                    "lots": [{"lot_no": "1",
+                             "subs": [{"name": "2020 Some Wine"}],
+                             "estimate_text": None, "result_text": None}],
+                }, fh)
+            with open(os.path.join(d, "sylvies", "October2026.txt"),
+                      "w", encoding="utf-8") as fh:
+                fh.write("\nLot Number: 1\nLot Name: 2020 Other Wine\n"
+                        "Lot Description: \nLot Bottle: 1 Bottle(s)\n"
+                        "Lot Bottletype: \nEstimate: \nResult: \n")
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_sylvies_fetched(builder, None)
+                build_db.load_sylvies_txt(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            auctions = conn.execute(
+                "SELECT COUNT(*) FROM auctions WHERE auction_id="
+                "'sylvies_2026-10'").fetchone()[0]
+            wine = conn.execute(
+                "SELECT wine FROM lots").fetchone()[0]
+            conn.close()
+        self.assertEqual(auctions, 1)
+        self.assertEqual(wine, "Some Wine")
+
     def test_steinfels_resultfile_json_parses_historical_dump(self):
         """The historical raw export of the weinauktion platform's own
         paginated API response (confirmed: 3,904 files, 2016-2026) --

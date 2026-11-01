@@ -5,6 +5,7 @@ from .christies import (ChristiesFetcher, MalformedResponse, MetaInvalid,
 from .dobiaschofsky import DobiaschofskyFetcher
 from .dorotheum import DorotheumFetcher
 from .sothebys import SothebysFetcher
+from .sylvies import SylviesFetcher
 from .finarte import FinarteFetcher
 from .hdh import HdhFetcher
 from .idealwine import IdealwineFetcher
@@ -35,6 +36,7 @@ FETCHERS = {
     "sothebys": SothebysFetcher(),
     "christies": ChristiesFetcher(),
     "winebarrel": WinebarrelFetcher(),
+    "sylvies": SylviesFetcher(),
 }
 
 

@@ -1146,3 +1146,66 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
   noch nicht).
 - [x] Bug: canonical_source-Provenienz (gefixt im Zuge von Kapitel 4.2–4.3,
   s. o.)
+- [x] **CI-vs-Samsung-Disk-Architektur** (Entscheidung): Option (a) —
+  periodisch CI-Artefakt herunterladen und manuell in den
+  Samsung-Disk-Baum mergen. `ingest_manifest.json` ist der geteilte
+  Dedup-State zwischen lokalen Läufen und CI.
+- [x] **steinfels/weinboerse CI-Bruch** (gefixt): `WeinauktionFetcher.
+  API_VERSION` war veraltet ("1.14"), die Plattform verlangt live "2.3"
+  — per `curl` gegen beide Häuser bestätigt. Hat CI real gebrochen
+  (Run `41257477575`).
+- [x] **steinfels historischer Resultfile-Dump** (gefixt, grösster
+  Einzelfund dieser Session): 3.904 `Resultfile*.json`-Dateien (2016–
+  2026) wurden nie gelesen — steinfels sah seit 2016 "eingefroren" aus,
+  weil nichts diese Dateien je geladen hat. Neue
+  `_load_steinfels_resultfile_json`: 11 → 157 Auktionen, ~7k → 104.895
+  Lots. `upperBasePrice==0` ist ein Null-Sentinel (26 % Stichprobe,
+  immer mit `basePrice==startingBid` gepaart) und wird auf `None`
+  gesetzt; `basePrice==0` hat **keine** solche Evidenz und bleibt
+  unverändert.
+- [x] **winebarrel.ch** (neuer Fetcher): Joomla-Seite, kein Login, kein
+  XHR-API — jede nummerierte "Auktion" ist in Wirklichkeit EIN Weinlos
+  (Konsignationsmodell, Verkäufer-Kommission, kein Aufgeld). 7.375 IDs
+  aus dem statischen Dump vor-geseedet, 169 echte Neufunde. In CI
+  aufgenommen (13 Häuser). Senior-Review: 7 Findings gefixt (u. a.
+  `_MAXBID`-Regex fehlte Schweizer Tausender-Apostroph, `price_basis`
+  fälschlich immer `"HAMMER"` statt `sold`-abhängig, leere Auktion
+  wurde trotzdem angelegt).
+- [x] **sylvies.be Live-Fetcher** (neu, grösster Debugging-Aufwand
+  dieser Session): Seite hat seit Mitte 2026 eine Azure-WAF-JS-Challenge
+  **und** verlangt für Einzelergebnisse einen eingeloggten Account —
+  deshalb sah das Archiv seit Juni 2026 "eingefroren" aus.
+  `ingest/sylvies_auth.py` löst die WAF per Camoufox (Sothebys-Muster),
+  die resultierenden Cookies funktionieren danach auf einer normalen
+  Session weiter. **Drei echte Bugs beim ersten Produktionslauf
+  gefunden und gefixt:**
+  1. Das `.ASPXAUTH`-Login-Cookie läuft nach ~30 Min ab (kürzer als ein
+     mehrstündiger Lauf) — `SylviesFetcher._get()` erkennt die
+     Login-Seite am Text "Login to Sylvie" und loggt automatisch neu
+     ein. Lief live nur 21→26 von 98 Auktionen durch (kaum Besserung).
+  2. Root Cause des Rests: die **separate** Azure-WAF-Clearance-Cookie
+     läuft unabhängig und ebenfalls ab, der Server liefert dann seine
+     JS-Challenge-Seite statt der Login-Seite — enthält kein "Login to
+     Sylvie", wurde also als legitimes "0 Lots"-Ergebnis fehlinterpretiert.
+     Fix: eine leere Seite 1 ist nie legitim (jede von `discover()`
+     gelistete Auktion hat echte Lots) → erzwingt einen Re-Login-Versuch.
+     Nach dem Fix: 0 "leeres Ergebnis"-Meldungen, alle 98/98 Auktionen
+     geladen (291.466 sylvies-Lots in der Prod-DB, exakt 98
+     `sylvies_<jahr>-<monat>`-Auktionen).
+  3. 5 Auktionstitel, die zwei Monate überspannen (z. B. "31 Aug & 1 Sep
+     2012"), nennen im `<title>` den **zweiten** (abgekürzten) Monat
+     direkt vor dem Jahr — die Archiv-Konvention bucketet aber nach dem
+     **ersten** Tag (bestätigt: `August2012.zip` existiert,
+     `September2012.zip` nicht). `_sylvies_title_month_key` nahm vorher
+     das Wort direkt vor der Jahreszahl; jetzt das erste erkannte
+     Monatswort im Titel (inkl. Abkürzungen).
+  Rebuild verifiziert: `integrity_check` ok, 0 FK-Verletzungen. Backup
+  `wine_auction_prices.sqlite.bak-20261101-235413`.
+  **Noch offen:** `sylvies` bewusst NICHT in `.github/workflows/
+  ingest.yml` aufgenommen (Camoufox ist eine schwere Dependency, analog
+  zu sothebys/idealwine — läuft nur lokal). baghera bleibt ungelöst:
+  Nutzer meint, DeepSeek habe früher einen Fetcher mit einem
+  login-freien API gebaut, der verloren ging — ich finde keine Spur
+  davon im Repo/Git-Historie/Samsung-Disk; wartet auf Nutzer-Input von
+  DeepSeeks Suche. wermuth-sa/Denz-Automatisierung (nächste Priorität
+  laut Nutzer) noch nicht begonnen.

@@ -994,6 +994,499 @@
     },
     "__last_run_at__": "2026-11-01T17:07:05.026638+00:00"
   },
+  "sylvies": {
+    "141": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:50:10.153141+00:00",
+      "url": "https://www.sylvies.be/en/auction/141"
+    },
+    "142": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:49:22.902631+00:00",
+      "url": "https://www.sylvies.be/en/auction/142"
+    },
+    "143": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:50:48.714024+00:00",
+      "url": "https://www.sylvies.be/en/auction/143"
+    },
+    "145": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:48:47.118204+00:00",
+      "url": "https://www.sylvies.be/en/auction/145"
+    },
+    "149": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:51:30.859744+00:00",
+      "url": "https://www.sylvies.be/en/auction/149"
+    },
+    "151": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:52:16.303892+00:00",
+      "url": "https://www.sylvies.be/en/auction/151"
+    },
+    "152": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:53:05.362921+00:00",
+      "url": "https://www.sylvies.be/en/auction/152"
+    },
+    "155": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:42:55.436382+00:00",
+      "url": "https://www.sylvies.be/en/auction/155"
+    },
+    "156": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:43:34.754913+00:00",
+      "url": "https://www.sylvies.be/en/auction/156"
+    },
+    "157": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:44:16.147998+00:00",
+      "url": "https://www.sylvies.be/en/auction/157"
+    },
+    "158": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:45:06.182025+00:00",
+      "url": "https://www.sylvies.be/en/auction/158"
+    },
+    "159": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:45:58.296950+00:00",
+      "url": "https://www.sylvies.be/en/auction/159"
+    },
+    "160": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:46:54.279691+00:00",
+      "url": "https://www.sylvies.be/en/auction/160"
+    },
+    "161": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:48:00.675487+00:00",
+      "url": "https://www.sylvies.be/en/auction/161"
+    },
+    "162": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:37:38.435933+00:00",
+      "url": "https://www.sylvies.be/en/auction/162"
+    },
+    "163": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:38:36.859613+00:00",
+      "url": "https://www.sylvies.be/en/auction/163"
+    },
+    "164": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:39:29.366810+00:00",
+      "url": "https://www.sylvies.be/en/auction/164"
+    },
+    "165": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:40:10.289819+00:00",
+      "url": "https://www.sylvies.be/en/auction/165"
+    },
+    "171": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:40:56.089795+00:00",
+      "url": "https://www.sylvies.be/en/auction/171"
+    },
+    "173": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:40:59.477931+00:00",
+      "url": "https://www.sylvies.be/en/auction/173"
+    },
+    "174": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:42:13.302375+00:00",
+      "url": "https://www.sylvies.be/en/auction/174"
+    },
+    "175": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:31:39.967742+00:00",
+      "url": "https://www.sylvies.be/en/auction/175"
+    },
+    "176": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:32:27.723062+00:00",
+      "url": "https://www.sylvies.be/en/auction/176"
+    },
+    "177": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:33:16.077556+00:00",
+      "url": "https://www.sylvies.be/en/auction/177"
+    },
+    "178": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:33:55.109583+00:00",
+      "url": "https://www.sylvies.be/en/auction/178"
+    },
+    "179": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:34:45.769540+00:00",
+      "url": "https://www.sylvies.be/en/auction/179"
+    },
+    "180": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:35:39.316205+00:00",
+      "url": "https://www.sylvies.be/en/auction/180"
+    },
+    "181": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:36:50.657023+00:00",
+      "url": "https://www.sylvies.be/en/auction/181"
+    },
+    "182": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:25:16.556200+00:00",
+      "url": "https://www.sylvies.be/en/auction/182"
+    },
+    "183": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:26:21.220701+00:00",
+      "url": "https://www.sylvies.be/en/auction/183"
+    },
+    "184": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:27:18.012257+00:00",
+      "url": "https://www.sylvies.be/en/auction/184"
+    },
+    "185": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:28:15.894539+00:00",
+      "url": "https://www.sylvies.be/en/auction/185"
+    },
+    "186": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:29:08.691658+00:00",
+      "url": "https://www.sylvies.be/en/auction/186"
+    },
+    "187": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:30:01.548362+00:00",
+      "url": "https://www.sylvies.be/en/auction/187"
+    },
+    "188": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:30:53.411270+00:00",
+      "url": "https://www.sylvies.be/en/auction/188"
+    },
+    "189": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:18:56.324041+00:00",
+      "url": "https://www.sylvies.be/en/auction/189"
+    },
+    "190": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:19:40.658827+00:00",
+      "url": "https://www.sylvies.be/en/auction/190"
+    },
+    "191": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:20:27.381184+00:00",
+      "url": "https://www.sylvies.be/en/auction/191"
+    },
+    "192": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:21:04.480417+00:00",
+      "url": "https://www.sylvies.be/en/auction/192"
+    },
+    "193": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:21:59.545350+00:00",
+      "url": "https://www.sylvies.be/en/auction/193"
+    },
+    "194": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:23:04.079956+00:00",
+      "url": "https://www.sylvies.be/en/auction/194"
+    },
+    "195": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:24:18.550189+00:00",
+      "url": "https://www.sylvies.be/en/auction/195"
+    },
+    "196": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:12:23.146800+00:00",
+      "url": "https://www.sylvies.be/en/auction/196"
+    },
+    "197": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:13:10.730980+00:00",
+      "url": "https://www.sylvies.be/en/auction/197"
+    },
+    "198": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:14:01.438578+00:00",
+      "url": "https://www.sylvies.be/en/auction/198"
+    },
+    "199": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:14:58.503952+00:00",
+      "url": "https://www.sylvies.be/en/auction/199"
+    },
+    "200": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:16:06.076988+00:00",
+      "url": "https://www.sylvies.be/en/auction/200"
+    },
+    "201": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:17:10.943199+00:00",
+      "url": "https://www.sylvies.be/en/auction/201"
+    },
+    "202": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:18:09.271360+00:00",
+      "url": "https://www.sylvies.be/en/auction/202"
+    },
+    "203": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:59:09.444004+00:00",
+      "url": "https://www.sylvies.be/en/auction/203"
+    },
+    "204": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:59:55.968914+00:00",
+      "url": "https://www.sylvies.be/en/auction/204"
+    },
+    "205": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:00:38.270962+00:00",
+      "url": "https://www.sylvies.be/en/auction/205"
+    },
+    "206": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:01:25.557130+00:00",
+      "url": "https://www.sylvies.be/en/auction/206"
+    },
+    "207": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:02:14.322399+00:00",
+      "url": "https://www.sylvies.be/en/auction/207"
+    },
+    "208": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:03:11.079440+00:00",
+      "url": "https://www.sylvies.be/en/auction/208"
+    },
+    "209": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:11:34.992870+00:00",
+      "url": "https://www.sylvies.be/en/auction/209"
+    },
+    "210": {
+      "etag": "",
+      "fetched_at": "2026-11-01T22:10:35.404689+00:00",
+      "url": "https://www.sylvies.be/en/auction/210"
+    },
+    "211": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:52:49.571615+00:00",
+      "url": "https://www.sylvies.be/en/auction/211"
+    },
+    "212": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:53:47.786543+00:00",
+      "url": "https://www.sylvies.be/en/auction/212"
+    },
+    "213": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:54:52.897712+00:00",
+      "url": "https://www.sylvies.be/en/auction/213"
+    },
+    "214": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:56:03.026042+00:00",
+      "url": "https://www.sylvies.be/en/auction/214"
+    },
+    "215": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:57:17.973242+00:00",
+      "url": "https://www.sylvies.be/en/auction/215"
+    },
+    "216": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:58:14.492645+00:00",
+      "url": "https://www.sylvies.be/en/auction/216"
+    },
+    "217": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:45:06.914285+00:00",
+      "url": "https://www.sylvies.be/en/auction/217"
+    },
+    "218": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:46:32.972699+00:00",
+      "url": "https://www.sylvies.be/en/auction/218"
+    },
+    "219": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:47:55.313080+00:00",
+      "url": "https://www.sylvies.be/en/auction/219"
+    },
+    "220": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:49:09.320427+00:00",
+      "url": "https://www.sylvies.be/en/auction/220"
+    },
+    "221": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:50:29.320212+00:00",
+      "url": "https://www.sylvies.be/en/auction/221"
+    },
+    "222": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:51:45.597439+00:00",
+      "url": "https://www.sylvies.be/en/auction/222"
+    },
+    "223": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:36:59.190626+00:00",
+      "url": "https://www.sylvies.be/en/auction/223"
+    },
+    "224": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:38:22.903044+00:00",
+      "url": "https://www.sylvies.be/en/auction/224"
+    },
+    "225": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:39:36.633773+00:00",
+      "url": "https://www.sylvies.be/en/auction/225"
+    },
+    "226": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:42:27.767629+00:00",
+      "url": "https://www.sylvies.be/en/auction/226"
+    },
+    "227": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:43:50.176194+00:00",
+      "url": "https://www.sylvies.be/en/auction/227"
+    },
+    "228": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:41:05.451507+00:00",
+      "url": "https://www.sylvies.be/en/auction/228"
+    },
+    "229": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:26:06.275239+00:00",
+      "url": "https://www.sylvies.be/en/auction/229"
+    },
+    "230": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:27:30.968524+00:00",
+      "url": "https://www.sylvies.be/en/auction/230"
+    },
+    "231": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:28:58.034691+00:00",
+      "url": "https://www.sylvies.be/en/auction/231"
+    },
+    "232": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:29:13.104207+00:00",
+      "url": "https://www.sylvies.be/en/auction/232"
+    },
+    "233": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:33:54.954896+00:00",
+      "url": "https://www.sylvies.be/en/auction/233"
+    },
+    "234": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:35:32.934624+00:00",
+      "url": "https://www.sylvies.be/en/auction/234"
+    },
+    "235": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:17:12.070057+00:00",
+      "url": "https://www.sylvies.be/en/auction/235"
+    },
+    "236": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:18:32.231144+00:00",
+      "url": "https://www.sylvies.be/en/auction/236"
+    },
+    "237": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:20:10.580890+00:00",
+      "url": "https://www.sylvies.be/en/auction/237"
+    },
+    "238": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:21:45.151133+00:00",
+      "url": "https://www.sylvies.be/en/auction/238"
+    },
+    "239": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:23:05.246428+00:00",
+      "url": "https://www.sylvies.be/en/auction/239"
+    },
+    "240": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:24:43.614075+00:00",
+      "url": "https://www.sylvies.be/en/auction/240"
+    },
+    "241": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:08:00.503159+00:00",
+      "url": "https://www.sylvies.be/en/auction/241"
+    },
+    "244": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:09:39.713386+00:00",
+      "url": "https://www.sylvies.be/en/auction/244"
+    },
+    "245": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:11:23.559345+00:00",
+      "url": "https://www.sylvies.be/en/auction/245"
+    },
+    "246": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:12:43.881081+00:00",
+      "url": "https://www.sylvies.be/en/auction/246"
+    },
+    "247": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:13:56.272358+00:00",
+      "url": "https://www.sylvies.be/en/auction/247"
+    },
+    "248": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:15:31.408084+00:00",
+      "url": "https://www.sylvies.be/en/auction/248"
+    },
+    "249": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:00:23.392501+00:00",
+      "url": "https://www.sylvies.be/en/auction/249"
+    },
+    "250": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:01:53.838010+00:00",
+      "url": "https://www.sylvies.be/en/auction/250"
+    },
+    "251": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:03:21.981632+00:00",
+      "url": "https://www.sylvies.be/en/auction/251"
+    },
+    "252": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:04:55.349889+00:00",
+      "url": "https://www.sylvies.be/en/auction/252"
+    },
+    "253": {
+      "etag": "",
+      "fetched_at": "2026-11-01T21:06:19.451284+00:00",
+      "url": "https://www.sylvies.be/en/auction/253"
+    },
+    "__last_run_at__": "2026-11-01T22:53:05.362932+00:00"
+  },
   "weinauktionator": {
     "34": {
       "etag": "",
