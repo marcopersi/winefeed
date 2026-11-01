@@ -637,6 +637,115 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(
             rows, [("Chambertin", 460.0), ("Pommard", 0.0)])
 
+    def test_steinfels_resultfile_json_parses_historical_dump(self):
+        """The historical raw export of the weinauktion platform's own
+        paginated API response (confirmed: 3,904 files, 2016-2026) --
+        same shape load_weinboerse already handles, but steinfels never
+        had an equivalent loader at all, which is why its data looked
+        "frozen since 2016" (the house itself is very much still
+        running -- "eAuktion 125" as of 2026-11-01)."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "shortDescription": "", "description": "Château X, 2015",
+                "basePrice": 100, "upperBasePrice": 180,
+                "hammerPrice": 150, "state": "sold"}
+        related = {"auctions": [{"id": 408, "title": "Auktion 408",
+                                 "startDate": "2023-06-09T08:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 408}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Steinfels"), exist_ok=True)
+            with open(os.path.join(d, "Steinfels", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": related, "items": [item]}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_steinfels_resultfile_json(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT a.auction_id, a.title, l.lot_no, l.wine, l.vintage,"
+                " l.estimate_low, l.estimate_high, l.hammer_price, l.sold"
+                " FROM lots l JOIN auctions a ON l.auction_id=a.id").fetchone()
+            conn.close()
+        self.assertEqual(row, ("api-408", "Auktion 408", "1",
+                               "Château X, 2015", 2015, 100.0, 180.0,
+                               150.0, 1))
+
+    def test_steinfels_resultfile_json_zero_is_not_a_real_estimate(self):
+        """Confirmed real case: upperBasePrice is exactly 0.0 for 26% of
+        a random sample of real items, always paired with
+        basePrice == startingBid -- a null sentinel (no estimate was
+        ever entered), not a genuine CHF-0 estimate."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "description": "Some wine", "basePrice": 10,
+                "upperBasePrice": 0, "startingBid": 10,
+                "hammerPrice": 62, "state": "sold"}
+        related = {"auctions": [{"id": 8, "title": "eAuktion 8",
+                                 "startDate": "2017-01-31T00:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 8}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Steinfels"), exist_ok=True)
+            with open(os.path.join(d, "Steinfels", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": related, "items": [item]}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_steinfels_resultfile_json(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT estimate_low, estimate_high FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, (10.0, None))
+
+    def test_steinfels_api_auction_id_does_not_collide_with_xlsx_aid(self):
+        """Confirmed real case: the platform's own auction id (e.g. 321,
+        a 2023-era sale) can coincidentally equal the unrelated
+        sequential file number of a 2002-03 XLSX batch file
+        (results_321.xlsx) -- without the aid_prefix, both landed under
+        one auction_id "321" and merged unrelated lots together under
+        duplicate lot numbers."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "description": "Unrelated 2023 wine", "basePrice": 100,
+                "upperBasePrice": 150, "hammerPrice": 120, "state": "sold"}
+        related = {"auctions": [{"id": 321, "title": "eAuktion 89",
+                                 "startDate": "2023-01-01T00:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 321}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Steinfels"), exist_ok=True)
+            with open(os.path.join(d, "Steinfels", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": related, "items": [item]}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            # The XLSX-sourced auction, same bare auction_id "321".
+            builder.add_auction("steinfels", "321", "321", "2003-01-01",
+                               "CHF", "HAMMER")
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_steinfels_resultfile_json(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            auction_ids = {r[0] for r in conn.execute(
+                "SELECT auction_id FROM auctions")}
+            conn.close()
+        self.assertEqual(auction_ids, {"321", "api-321"})
+
     def test_zacky_prefers_sale_no_over_colliding_wayback_id(self):
         """Confirmed real case: the wayback-generation archive (id 19-287,
         Zachys' own auctionid) and the later, richer "structured"

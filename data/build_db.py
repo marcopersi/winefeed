@@ -1102,7 +1102,7 @@ def load_koppe(b, limit):
             break
 
 
-def _load_weinauktion_json(b, provider, limit):
+def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
     """Load the weinauktion-platform API JSON (steinfels / weinboerse).
 
     Only matches ``run_ingest.py``-fetched files (``{auction, lots}``,
@@ -1112,6 +1112,17 @@ def _load_weinauktion_json(b, provider, limit):
     phantom "None"-id auction per file instead of 0 (confirmed: this is
     exactly how the original, broken weinboerse loader produced its
     "1 auction / 0 lots" symptom).
+
+    ``aid_prefix`` disambiguates the platform's own numeric auction id
+    from an unrelated id namespace already used for this provider --
+    steinfels' 2002-03 XLSX batch is numbered by sequential *file*
+    number (e.g. "321"), not a platform auction id, and the platform's
+    own ids run low enough (251 for a 2023 sale) to collide with it by
+    pure coincidence (confirmed real case: DB auction id 6 ended up with
+    both "Château Angélus" from the XLSX and an unrelated "Château de
+    Bel-Air" lot from the API under the same auction_id "321", both
+    claiming lot_no "1"). weinboerse has no such second namespace, so it
+    passes none.
     """
     n = 0
     for f in _json_files(provider):
@@ -1120,7 +1131,7 @@ def _load_weinauktion_json(b, provider, limit):
             continue
         b.set_source(f)
         a = d.get("auction", {})
-        aid = str(a.get("id"))
+        aid = aid_prefix + str(a.get("id"))
         a_id = b.add_auction(provider, aid, a.get("name"),
                              parse_date(a.get("date")),
                              a.get("currency") or "CHF", "HAMMER")
@@ -2156,11 +2167,113 @@ def load_steinfels(b, limit):
         n += 1
         if limit and n >= limit:
             break
-    # The Alt-XLSX (2002-03) and API-JSON (current catalogs) are disjunct
-    # auction-id namespaces, so both are loaded into the same "steinfels"
-    # provider without collision.
+    # The Alt-XLSX (2002-03) is numbered by sequential file number, not a
+    # platform auction id; the API-JSON/historical-dump ids come from the
+    # platform itself and run low enough to collide with it by pure
+    # coincidence (see _load_weinauktion_json's aid_prefix docstring) --
+    # both need the same prefix to stay in a namespace of their own.
     remaining = None if limit is None else limit - n
-    _load_weinauktion_json(b, "steinfels", remaining)
+    _load_weinauktion_json(b, "steinfels", remaining, aid_prefix="api-")
+    _load_steinfels_resultfile_json(b, remaining)
+
+
+def _load_steinfels_resultfile_json(b, limit):
+    """Historical raw export of the weinauktion platform's own paginated
+    API response (confirmed: 3,904 files, 2016-2026, e.g. "Auktion 408" --
+    CHF 12% Kommission + CHF 10 Lotgebühr, matches docs/premium-policy.md).
+    Same ``{"@related": {auctions, catalogs, parts}, "items": [...]}``
+    shape ``load_weinboerse`` already handles for weinboerse's identical
+    platform -- this is the steinfels-side fix for the same gap: steinfels
+    looked "frozen since 2016" only because nothing ever read these files
+    or the CI-fetched ones (see the x-api-version fix in
+    ingest/fetchers/weinauktion.py), not because the house stopped
+    running auctions (it is mid "eAuktion 125" as of 2026-11-01).
+
+    Field mapping deliberately stays as flat as the live fetcher's own
+    ``_map_lot`` (ingest/fetchers/weinauktion.py) -- wine text + a
+    vintage regex, not weinboerse's richer producer/quantity/OHK
+    free-text parse -- since steinfels' live-fetched lots never got that
+    treatment either; consistency with the live path matters more than
+    per-house parsing depth here.
+    """
+    files = _json_files("Steinfels", "**/Resultfile*.json")
+    auctions, catalogs, parts = {}, {}, {}
+    for f in files:
+        rel = load_json(f).get("@related", {})
+        for a in rel.get("auctions", []):
+            auctions[a["id"]] = a
+        for c in rel.get("catalogs", []):
+            catalogs[c["id"]] = c
+        for p in rel.get("parts", []):
+            parts[p["id"]] = p
+    part_to_auction = {
+        pid: catalogs[p["auctionCatalogId"]]["auctionId"]
+        for pid, p in parts.items() if p.get("auctionCatalogId") in catalogs
+    }
+
+    # Mirrors load_weinboerse: an auction the CI fetcher has already
+    # written as its own "steinfels/<catalog_id>.json" ({auction, lots}
+    # shape) wins over this frozen dump, so a future CI refetch of the
+    # same catalog is not double-loaded on top of it.
+    fetched_auction_ids = set()
+    for f in _json_files("steinfels"):
+        if os.path.basename(f).lower().startswith("resultfile"):
+            continue
+        cat_id = os.path.splitext(os.path.basename(f))[0]
+        cat = catalogs.get(int(cat_id)) if cat_id.isdigit() else None
+        if cat:
+            fetched_auction_ids.add(cat["auctionId"])
+
+    seen = set()
+    auction_db_id = {}
+    n = 0
+    for f in files:
+        d = load_json(f)
+        b.set_source(f)
+        for it in d.get("items", []):
+            key = (it.get("auctionCatalogPartId"), it.get("id"))
+            if key in seen:
+                continue
+            seen.add(key)
+            aid = part_to_auction.get(key[0])
+            if aid in fetched_auction_ids:
+                continue
+            a = auctions.get(aid)
+            if a is None:
+                continue
+            if aid not in auction_db_id:
+                auction_db_id[aid] = b.add_auction(
+                    "steinfels", f"api-{aid}", a.get("title"),
+                    parse_date(a.get("startDate")),
+                    a.get("currency") or "CHF", "HAMMER")
+            a_id = auction_db_id[aid]
+
+            text = _wb_strip_html(
+                it.get("shortDescription") or it.get("description") or "")
+            m = re.search(r"\b(19|20)\d{2}\b", text)
+            # 0.0 is a null sentinel here, not a real CHF-0 estimate --
+            # confirmed: upperBasePrice is exactly 0 for 26% of a random
+            # sample, and on those same lots basePrice always equals
+            # startingBid (no real estimate was ever entered, only a
+            # starting bid), while recent auctions (e.g. "Auktion 408",
+            # 2023) use both fields as a genuine low/high estimate range.
+            estimate_low = to_float(it.get("basePrice")) or None
+            estimate_high = to_float(it.get("upperBasePrice")) or None
+            b.add_lot(a_id, {
+                "lot_no": str(it.get("number")),
+                "source_lot_key": f"{key[0]}:{key[1]}",
+                "wine": text or None,
+                "vintage": to_int(m.group(0)) if m else None,
+                "estimate_low": estimate_low,
+                "estimate_high": estimate_high,
+                "hammer_price": to_float(it.get("hammerPrice")),
+                "sold": 1 if it.get("state") == "sold" else 0,
+                "price_basis": "HAMMER",
+                "currency": a.get("currency") or "CHF",
+            })
+        n += 1
+        if limit and n >= limit:
+            break
 
 
 def load_steinfels_staging(b, limit):
