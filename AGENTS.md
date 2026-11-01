@@ -18,7 +18,7 @@
 
 ## Daten-Pipeline (Überblick)
 
-- Monatlicher CI-Ingest (12 Häuser): `.github/workflows/ingest.yml` (cron `0 0 1 * *`)
+- Monatlicher CI-Ingest (13 Häuser): `.github/workflows/ingest.yml` (cron `0 0 1 * *`)
   → `.github/workflows/process.yml` (DB-Build als Artifact).
 - Lokaler DB-Build: `python3 data/build_db.py` (atomar, tmp + `os.replace`).
 - Preis-Annotation in `data/build_db.py`: `_annotate_fx` (NLG→EUR),
