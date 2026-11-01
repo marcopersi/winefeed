@@ -1123,6 +1123,20 @@ def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
     Bel-Air" lot from the API under the same auction_id "321", both
     claiming lot_no "1"). weinboerse has no such second namespace, so it
     passes none.
+
+    Known residual risk (senior review, not fixed -- needs real-archive
+    verification before touching it, not a guess): for steinfels, this
+    function's ``a.get("id")`` is the live fetcher's own ``cat_id``
+    (catalog id -- see ``ingest/fetchers/weinauktion.py``'s ``discover``:
+    ``ref.auction_id = str(cat_id)``), while
+    ``_load_steinfels_resultfile_json`` resolves ids all the way to the
+    platform's true parent ``auctionId``. Both get the same "api-"
+    prefix, so a catalog id could in principle still collide with an
+    unrelated sale's true auction id. Checked against the live production
+    DB after this session's rebuild: every "api-*" steinfels auction_id
+    currently has exactly one coherent title and no duplicate lot_no --
+    zero actual collisions today -- but that is not a guarantee against a
+    future one.
     """
     n = 0
     for f in _json_files(provider):
@@ -1136,6 +1150,7 @@ def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
                              parse_date(a.get("date")),
                              a.get("currency") or "CHF", "HAMMER")
         for lot in d.get("lots", []):
+            sold = bool(lot.get("sold"))
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_no")),
                 "wine": lot.get("wine"),
@@ -1143,9 +1158,9 @@ def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
                 "estimate_low": to_float(lot.get("estimate_low")),
                 "estimate_high": to_float(lot.get("estimate_high")),
                 "hammer_price": to_float(lot.get("hammer_price")),
-                "price_basis": "HAMMER",
+                "price_basis": "HAMMER" if sold else "UNKNOWN",
                 "currency": lot.get("currency") or "CHF",
-                "sold": 1 if lot.get("sold") else 0,
+                "sold": 1 if sold else 0,
             })
         n += 1
         if limit and n >= limit:
@@ -1580,11 +1595,22 @@ def load_winebarrel(b, limit):
     # the live site (and in the CI fetcher's output below) is a single
     # wine lot, continuously consigned -- so everything lands in one
     # virtual "all" auction, same as the static dump.
+    f = os.path.join(ARCHIVE, "winebarrel", "winebarrel_lots.json")
+    # The live fetcher (ingest/fetchers/winebarrel.py) writes one
+    # {auction, lots} file per lot, named "<auction_id>.json" -- the same
+    # convention _load_weinauktion_json relies on for steinfels/
+    # weinboerse.
+    fetched_files = [jf for jf in _json_files("winebarrel")
+                     if os.path.basename(jf) != "winebarrel_lots.json"]
+    if not os.path.exists(f) and not fetched_files:
+        # No archive data at all (e.g. ARCHIVE_PATH not mounted) -- don't
+        # insert an empty provider/auction row for nothing.
+        return
+
     a_id = b.add_auction("winebarrel", "all", "winebarrel", None, None, "HAMMER")
     n = 0
     seen_lot_nos = set()
 
-    f = os.path.join(ARCHIVE, "winebarrel", "winebarrel_lots.json")
     if os.path.exists(f):
         d = load_json(f)
         b.set_source(f)
@@ -1605,14 +1631,9 @@ def load_winebarrel(b, limit):
             })
             n += 1
 
-    # The live fetcher (ingest/fetchers/winebarrel.py) writes one
-    # {auction, lots} file per lot, named "<auction_id>.json" -- the same
-    # convention _load_weinauktion_json relies on for steinfels/
-    # weinboerse. Skip any id the static dump already has, so a refetch
-    # of an already-covered lot is never double-loaded.
-    for jf in _json_files("winebarrel"):
-        if os.path.basename(jf) == "winebarrel_lots.json":
-            continue
+    # Skip any id the static dump already has, so a refetch of an
+    # already-covered lot is never double-loaded.
+    for jf in fetched_files:
         if limit and n >= limit:
             return
         jd = load_json(jf)
@@ -1624,6 +1645,7 @@ def load_winebarrel(b, limit):
                 continue
             seen_lot_nos.add(lot_no)
             b.set_source(jf)
+            sold = bool(lot.get("sold"))
             b.add_lot(a_id, {
                 "lot_no": lot_no,
                 "lot_date": parse_date(lot.get("auction_end")),
@@ -1632,9 +1654,9 @@ def load_winebarrel(b, limit):
                 "bottle_size_dl": to_float(lot.get("bottle_size_dl")),
                 "region": lot.get("region"),
                 "hammer_price": to_float(lot.get("hammer_price")),
-                "sold": 1 if lot.get("sold") else 0,
+                "sold": 1 if sold else 0,
                 "currency": lot.get("currency") or "CHF",
-                "price_basis": "HAMMER",
+                "price_basis": "HAMMER" if sold else "UNKNOWN",
             })
             n += 1
             if limit and n >= limit:
@@ -2215,9 +2237,14 @@ def load_steinfels(b, limit):
     # platform itself and run low enough to collide with it by pure
     # coincidence (see _load_weinauktion_json's aid_prefix docstring) --
     # both need the same prefix to stay in a namespace of their own.
-    remaining = None if limit is None else limit - n
-    _load_weinauktion_json(b, "steinfels", remaining, aid_prefix="api-")
-    _load_steinfels_resultfile_json(b, remaining)
+    remaining = None if limit is None else max(0, limit - n)
+    # `_load_weinauktion_json`/`_load_steinfels_resultfile_json`'s own
+    # `if limit and n >= limit` treats 0 as falsy (unlimited), so a used-up
+    # budget must skip the calls outright rather than pass 0 through (see
+    # load_weinboerse).
+    if remaining is None or remaining > 0:
+        _load_weinauktion_json(b, "steinfels", remaining, aid_prefix="api-")
+        _load_steinfels_resultfile_json(b, remaining)
 
 
 def _load_steinfels_resultfile_json(b, limit):
@@ -2274,6 +2301,8 @@ def _load_steinfels_resultfile_json(b, limit):
         d = load_json(f)
         b.set_source(f)
         for it in d.get("items", []):
+            if limit and n >= limit:
+                break
             key = (it.get("auctionCatalogPartId"), it.get("id"))
             if key in seen:
                 continue
@@ -2294,13 +2323,17 @@ def _load_steinfels_resultfile_json(b, limit):
             text = _wb_strip_html(
                 it.get("shortDescription") or it.get("description") or "")
             m = re.search(r"\b(19|20)\d{2}\b", text)
-            # 0.0 is a null sentinel here, not a real CHF-0 estimate --
-            # confirmed: upperBasePrice is exactly 0 for 26% of a random
+            sold = it.get("state") == "sold"
+            # upperBasePrice==0.0 is a null sentinel, not a real CHF-0
+            # estimate -- confirmed: it's exactly 0 for 26% of a random
             # sample, and on those same lots basePrice always equals
             # startingBid (no real estimate was ever entered, only a
             # starting bid), while recent auctions (e.g. "Auktion 408",
             # 2023) use both fields as a genuine low/high estimate range.
-            estimate_low = to_float(it.get("basePrice")) or None
+            # That evidence covers upperBasePrice only -- basePrice has no
+            # equivalent sentinel pattern, so a genuine CHF-0 low estimate
+            # is kept rather than squashed to None.
+            estimate_low = to_float(it.get("basePrice"))
             estimate_high = to_float(it.get("upperBasePrice")) or None
             b.add_lot(a_id, {
                 "lot_no": str(it.get("number")),
@@ -2310,11 +2343,11 @@ def _load_steinfels_resultfile_json(b, limit):
                 "estimate_low": estimate_low,
                 "estimate_high": estimate_high,
                 "hammer_price": to_float(it.get("hammerPrice")),
-                "sold": 1 if it.get("state") == "sold" else 0,
-                "price_basis": "HAMMER",
+                "sold": 1 if sold else 0,
+                "price_basis": "HAMMER" if sold else "UNKNOWN",
                 "currency": a.get("currency") or "CHF",
             })
-        n += 1
+            n += 1
         if limit and n >= limit:
             break
 

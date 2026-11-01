@@ -460,6 +460,35 @@ class TestLoaderRoundtrip(unittest.TestCase):
             conn.close()
         self.assertEqual(count, 1)
 
+    def test_load_weinauktion_json_unsold_lot_price_basis_is_unknown(self):
+        """Senior-review finding: price_basis was hardcoded to "HAMMER"
+        regardless of sold state, unlike every other loader in this file
+        ("HAMMER" if sold else "UNKNOWN", e.g. load_koppe/load_dorotheum/
+        load_winefields). An unsold lot with no real hammer_price must
+        not be marked as if one were observed."""
+        data = {"auction": {"id": 1, "name": "Auktion", "date": None,
+                            "currency": "CHF"},
+                "lots": [{"lot_no": "1", "wine": "x", "hammer_price": None,
+                         "sold": False}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "weinboerse"), exist_ok=True)
+            with open(os.path.join(d, "weinboerse", "1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_weinauktion_json(builder, "weinboerse", None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT price_basis, sold FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, ("UNKNOWN", 0))
+
     def test_load_weinauktion_json_skips_phantom_auction_files(self):
         """A raw '@related'/'items'-shaped file (this house's own export,
         not a run_ingest.py fetch) must not create a phantom auction with

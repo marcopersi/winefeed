@@ -25,11 +25,15 @@ LIST_PATH = "/de/weinauktionen/auktionsarchiv"
 PAGE_SIZE = 20
 
 _AUCTION_ID = re.compile(r'data-auctionid="(\d+)"')
+# Confirmed clean across 4 real pages (ids 267, 1966, 3732, 4183): the
+# Joomla <title> tag is the bare wine name, with no "- SiteName" suffix
+# the CMS commonly appends elsewhere. Not stripping anything here --
+# there is nothing to strip.
 _TITLE = re.compile(r"<title>([^<]*)</title>")
 _FIELD = re.compile(r"<strong>([^<:]+):</strong>\s*([^<\n]*)")
 _WEINGUT = re.compile(
     r"<strong>Weingut:</strong>\s*<a[^>]*>([^<]+)</a>")
-_MAXBID = re.compile(r'id="maxbid">\s*([\d.,]+)\s*<')
+_MAXBID = re.compile(r'id="maxbid">\s*([\d.,\']+)\s*<')
 _ENDED_AT = re.compile(
     r"Auktion beendet um:</strong>\s*(\d{4}-\d{2}-\d{2})")
 _LITERS = re.compile(r"(\d+(?:[.,]\d+)?)\s*l\b", re.IGNORECASE)
