@@ -379,12 +379,38 @@ Weinbörse-Review entdeckt, nicht Teil der ursprünglichen Bestandsaufnahme):
       beide `vinoStagingFile*.xlsx`). Umgekehrt landet alles, was CI
       monatlich frisch fetcht, nie auf der Samsung-Disk, die dieser
       Bauplan und `build_db.py` lokal als „die" Produktions-DB behandeln.
-      **Entscheidung beim Auftraggeber nötig** (keine davon ist rein
-      technisch, alle sind grösser als ein einzelnes Haus):
-      (a) CI-Artifact periodisch herunterladen und auf Samsung mergen,
-      (b) das CI-DB-Artifact als kanonisch behandeln und den
-      Samsung-Workflow auslaufen lassen, oder (c) neue Archiv-Dateien aus
-      `ingest.yml` direkt ins Repo committen statt als Artifact.
+      **Entscheidung getroffen (01.11.2026): (a), periodisch mergen.**
+      Erster manueller Merge durchgeführt: `gh run download` auf den
+      letzten erfolgreichen CI-Lauf, die neuen `steinfels/`- und
+      `weinboerse/`-Dateien (jeweils flach, Katalog-ID als Dateiname)
+      nach `WeinAuktionspreise/steinfels/` bzw. `.../weinboerse/`
+      kopiert (case-insensitive macOS-Merge mit den bestehenden
+      `Steinfels/`/`Weinboerse/`-Bäumen). **Dabei den eigentlichen
+      Haupt-Fund gemacht:** nicht die 4 fehlenden CI-Dateien waren das
+      Problem, sondern dass `ingest/fetchers/weinauktion.py` seit einem
+      API-Versions-Bump (1.14 → 2.3) für steinfels/weinboerse in CI
+      durchgehend fehlschlug (CI-Lauf `41257477575`, 01.11.2026,
+      `fehlgeschlagen: steinfels, weinboerse, dorotheum`) — gefixt,
+      verifiziert (CI-Lauf `41329764826` grün), gepusht. Noch grösserer
+      Fund: steinfels' 3.904 bereits archivierte `Resultfile*.json`
+      (2016–2026, dieselbe Plattform-API-Rohform wie bei weinboerse) hatte
+      **noch nie ein Loader gelesen** — steinfels sah nur „eingefroren
+      seit 2016" aus, obwohl das Haus munter weiterläuft (live bestätigt:
+      „eAuktion 125" lief am 31.10.2026). Neue
+      `_load_steinfels_resultfile_json` (analog zu `load_weinboerse`)
+      nachgezogen, dabei 2 echte Bugs gefunden+gefixt (`upperBasePrice=0`
+      als Nullwert-Sentinel missverstanden; Plattform-Auktions-ID
+      kollidierte zufällig mit dem alten XLSX-Dateinummern-Schema, s.
+      Commit `a625078`). Rebuild verifiziert: steinfels 11 → 157
+      Auktionen, ~7.000 → 104.895 Lots, Datumsbereich jetzt 2002–2026,
+      `integrity_check` ok, 0 neue Duplikat-Fälle, AMBIGUOUS weiterhin 0.
+      **Dorotheum-Fix im selben Zug:** ein Schätzpreis-Bereich
+      ("EUR 8.000,- bis EUR 10.000,-") liess `_parse_price` abstürzen,
+      brach CI für dorotheum komplett — gefixt (nimmt die Untergrenze).
+      Backups: `.bak-pre-fx`, `.bak-pre-steinfels-resultfile`.
+      **Offen:** (b)/(c) bewusst nicht gewählt; (a) ist jetzt ein
+      manueller, nicht automatisierter Schritt — ein periodischer Cron
+      oder Reminder dafür ist ein Follow-up, kein Blocker.
 - [ ] **Generischer Dublettenschutz für „zwei Quellen, eine Auktion"** —
       fünfter Fall dieser Bugklasse in dieser Session (Wermuth xlsx/CSV,
       Steinfels 316/Staging, Weinbörse Dump/Fetcher, Weinauktionator
