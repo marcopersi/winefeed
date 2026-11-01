@@ -19,7 +19,8 @@ class TestSearch(unittest.TestCase):
                 id INTEGER PRIMARY KEY, canonical_name TEXT,
                 producer TEXT, region TEXT);
             CREATE TABLE providers (id INTEGER PRIMARY KEY, name TEXT);
-            CREATE TABLE auctions (id INTEGER PRIMARY KEY, provider_id INTEGER);
+            CREATE TABLE auctions (
+                id INTEGER PRIMARY KEY, provider_id INTEGER, location TEXT);
             CREATE TABLE lots (
                 id INTEGER PRIMARY KEY, wine_ref_id INTEGER,
                 auction_id INTEGER, lot_date TEXT, total_price REAL,
@@ -30,7 +31,7 @@ class TestSearch(unittest.TestCase):
                 (3, 'Domaine Ravaut Corton-Bressandes', 'Domaine Ravaut',
                  'Corton');
             INSERT INTO providers VALUES (1, 'koppe');
-            INSERT INTO auctions VALUES (1, 1);
+            INSERT INTO auctions VALUES (1, 1, 'Köln');
             INSERT INTO lots VALUES
                 (1, 1, 1, '2020-01-01', 100.0, 95.0, 'EUR'),
                 (2, 1, 1, '2021-01-01', 120.0, 115.0, 'EUR'),
@@ -75,6 +76,7 @@ class TestSearch(unittest.TestCase):
                          ["2020-01-01", "2021-01-01", "2022-01-01"])
         self.assertEqual(prices[0]["price"], 100.0)
         self.assertEqual(prices[0]["currency"], "EUR")
+        self.assertEqual(prices[0]["location"], "Köln")
 
     def test_prices_falls_back_to_realised(self):
         resp = self.client.get("/wines/1/prices")

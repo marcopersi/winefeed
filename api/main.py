@@ -101,7 +101,7 @@ def prices(wine_id: int):
             """
             SELECT l.lot_date,
                    COALESCE(l.total_price, l.realised_price) AS price,
-                   l.currency, p.name
+                   l.currency, p.name, a.location
             FROM lots l
             JOIN auctions a ON a.id = l.auction_id
             JOIN providers p ON p.id = a.provider_id
@@ -114,5 +114,5 @@ def prices(wine_id: int):
     finally:
         conn.close()
     return {"wine_id": wine_id, "prices": [
-        {"lot_date": r[0], "price": r[1], "currency": r[2], "provider": r[3]}
-        for r in rows]}
+        {"lot_date": r[0], "price": r[1], "currency": r[2], "provider": r[3],
+         "location": r[4]} for r in rows]}

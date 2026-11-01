@@ -4,14 +4,21 @@ import {
   YAxis,
 } from "recharts";
 
-function ChartTooltip({ active, payload, label }) {
+// "2020-06-15" -> "15.06.2020" (dd.MM.yyyy); unparseable input is shown as-is
+// rather than guessed at.
+export function formatDate(isoDate) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate || "");
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : isoDate;
+}
+
+function ChartTooltip({ active, payload }) {
   if (!active || !payload || !payload.length) {
     return null;
   }
   const point = payload[0].payload;
   return (
     <div className="chart-tooltip">
-      <p className="chart-tooltip-date">{label}</p>
+      <p className="chart-tooltip-date">{formatDate(point.lot_date)}</p>
       <p className="chart-tooltip-value">
         <span className="chart-tooltip-swatch" aria-hidden="true" />
         {point.price.toLocaleString(undefined, {
@@ -19,7 +26,9 @@ function ChartTooltip({ active, payload, label }) {
         })}{" "}
         {point.currency}
       </p>
-      <p className="chart-tooltip-provider">{point.provider}</p>
+      <p className="chart-tooltip-provider">
+        {[point.provider, point.location].filter(Boolean).join(" · ")}
+      </p>
     </div>
   );
 }
@@ -60,6 +69,7 @@ export default function PriceChart({ prices }) {
           <CartesianGrid vertical={false} stroke="var(--gridline)" />
           <XAxis
             dataKey="lot_date"
+            tickFormatter={formatDate}
             tick={{ fill: "var(--text-muted)", fontSize: 12 }}
             axisLine={{ stroke: "var(--baseline)" }}
             tickLine={false}
