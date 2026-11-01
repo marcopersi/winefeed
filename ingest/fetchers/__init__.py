@@ -13,6 +13,7 @@ from .langtons import LangtonsFetcher
 from .pandolfini import PandolfiniFetcher
 from .weinauktion import WeinauktionFetcher
 from .weinauktionator import WeinauktionatorFetcher
+from .winebarrel import WinebarrelFetcher
 from .winefields import WinefieldsFetcher
 
 FETCHERS = {
@@ -33,6 +34,7 @@ FETCHERS = {
     "dobiaschofsky": DobiaschofskyFetcher(),
     "sothebys": SothebysFetcher(),
     "christies": ChristiesFetcher(),
+    "winebarrel": WinebarrelFetcher(),
 }
 
 

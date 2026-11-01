@@ -637,6 +637,55 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(
             rows, [("Chambertin", 460.0), ("Pommard", 0.0)])
 
+    def test_winebarrel_loads_fetcher_output_alongside_static_dump(self):
+        """The static winebarrel_lots.json dump and the live fetcher's
+        per-lot "<auction_id>.json" files (ingest/fetchers/winebarrel.py)
+        must both load into the same virtual "all" auction, with no
+        double-load if the fetcher ever re-covers an id already in the
+        static dump."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "winebarrel"), exist_ok=True)
+            with open(os.path.join(d, "winebarrel", "winebarrel_lots.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump([{"auction_id": 267, "name": "Old Static Lot",
+                           "winery": "X", "bottles": 1,
+                           "hammer_price": 100.0,
+                           "auction_end": "2019-03-29 18:05:05"}], fh)
+            # New fetched lot (not in the static dump).
+            with open(os.path.join(d, "winebarrel", "4183.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "4183", "name": None, "date": None},
+                    "lots": [{"lot_no": "4183", "wine": "New Fetched Lot",
+                             "producer": "Y", "quantity": "6",
+                             "bottle_size_dl": 7.5, "hammer_price": 360.0,
+                             "sold": 1, "auction_end": "2024-03-02",
+                             "currency": "CHF"}],
+                }, fh)
+            # A re-fetch of an id the static dump already covers -- must
+            # not be double-loaded.
+            with open(os.path.join(d, "winebarrel", "267.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "267", "name": None, "date": None},
+                    "lots": [{"lot_no": "267", "wine": "Old Static Lot",
+                             "hammer_price": 100.0, "sold": 1}],
+                }, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_winebarrel(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            rows = conn.execute(
+                "SELECT lot_no, wine FROM lots ORDER BY lot_no").fetchall()
+            conn.close()
+        self.assertEqual(rows, [("267", "Old Static Lot"),
+                                ("4183", "New Fetched Lot")])
+
     def test_steinfels_resultfile_json_parses_historical_dump(self):
         """The historical raw export of the weinauktion platform's own
         paginated API response (confirmed: 3,904 files, 2016-2026) --

@@ -1576,26 +1576,69 @@ def load_munich_wine_company(b, limit):
 
 
 def load_winebarrel(b, limit):
-    f = os.path.join(ARCHIVE, "winebarrel", "winebarrel_lots.json")
-    if not os.path.exists(f):
-        return
-    d = load_json(f)
-    b.set_source(f)
-    # one virtual auction holding everything
+    # Not a classic multi-lot batch-sale house: each numbered "auction" on
+    # the live site (and in the CI fetcher's output below) is a single
+    # wine lot, continuously consigned -- so everything lands in one
+    # virtual "all" auction, same as the static dump.
     a_id = b.add_auction("winebarrel", "all", "winebarrel", None, None, "HAMMER")
-    for i, lot in enumerate(d):
-        if limit and i >= limit:
-            break
-        b.add_lot(a_id, {
-            "lot_no": str(lot.get("auction_id")),
-            "lot_date": parse_date(lot.get("auction_end")),
-            "wine": lot.get("name"), "producer": lot.get("winery"),
-            "vintage": to_int(lot.get("vintage")),
-            "quantity": to_int(lot.get("bottles")),
-            "region": lot.get("region"),
-            "hammer_price": to_float(lot.get("hammer_price")),
-            "price_basis": "HAMMER",
-        })
+    n = 0
+    seen_lot_nos = set()
+
+    f = os.path.join(ARCHIVE, "winebarrel", "winebarrel_lots.json")
+    if os.path.exists(f):
+        d = load_json(f)
+        b.set_source(f)
+        for lot in d:
+            if limit and n >= limit:
+                return
+            lot_no = str(lot.get("auction_id"))
+            seen_lot_nos.add(lot_no)
+            b.add_lot(a_id, {
+                "lot_no": lot_no,
+                "lot_date": parse_date(lot.get("auction_end")),
+                "wine": lot.get("name"), "producer": lot.get("winery"),
+                "vintage": to_int(lot.get("vintage")),
+                "quantity": to_int(lot.get("bottles")),
+                "region": lot.get("region"),
+                "hammer_price": to_float(lot.get("hammer_price")),
+                "price_basis": "HAMMER",
+            })
+            n += 1
+
+    # The live fetcher (ingest/fetchers/winebarrel.py) writes one
+    # {auction, lots} file per lot, named "<auction_id>.json" -- the same
+    # convention _load_weinauktion_json relies on for steinfels/
+    # weinboerse. Skip any id the static dump already has, so a refetch
+    # of an already-covered lot is never double-loaded.
+    for jf in _json_files("winebarrel"):
+        if os.path.basename(jf) == "winebarrel_lots.json":
+            continue
+        if limit and n >= limit:
+            return
+        jd = load_json(jf)
+        if not jd.get("auction") or not jd.get("lots"):
+            continue
+        for lot in jd["lots"]:
+            lot_no = str(lot.get("lot_no"))
+            if lot_no in seen_lot_nos:
+                continue
+            seen_lot_nos.add(lot_no)
+            b.set_source(jf)
+            b.add_lot(a_id, {
+                "lot_no": lot_no,
+                "lot_date": parse_date(lot.get("auction_end")),
+                "wine": lot.get("wine"), "producer": lot.get("producer"),
+                "quantity": to_int(lot.get("quantity")),
+                "bottle_size_dl": to_float(lot.get("bottle_size_dl")),
+                "region": lot.get("region"),
+                "hammer_price": to_float(lot.get("hammer_price")),
+                "sold": 1 if lot.get("sold") else 0,
+                "currency": lot.get("currency") or "CHF",
+                "price_basis": "HAMMER",
+            })
+            n += 1
+            if limit and n >= limit:
+                return
 
 
 # --- sylvies (Belgian wine auctions) ---------------------------------------- #
