@@ -741,11 +741,73 @@ Abhängigkeit in `data/requirements.txt`.
 
 ### 4.4 Stufe 3 — LLM-Residuum (DeepSeek, offline, eingefroren)
 
+**Status: im Wesentlichen erledigt, nicht „❌ offen" wie hier zuvor stand.**
+Diese Zeile war an dieser Stelle stehengeblieben, obwohl `reference/
+wine_alias_overrides.csv` schon **76.075** `llm-review`-Zeilen enthielt (Commit
+`0f6e973`, vor dieser Session) — dieselbe Art von Fehler wie bei Kapitel 3,
+diesmal selbst entdeckt statt vom Auftraggeber korrigiert. Nicht ein drittes Mal
+wiederholen.
+
 Nur was Stufe 0–2 nicht auflösen, geht an den LLM — **generalisiertes Muster aus
 `llm_review_producer.py`** (deepseek-flash, batched, `--workers`, `.state`-Resume,
 `temperature=0`, JSON-`response_format`, 429-Retry, inkrementelles Schreiben).
-Output = Override-CSV mit `reason=llm-review` + `confidence`; unsicher →
-`*_rest.csv` in die Review-Queue. Build liest nur die CSVs.
+Output = Override-CSV mit `reason=llm-review`; unsicher → `*_rest.csv` in die
+Review-Queue (nicht versioniert, Scratch). Build liest nur `wine_alias_overrides.csv`.
+
+**Diese Session nachgezogen (die 4 neuen Häuser seit dem Oct-15-Pass):**
+`review_producer_extraction.py` neu laufen lassen → 113.205 Review-Kandidaten,
+davon **102.117 in Kategorie `name-contains-producer` reine Matcher-Artefakte**
+(naiver `pk in key`-Substring-Scan traf auf degenerierte Produzenten-Keys wie
+`producer="0"`/`producer="(B)"` → `producer_key` `"0"`/`"b"`, die fast jeden
+Namen treffen). Fix: `match_producer()` (der bereits Gold-Set-validierte
+§4.2/4.3-Matcher) statt der naiven Substring-Prüfung → 113.205 → 13.958
+(`producer-prefix` 7.233, `producer-embedded` 3.855, `name-contains-producer`
+2.870). Auch der gefixte Matcher produziert für `name-contains-producer` noch
+sichtbare Falsch-Positive (bereits dokumentiertes Restrisiko: einzelnes
+generisches Wort trifft genau die 0,5-Coverage-Schwelle eines 2-Token-Produzenten
+— bestätigt: „Semillon Sauvignon Blanc" → „Château Cheval Blanc" via Token
+„Blanc"; „Harvest Road Shiraz Cabernet" → „Deviation Road" via „Road";
+„Châteauneuf du Pape..." → „Château Pape Clément" via „Pape") — **diese
+Kategorie bewusst NICHT an den LLM gegeben** (ein falscher „bekannter
+Produzent"-Hinweis hätte den LLM dazu verleitet, einen nicht existierenden
+Produzenten aus dem Namen zu entfernen). Nur `producer-prefix`+`producer-embedded`
+(11.088 Fälle, 222 Batches) liefen gegen DeepSeek: 9.435 sichere Antworten →
+in `wine_alias_overrides.csv` gemergt, 1.653 unsicher → Review-Queue (nicht
+gemergt). Ein kleines LLM-Artefakt (führendes Komma, wenn nur der Produzenten-
+Token entfernt wurde, 6 von 9.435 in diesem Lauf) gefixt, dabei gleich
+2.106 Whitespace-/Tab-Reste und 367 ältere führende Kommas aus dem gesamten
+File bereinigt.
+
+**Nebenfund, grösser als der LLM-Pass selbst:** beim Quantifizieren des
+*eigentlichen* Stufe-0–2-Residuums (nicht Produzenten-Redundanz, sondern
+`lot_kind='SINGLE' AND wine_ref_id IS NULL`) zeigte sich: von 8.713
+unaufgelösten Lots waren **8.549 (98%) christies**, und 100% davon hatten
+einen `wine`-Text ohne ein einziges Buchstaben-Zeichen (`'1 ^,,^^,,^'`, auch
+leerer String). Root Cause: Christie's eigene historische Kataloge nutzen
+Ditto-Zeichen („wie das Los darüber") statt den Weinnamen zu wiederholen; der
+Scrape hat die Ditto-Glyphen bzw. den leeren Titel wörtlich übernommen statt
+aufzulösen. Bestätigt an Auktion 10025 (Los 11 „Armagnac--Vintage 1982", Lose
+12-14 je `'1 ^,,^^,,^'`) und Auktion 5689 (Los 168 „Côte de Beaune. Ramonet",
+Los 169 Titel leer). Fix: `_resolve_christies_ditto_lots` — jedes Ditto-/
+Leer-Los erbt Titel+Beschreibung vom nächsten vorangehenden Los mit echtem
+Text in derselben Auktion; eigener Preis/Schätzpreis bleibt unberührt. Tests:
+`test_resolve_christies_ditto_lots`,
+`test_resolve_christies_ditto_lots_no_preceding_real_lot`.
+
+**Kombiniert production-rebuilt und verifiziert:** SINGLE ohne `wine_ref_id`
+8.713 → **164** (christies: 8.549 → 0; Rest: steinfels 105, wermuth-sa 18,
+winefields 14, sylvies 14, besch-cannes 10, sothebys 2, langtons 1 —
+unverändert ggü. vorher). `integrity_check` ok, 0 FK-Verletzungen, 0
+AMBIGUOUS, Gesamt-Lot-Zahl unverändert (2.940.837 — keine der beiden
+Änderungen fügt Lots hinzu oder entfernt sie). Backup
+`wine_auction_prices.sqlite.bak-pre-llm-christies-ditto`.
+
+**Offen, bewusst nicht in diesem Durchgang:** `name-contains-producer`
+(2.870 Kandidaten) bleibt ungeprüft liegen, bis das Appellations-Referenz-
+Check (bereits im „Offene Entscheidungen"-Abschnitt genannt) existiert — sonst
+würde der LLM falsche Produzenten-Hinweise als Fakt bekommen. Die
+verbliebenen 164 unaufgelösten SINGLE-Lots (7 Häuser) sind klein genug, um
+einzeln statt per LLM-Batch geprüft zu werden — noch nicht gemacht.
 
 ### 4.5 Review-Queue (menschliche Kuratierung)
 
@@ -953,7 +1015,14 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
   idealwine-Schreibweise dadurch für andere Häuser überschreiben, bevor
   idealwine selbst als Autorität greift. Das ist mit der doku­mentierten
   idealwine-Policy (§3) abzustimmen, nicht nebenbei zu fixen.
-- [ ] Kapitel 4.4: LLM-Residuum-Stufe (DeepSeek, eingefroren)
+- [x] Kapitel 4.4 (im Wesentlichen erledigt): 76.075 `llm-review`-Overrides
+  existierten schon vor dieser Session (Commit `0f6e973`) — diese Zeile stand
+  hier fälschlich auf „offen". Diese Session: `review_producer_extraction.py`-
+  Matcher gefixt (113.205 → 13.958 Kandidaten), 11.088 sichere Kategorien
+  gegen DeepSeek gelaufen (9.435 gemergt), und der dominante Rest-Fund
+  (christies Ditto-Marken, 8.549 von 8.713 unaufgelösten SINGLE-Lots) gefixt
+  und rebuilt. SINGLE ohne `wine_ref_id`: 8.713 → 164. Details in Kapitel
+  4.4 oben.
 - [x] Kapitel 5 (teils): Schema `is_ohk`, `note`, `price_per_bottle` + `_to_bool`;
   Loader-Anbindung in load_wermuth/load_steinfels_staging. Offen:
   price_per_bottle-Ableitung + CHECK-Constraint.
