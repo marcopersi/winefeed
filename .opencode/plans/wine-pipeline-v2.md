@@ -900,6 +900,53 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
 3. **iDealwine als stille Autorität** (§3) — als Policy dokumentieren, nicht
    implizit im Code lassen.
 4. **Staging-Import unterschätzt** (§2) — Multi-Event/Multi-Schema-Workbooks.
+5. **Merge-Qualität (§0-Leitmotiv verletzt), gefixt für 4 mechanische Ursachen:**
+   beim Live-Test von Kapitel 7 (echte Suche gegen die Prod-DB, §0 nennt
+   genau diese Stichproben) zeigte sich: „Sassicaia" zerfiel in 13+
+   getrennte `wines`-Zeilen für denselben Wein. Vier Ursachen gefunden und
+   gefixt (alle mechanisch, kein Raten): (1) Gebinde-Text („(2 BT)",
+   „Magnum") nie aus `lots.wine` entfernt — `strip_bottle_format()` neu in
+   `bottle.py`, in `_parse_bottle_formats` verdrahtet, 17.226 → 301 Fälle.
+   (2) Christies' „--Vintage"-Trenner überlebte die Jahrgangs-Extraktion
+   (`_remove_token` entfernte nur die Ziffern) — gefixt in `vintage.py`
+   für EXTRACTED- und NV-Pfad, 36.390 → 13.859 (Rest = legitime
+   AMBIGUOUS/MV-Mehrfachjahrgangs-Lots, by design nicht bereinigt). (3)
+   Klassifikations-/Zustandscodes (VdT, OHK, SBE, AGE, „(B)", „0") landeten
+   als Produzent — generalisiert aus sylvies' eigenem
+   `_SYLVIES_PROVENANCE_CODE` (nur dieses Haus) zu einem globalen
+   `_JUNK_PRODUCER_CODES`-Reject in `_match_producer_and_wine`, 26 → 0. (4)
+   „Incisa" fehlte als Kurz-Alias für „Tenuta San Guido" (1 Zeile in
+   `producers.csv`). Dazu die vom Auftraggeber entschiedene
+   Absorptions-Regel: eine `alias_key`-Gruppe mit genau einem bekannten
+   Produzenten absorbiert ihre produzentenlosen Geschwister in dieselbe
+   `wines`-Zeile (`_resolve`s `by_producer`-Gruppierung +
+   `_backfill_wine_ref`s `alias_to_single_wine`-Fallback, damit auch Lots
+   ohne eigenen Produzenten die absorbierte Wein-Zeile finden); bei ≥2
+   verschiedenen Produzenten bleibt die AMBIGUOUS-Splitting-Trennung aus
+   §4.1 unverändert. Rebuild verifiziert: `wines` 217.778 → 209.080
+   (-8.698, echte Merges), `integrity_check` ok, 0 FK-Verletzungen,
+   Lot-Zahl unverändert (2.940.837). **Nebenbefund:** SINGLE ohne
+   `wine_ref_id` stieg von 164 auf 226 — jeder neue Fall einzeln
+   nachverfolgt: alles vorbestehender Datenmüll (reine
+   Satzzeichen-/Ziffern-Platzhaltertexte wie christies'
+   „--Vintage 1961 (1)"-Sub-Lots ohne jeden Weinnamen-Präfix, oder
+   sothebys' chinesischsprachige Lots, deren Text `normalize()` komplett
+   verwirft), der vorher mehrere **unterschiedliche** echte Weine
+   fälschlich zu einer Fake-Wein-Zeile zusammengeführt hat und jetzt
+   korrekt ausgeschlossen bleibt — eine falsche Zusammenführung ist
+   schlimmer als ein ehrlicher Miss. Backup
+   `wine_auction_prices.sqlite.bak-pre-merge-quality`.
+   **Zwei neue, separate Funde, bewusst nicht in diesem Durchgang
+   gefixt:** (a) christies hat eine dritte Ditto-Variante
+   („--Vintage <Jahr> (<N>)" ganz ohne Weinnamen-Präfix), die
+   `_resolve_christies_ditto_lots`s „keine Buchstaben"-Erkennung nicht
+   greift (das Wort „Vintage" hat Buchstaben) — eigene Lücke, nicht
+   Teil dieses Durchgangs. (b) `wine_resolution/normalize.py` verwirft
+   CJK-Text (Chinesisch/Japanisch/Koreanisch) komplett statt ihn zu
+   verarbeiten — betrifft mutmaßlich alle sothebys-Lots mit
+   chinesischsprachiger Beschreibung, nicht nur die hier sichtbaren
+   26 neu unresolved Fälle; eine eigene, grössere Baustelle
+   (CJK-Tokenisierung), nicht Teil dieses Durchgangs.
 
 ## Offene Entscheidungen (noch zu klären)
 
@@ -1041,7 +1088,18 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
   `4a17079`). **Blockiert auf `EODHD_API_TOKEN`** (Credential, kann nicht
   von mir beschafft werden) — ohne Token kein Cache, ohne Cache keine
   echten Kurse im Build.
-- [ ] Kapitel 7: Search (FTS5)
-- [ ] Kapitel 8: GUI/UX
+- [x] Kapitel 7 (Teilstatus, nicht "❌ offen" wie hier zuvor stand): das
+  MVP (`wine-mvp-search-chart.md`, #94) hat Autocomplete + Ranking
+  (Präfix→Substring→Lot-Anzahl) bereits fertig (`api/main.py`
+  `GET /search`, Schritt 1-3 dort erledigt). FTS5 ist laut diesem Plan
+  bewusst Follow-up ("MVP nutzt noch LIKE"), kein Rückstand. Facetten
+  sind in `wine-mvp-search-chart.md` §3 explizit **out of scope** fürs
+  MVP — dieser Punkt hier widerspricht dem genehmigten MVP-Scope, nicht
+  umsetzen ohne neue Freigabe. Live gegen die Prod-DB verifiziert
+  (`curl /search?q=montrose`, `=sassicaia`, `/wines/top`) — dabei den
+  Merge-Qualitäts-Fund oben entdeckt. **Noch offen:** echtes FTS5 (als
+  Follow-up, nicht blockierend), Frontend nicht erneut gefahren (nur
+  Backend live getestet).
+- [ ] Kapitel 8: GUI/UX — noch nicht angefasst in dieser Session.
 - [x] Bug: canonical_source-Provenienz (gefixt im Zuge von Kapitel 4.2–4.3,
   s. o.)
