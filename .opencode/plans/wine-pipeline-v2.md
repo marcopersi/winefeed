@@ -858,27 +858,25 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
 
 ## 6. FX-Problem
 
-- [x] Code vollständig da, nur die Daten fehlen noch (s. Blocker unten).
-  **Quelle entschieden: EODHD** (`data/fetch_fx.py`, Commit `4a17079`), nicht
-  ECB wie hier zuvor stand — die ECB-Zeile war an dieser Stelle stehen
-  geblieben, obwohl EODHD später implementiert wurde (ECBs dokumentierte
-  Lücke bei SGD/HKD/CNY war genau der Grund, EODHD deckt alle 7 benötigten
-  Währungen ab). Infrastruktur fertig: `fx_rates`-Tabelle, `_load_fx_rates`
-  (liest den offline-Cache, Build braucht nie Netz/Token),
-  `_annotate_fx`, beide in `main()` verdrahtet. Zielwährung EUR, Kurse
-  **zum `lot_date`**. Heute ist `fx_rate` nur für NLG→EUR gefüllt
-  (gesetzlicher Fixkurs, `build_db._FX_FIX`).
-  **Blocker:** `EODHD_API_TOKEN` fehlt — `/Volumes/samsung/winefeed-data/fx`
-  existiert noch nicht, jeder Build zeigt `WARN: no FX cache`. Kann nicht von
-  mir beschafft werden (Credential). Bis dahin zeigt das MVP Rohwährung +
+- [x] **Erledigt.** Quelle: **EODHD** (`data/fetch_fx.py`, Commit `4a17079`),
+  nicht ECB wie hier zuvor stand (ECBs dokumentierte Lücke bei SGD/HKD/CNY
+  war genau der Grund). Token erhalten, Cache gefüllt, `_apply_fx_rates`
+  (neu) annotiert jeden Lot mit dem nächsten verfügbaren Kurs am oder vor
+  `lot_date`, inkl. tatsächlichem Kursdatum in `lots.fx_rate_date` — Details
+  und Zahlen im Progress-Log unten. Bis das Frontend das nutzt, zeigt das
+  MVP weiterhin Rohwährung +
   `currency`-Label (siehe MVP-Plan §6).
 
 ## 7. Search Capabilities
 
 - [ ] **FTS5**-Index über `canonical_name`/`producer`/`region` (contentless,
-  aus `wines`). MVP nutzt noch `LIKE` (238k Namen, ausreichend).
-- [ ] Autocomplete + Ranking (Präfix > Substring > Lot-Anzahl, wie im MVP-Plan).
-- [ ] Facetten (Produzent, Region, Jahrgang, Gebinde, `is_ohk`).
+  aus `wines`). MVP nutzt noch `LIKE` (238k Namen, ausreichend) — bewusstes
+  Follow-up, kein Rückstand.
+- [x] Autocomplete + Ranking (Präfix > Substring > Lot-Anzahl) — bereits im
+  MVP (`api/main.py` `GET /search`), live verifiziert.
+- [ ] Facetten (Produzent, Region, Jahrgang, Gebinde, `is_ohk`) — **out of
+  scope** laut `wine-mvp-search-chart.md` §3 Freigabe, nicht ohne neue
+  Entscheidung umzusetzen.
 
 ## 8. GUI / UX
 
@@ -1083,11 +1081,19 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
 - [x] Kapitel 5 (teils): Schema `is_ohk`, `note`, `price_per_bottle` + `_to_bool`;
   Loader-Anbindung in load_wermuth/load_steinfels_staging. Offen:
   price_per_bottle-Ableitung + CHECK-Constraint.
-- [x] Kapitel 6 (Code): `fetch_fx.py` (EODHD) + `fx_rates`-Tabelle +
-  `_load_fx_rates`/`_annotate_fx` fertig, `main()` verdrahtet (Commit
-  `4a17079`). **Blockiert auf `EODHD_API_TOKEN`** (Credential, kann nicht
-  von mir beschafft werden) — ohne Token kein Cache, ohne Cache keine
-  echten Kurse im Build.
+- [x] Kapitel 6 (erledigt): Token vom Auftraggeber erhalten, `fetch_fx.py`
+  gelaufen (alle 7 Währungen, Cache in `/Volumes/samsung/winefeed-data/fx`).
+  **Korrektur:** die vorherige „Code fertig"-Einschätzung hier war falsch —
+  `_load_fx_rates` befüllte `fx_rates` nur, aber nichts hat die Tabelle
+  je gegen `lots` gejoint. Neue `_apply_fx_rates` nachgezogen: pro Lot
+  der nächste verfügbare Kurs **am oder vor** `lot_date` (Handelstage-Lücken
+  an Wochenenden/Feiertagen), das tatsächlich genutzte Kursdatum in neuer
+  Spalte `lots.fx_rate_date` (kann von `lot_date` abweichen). Lots vor
+  Kursabdeckungsbeginn (z. B. EURAUD erst ab 2006-03-01, langtons hat
+  AUD-Lots aus den 90ern) bleiben bewusst ohne Kurs statt extrapoliert.
+  Rebuild verifiziert: AUD 1.183.558/1.342.478 (Lücke = Vor-2006, erwartet),
+  GBP/SGD/CNY voll abgedeckt, `integrity_check` ok, NLG-Fixkurs unberührt.
+  Backup `wine_auction_prices.sqlite.bak-pre-fx`.
 - [x] Kapitel 7 (Teilstatus, nicht "❌ offen" wie hier zuvor stand): das
   MVP (`wine-mvp-search-chart.md`, #94) hat Autocomplete + Ranking
   (Präfix→Substring→Lot-Anzahl) bereits fertig (`api/main.py`
