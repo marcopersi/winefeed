@@ -60,7 +60,7 @@
       "fetched_at": "2026-10-11T13:43:17.612729+00:00",
       "url": "https://www.cannesauction.com/auctions/418-vente-aux-encheres-speciale-de-l-agrasc-a-nice"
     },
-    "__last_run_at__": "2026-10-14T19:46:27.884014+00:00"
+    "__last_run_at__": "2026-11-01T17:13:56.062380+00:00"
   },
   "christies": {
     "31122": {
@@ -71,7 +71,7 @@
     "__last_run_at__": "2026-10-12T13:46:06.085101+00:00"
   },
   "dobiaschofsky": {
-    "__last_run_at__": "2026-10-14T19:46:27.885215+00:00",
+    "__last_run_at__": "2026-11-01T17:13:56.064395+00:00",
     "wein": {
       "etag": "",
       "fetched_at": "2026-10-11T13:44:00.478129+00:00",
@@ -79,7 +79,107 @@
     }
   },
   "dorotheum": {
-    "__last_run_at__": "2026-10-14T19:46:23.560734+00:00"
+    "124852": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:28.008380+00:00",
+      "url": "https://www.dorotheum.com/de/a/124852/"
+    },
+    "124876": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:31.728103+00:00",
+      "url": "https://www.dorotheum.com/de/a/124876/"
+    },
+    "125272": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:31.130560+00:00",
+      "url": "https://www.dorotheum.com/de/a/125272/"
+    },
+    "125284": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:30.574885+00:00",
+      "url": "https://www.dorotheum.com/de/a/125284/"
+    },
+    "125443": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:32.297126+00:00",
+      "url": "https://www.dorotheum.com/de/a/125443/"
+    },
+    "125479": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:20.550438+00:00",
+      "url": "https://www.dorotheum.com/de/a/125479/"
+    },
+    "125503": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:29.332754+00:00",
+      "url": "https://www.dorotheum.com/de/a/125503/"
+    },
+    "125551": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:27.115991+00:00",
+      "url": "https://www.dorotheum.com/de/a/125551/"
+    },
+    "125587": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:26.350248+00:00",
+      "url": "https://www.dorotheum.com/de/a/125587/"
+    },
+    "125695": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:24.694296+00:00",
+      "url": "https://www.dorotheum.com/de/a/125695/"
+    },
+    "125731": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:23.915497+00:00",
+      "url": "https://www.dorotheum.com/de/a/125731/"
+    },
+    "125755": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:23.138773+00:00",
+      "url": "https://www.dorotheum.com/de/a/125755/"
+    },
+    "125779": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:21.278678+00:00",
+      "url": "https://www.dorotheum.com/de/a/125779/"
+    },
+    "125827": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:19.463507+00:00",
+      "url": "https://www.dorotheum.com/de/a/125827/"
+    },
+    "127183": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:29.991263+00:00",
+      "url": "https://www.dorotheum.com/de/a/127183/"
+    },
+    "127195": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:28.744569+00:00",
+      "url": "https://www.dorotheum.com/de/a/127195/"
+    },
+    "127255": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:25.529728+00:00",
+      "url": "https://www.dorotheum.com/de/a/127255/"
+    },
+    "127279": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:22.146399+00:00",
+      "url": "https://www.dorotheum.com/de/a/127279/"
+    },
+    "127327": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:18.116440+00:00",
+      "url": "https://www.dorotheum.com/de/a/127327/"
+    },
+    "127549": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:18.742576+00:00",
+      "url": "https://www.dorotheum.com/de/a/127549/"
+    },
+    "__last_run_at__": "2026-11-01T17:13:32.297141+00:00"
   },
   "finarte": {
     "02": {
@@ -97,6 +197,11 @@
       "fetched_at": "2026-10-11T13:42:24.788505+00:00",
       "url": "https://www.finarte.it/auction/the-christmas-collection-holiday-wine-spirits-online-2025-12-05"
     },
+    "06": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:53.859092+00:00",
+      "url": "https://www.finarte.it/auction/antiques-milan-2026-11-06"
+    },
     "07": {
       "etag": "",
       "fetched_at": "2026-10-11T13:42:29.833108+00:00",
@@ -106,6 +211,11 @@
       "etag": "",
       "fetched_at": "2026-10-11T13:42:15.369197+00:00",
       "url": "https://www.finarte.it/auction/fine-wines-rome-2026-06-08"
+    },
+    "09": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:55.032596+00:00",
+      "url": "https://www.finarte.it/auction/easy-collecting-antiques-online-2026-11-09"
     },
     "10": {
       "etag": "",
@@ -182,7 +292,7 @@
       "fetched_at": "2026-10-11T13:42:44.312048+00:00",
       "url": "https://www.finarte.it/auction/wines-old-but-gold-milan-2025-01-30"
     },
-    "__last_run_at__": "2026-10-14T19:46:26.784499+00:00"
+    "__last_run_at__": "2026-11-01T17:13:55.032611+00:00"
   },
   "hdh": {
     "1109": {
@@ -665,7 +775,7 @@
       "fetched_at": "2026-10-11T13:17:23.599123+00:00",
       "url": "https://hdhauctions.com/wp-content/uploads/2026/09/2609_AuctionResults.pdf"
     },
-    "__last_run_at__": "2026-10-14T19:46:07.313933+00:00"
+    "__last_run_at__": "2026-11-01T17:09:20.847086+00:00"
   },
   "koppe": {
     "10": {
@@ -688,7 +798,7 @@
       "fetched_at": "2026-10-13T19:18:35.520529+00:00",
       "url": "https://www.weinauktion.de/de/auktionen/13"
     },
-    "__last_run_at__": "2026-10-14T19:46:07.966595+00:00"
+    "__last_run_at__": "2026-11-01T17:09:22.526179+00:00"
   },
   "langtons": {
     "8212": {
@@ -746,6 +856,61 @@
       "fetched_at": "2026-10-13T19:19:10.284640+00:00",
       "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8223&name=F27SF016&clearSearch=true&isAjax=true"
     },
+    "8235": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:04.087906+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8235&name=F27BG017&clearSearch=true&isAjax=true"
+    },
+    "8236": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:12:49.323553+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8236&name=F27BX017&clearSearch=true&isAjax=true"
+    },
+    "8237": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:12:45.070420+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8237&name=F27LC017&clearSearch=true&isAjax=true"
+    },
+    "8240": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:12:23.059751+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8240&name=F27FR018&clearSearch=true&isAjax=true"
+    },
+    "8241": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:12:17.289897+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8241&name=F27EA018&clearSearch=true&isAjax=true"
+    },
+    "8242": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:11:13.221938+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8242&name=F27IT018&clearSearch=true&isAjax=true"
+    },
+    "8243": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:10:52.134980+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8243&name=F27SF018&clearSearch=true&isAjax=true"
+    },
+    "8244": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:10:42.271567+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8244&name=F27VN018&clearSearch=true&isAjax=true"
+    },
+    "8245": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:10:38.267724+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8245&name=F27MP018&clearSearch=true&isAjax=true"
+    },
+    "8246": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:10:36.351779+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8246&name=F27SZ018&clearSearch=true&isAjax=true"
+    },
+    "8247": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:10:06.878301+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8247&name=F27UR018&clearSearch=true&isAjax=true"
+    },
     "8281": {
       "etag": "",
       "fetched_at": "2026-10-11T13:40:53.794571+00:00",
@@ -771,7 +936,12 @@
       "fetched_at": "2026-10-11T13:39:35.147256+00:00",
       "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8323&name=F27MP015%2e1&clearSearch=true&isAjax=true"
     },
-    "__last_run_at__": "2026-10-14T19:46:09.172440+00:00"
+    "8339": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:09:57.779276+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8339&name=F27BP018&clearSearch=true&isAjax=true"
+    },
+    "__last_run_at__": "2026-11-01T17:13:04.087920+00:00"
   },
   "pandolfini": {
     "1376": {
@@ -799,7 +969,12 @@
       "fetched_at": "2026-10-11T13:41:33.270390+00:00",
       "url": "https://www.pandolfini.it/uk/auction-1448/smartwine-2-0--fleurs-de-vigne.asp?action=reset"
     },
-    "__last_run_at__": "2026-10-14T19:46:24.008800+00:00"
+    "1464": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:13:45.574393+00:00",
+      "url": "https://www.pandolfini.it/uk/auction-1464/coup-de-thtre--fine-and-rare-wine.asp?action=reset"
+    },
+    "__last_run_at__": "2026-11-01T17:13:47.621408+00:00"
   },
   "steinfels": {
     "768": {
@@ -812,7 +987,12 @@
       "fetched_at": "2026-10-11T13:17:09.362494+00:00",
       "url": "https://auktionen.steinfelsweine.ch/api/lots?cat_id=771"
     },
-    "__last_run_at__": "2026-10-14T19:46:05.676267+00:00"
+    "805": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:07:05.026620+00:00",
+      "url": "https://auktionen.steinfelsweine.ch/api/lots?cat_id=805"
+    },
+    "__last_run_at__": "2026-11-01T17:07:05.026638+00:00"
   },
   "weinauktionator": {
     "34": {
@@ -845,10 +1025,15 @@
       "fetched_at": "2026-10-11T13:17:11.083829+00:00",
       "url": "https://www.weinauktionator.de/de/info/results/xlsx/39/weinauktionator_results_39.xlsx"
     },
-    "__last_run_at__": "2026-10-14T19:46:07.154141+00:00"
+    "__last_run_at__": "2026-11-01T17:07:13.461940+00:00"
   },
   "weinboerse": {
-    "__last_run_at__": "2026-10-14T19:46:06.571745+00:00"
+    "303": {
+      "etag": "",
+      "fetched_at": "2026-11-01T17:07:12.749457+00:00",
+      "url": "https://auktion.weinauktion.ch/api/lots?cat_id=303"
+    },
+    "__last_run_at__": "2026-11-01T17:07:12.749472+00:00"
   },
   "winefields": {
     "1-79YM6Y": {
@@ -881,6 +1066,6 @@
       "fetched_at": "2026-10-11T13:41:25.606062+00:00",
       "url": "https://auctions.winefields.com/auctions/1-AO56VE/wf77-fine-rare-wines-part-i"
     },
-    "__last_run_at__": "2026-10-14T19:46:23.397047+00:00"
+    "__last_run_at__": "2026-11-01T17:13:16.224017+00:00"
   }
 }
