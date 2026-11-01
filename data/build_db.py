@@ -11,6 +11,7 @@ Every run drops and recreates the schema, so the result is fully reproducible:
     python3 build_db.py --dry-run  # no write
 """
 import argparse
+import bisect
 import csv
 import datetime
 import glob
@@ -183,6 +184,7 @@ CREATE TABLE lots (
   currency            TEXT,
   fx_rate             REAL,
   fx_target_currency  TEXT,
+  fx_rate_date        TEXT,
   sold                INTEGER,
   condition_text      TEXT,
   description         TEXT,
@@ -2859,6 +2861,7 @@ def _build(conn, args):
     _apply_premium_policy(conn)
     _apply_tax(conn)
     _fill_lot_date(conn)
+    _apply_fx_rates(conn)
 
     if not args.skip_resolution:
         from build_wines import run as resolve_wines
@@ -2932,6 +2935,45 @@ def _annotate_fx(conn):
         conn.execute(
             "UPDATE lots SET fx_rate = ?, fx_target_currency = 'EUR'"
             " WHERE currency = ?", (rate, currency))
+
+
+def _apply_fx_rates(conn):
+    """Annotate market currencies (AUD/USD/GBP/CHF/HKD/SGD/CNY) with their
+    historical EUR rate on ``lot_date`` (Issue #97).
+
+    ``fx_rates`` (loaded by ``_load_fx_rates`` from the EODHD cache) has one
+    row per currency per *trading* day -- weekends/holidays have no row.
+    For each lot, uses the nearest available rate on or before ``lot_date``
+    (the standard FX convention: never a future rate) and records which
+    date that rate actually came from in ``fx_rate_date``, since it can
+    differ from ``lot_date`` itself. A lot dated before that currency's
+    earliest cached rate (e.g. EURAUD only starts 2006-03-01, but langtons
+    has AUD lots from the 1990s) gets no rate -- extrapolating backwards
+    would be a guess, not a lookup. Only currencies already in _FX_FIX
+    (fixed legal rates, not market-quoted) are excluded; NLG is not in
+    ``fx_rates`` at all, so the WHERE clause already leaves it alone.
+    Must run after ``_fill_lot_date`` so the auction-date fallback is
+    already applied.
+    """
+    by_currency = {}
+    for currency, date, per_eur in conn.execute(
+            "SELECT currency, date, per_eur FROM fx_rates ORDER BY currency, date"):
+        by_currency.setdefault(currency, ([], []))
+        dates, rates = by_currency[currency]
+        dates.append(date)
+        rates.append(per_eur)
+
+    for currency, (dates, rates) in by_currency.items():
+        updates = []
+        for lot_id, lot_date in conn.execute(
+                "SELECT id, lot_date FROM lots WHERE currency = ?"
+                " AND lot_date IS NOT NULL AND fx_rate IS NULL", (currency,)):
+            i = bisect.bisect_right(dates, lot_date) - 1
+            if i >= 0:
+                updates.append((rates[i], dates[i], lot_id))
+        conn.executemany(
+            "UPDATE lots SET fx_rate = ?, fx_target_currency = 'EUR',"
+            " fx_rate_date = ? WHERE id = ?", updates)
 
 
 # Buyer's premium policy per house. ``rate`` = flat premium fraction of the

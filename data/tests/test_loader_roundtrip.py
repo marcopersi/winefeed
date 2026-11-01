@@ -75,6 +75,50 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (10.0, 5.0, 1.9, 116.9, "DERIVED"))
         conn.close()
 
+    def test_apply_fx_rates_uses_nearest_prior_trading_day(self):
+        """fx_rates only has one row per *trading* day; a lot dated on a
+        weekend/holiday must fall back to the nearest earlier rate, never
+        a future one, and record which date that rate actually came from
+        (fx_rate_date) since it can differ from the lot's own date."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("langtons", "1", "Langtons 1", None,
+                                   "AUD", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x", "currency": "AUD",
+                               "lot_date": "2020-01-04"})  # a Saturday
+        conn.executemany(
+            "INSERT INTO fx_rates(currency, date, per_eur, source)"
+            " VALUES (?,?,?,?)",
+            [("AUD", "2020-01-03", 1.6, "EODHD"),
+             ("AUD", "2020-01-06", 1.7, "EODHD")])
+        build_db._apply_fx_rates(conn)
+        row = conn.execute(
+            "SELECT fx_rate, fx_target_currency, fx_rate_date FROM lots"
+        ).fetchone()
+        self.assertEqual(row, (1.6, "EUR", "2020-01-03"))
+        conn.close()
+
+    def test_apply_fx_rates_no_rate_before_coverage_starts(self):
+        """A lot dated before the currency's earliest cached rate gets no
+        rate -- extrapolating backwards would be a guess, not a lookup."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("langtons", "1", "Langtons 1", None,
+                                   "AUD", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x", "currency": "AUD",
+                               "lot_date": "1998-01-01"})
+        conn.execute(
+            "INSERT INTO fx_rates(currency, date, per_eur, source)"
+            " VALUES ('AUD', '2006-03-01', 1.6, 'EODHD')")
+        build_db._apply_fx_rates(conn)
+        row = conn.execute(
+            "SELECT fx_rate, fx_target_currency, fx_rate_date FROM lots"
+        ).fetchone()
+        self.assertEqual(row, (None, None, None))
+        conn.close()
+
     def test_sylvies_premium_is_20_percent_with_no_tax(self):
         """sylvies.be Conditions of Sale: 20% buyer's premium excl. VAT, no
         per-lot fee, VAT is destination-dependent (no single numeric rate) --
