@@ -75,6 +75,26 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (10.0, 5.0, 1.9, 116.9, "DERIVED"))
         conn.close()
 
+    def test_sylvies_premium_is_20_percent_with_no_tax(self):
+        """sylvies.be Conditions of Sale: 20% buyer's premium excl. VAT, no
+        per-lot fee, VAT is destination-dependent (no single numeric rate) --
+        same treatment as sothebys/langtons/christies: tax_amount stays NULL."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("sylvies", "1", "Sylvies 1", None, "EUR",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x",
+                               "hammer_price": 100.0, "price_basis": "HAMMER",
+                               "currency": "EUR"})
+        build_db._apply_premium_policy(conn)
+        build_db._apply_tax(conn)
+        row = conn.execute(
+            "SELECT buyer_premium, fees, tax_amount, total_price, price_source"
+            " FROM lots").fetchone()
+        self.assertEqual(row, (20.0, None, None, 120.0, "DERIVED"))
+        conn.close()
+
     def test_fill_lot_date(self):
         conn = sqlite3.connect(":memory:")
         conn.executescript(build_db.SCHEMA)

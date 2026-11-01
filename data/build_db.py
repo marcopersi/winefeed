@@ -2915,6 +2915,7 @@ PREMIUM_POLICY = {
     "wermuth-sa": {"rate": 0.10, "fees": 8.0},
     "besch-cannes": {"rate": 0.24},
     "munich-wine-company": {"rate": 0.15, "fees": 5.0},
+    "sylvies": {"rate": 0.20},
 }
 
 
@@ -2995,7 +2996,8 @@ def _fill_lot_date(conn):
 # rate. ``tax_amount`` is derived as a fraction of the buyer's premium (not the
 # hammer). Houses whose premium already includes VAT (finarte, besch-cannes,
 # dorotheum, baghera) or whose rate is not numerically documented (sothebys,
-# langtons, christies) are intentionally absent.
+# langtons, christies, sylvies -- VAT is destination-dependent) are
+# intentionally absent.
 TAX_POLICY = {
     "winefields": 0.21,
     "steinfels": 0.081,
