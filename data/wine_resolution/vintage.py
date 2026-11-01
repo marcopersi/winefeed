@@ -59,11 +59,17 @@ def resolve_vintage(raw_name, structured_vintage=None, auction_year=None):
     years = [int(y) for y in _YEAR_ANY.findall(name)]
     distinct_years = set(years)
 
-    # NV is recognised before any year regex.
-    if _NV.search(name):
+    # NV is recognised before any year regex. Strip a "--Non-Vintage"-style
+    # marker the same way _remove_token does for an extracted year -- an NV
+    # wine (e.g. NV Champagne) is still a legitimate single-wine identity,
+    # so the literal separator must not survive into its canonical name.
+    m = _NV.search(name)
+    if m:
+        cleaned = re.sub(r"-{1,2}\s*$", "", name[:m.start()]) + name[m.end():]
         return {
             "status": STATUS_NV, "final": None, "extracted": None,
-            "rule_id": "nv-keyword", "evidence": name, "cleaned_name": name,
+            "rule_id": "nv-keyword", "evidence": name,
+            "cleaned_name": re.sub(r"\s+", " ", cleaned).strip(),
         }
 
     # Decade hints ("1970s", "1980'ties") are multi-vintage, not a single year.
@@ -188,8 +194,20 @@ _QTY_BRACKET = re.compile(
 
 
 def _remove_token(name, year):
-    """Remove the accepted vintage token and a trailing quantity bracket."""
+    """Remove the accepted vintage token and a trailing quantity bracket.
+
+    Also removes a "--Vintage"/"Vintage"/"--Mill\u00e9sime" marker immediately
+    preceding the token, as one unit, wherever it sits in the string --
+    confirmed real case: christies' own raw format is "<name>--Vintage
+    <year>", sometimes with more text after the year ("Croft--Vintage
+    1920 Level: base of neck"), so the marker is not always trailing. The
+    ``trailing-year`` and ``vintage-keyword`` rules above only ever
+    matched the year digits, leaving the marker behind as literal junk
+    once the year was gone (confirmed on 36,390 wines project-wide)."""
     token = str(year)
+    name = re.sub(
+        rf"-{{1,2}}\s*(?:Vintage|Mill\u00e9sime(?:/Vintage)?)\s*{token}\b",
+        " ", name, flags=re.IGNORECASE)
     name = re.sub(rf"\b{token}\b", " ", name)
     name = re.sub(rf"([a-z\u00e0-\u00ff]){token}\b", r"\1", name,
                   flags=re.IGNORECASE)

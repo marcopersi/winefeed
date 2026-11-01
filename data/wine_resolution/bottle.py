@@ -57,3 +57,32 @@ def parse_bottle_format(name, description=None):
             liters = float(m.group(1).replace(",", "."))
             return 1, liters * 10
     return None, None
+
+
+def strip_bottle_format(name):
+    """Remove a recognised bottle-format mention (``(6 BT)``, ``2 Magnums``,
+    ``0,75l``) from ``name``.
+
+    The bottle format is an attribute (``quantity``/``bottle_size_dl``), not
+    part of the wine's identity (leitmotiv Sec. 0: "name = reiner Wein-Name
+    ... ohne Gebinde"), so it must not survive into ``canonical_name`` /
+    ``alias_key`` -- left in, "Sassicaia" and "Sassicaia (2 BT)" fragment
+    into two different wines rows for the same real wine. Only removes a
+    match ``parse_bottle_format`` itself would recognise (same precedence:
+    bracket, then plain, then liter), so an unrecognised number is never
+    guessed away; a bare format word with no leading count (e.g. a lone
+    "Magnum") is intentionally not covered -- that is a quantity, not a
+    display, question, outside the scope of this cleanup."""
+    if not name:
+        return name
+    for m in _BRACKET.finditer(name):
+        fmt = m.group(2).upper().replace(".", "")
+        if fmt in BOTTLE_FORMATS or fmt in _LITER_FORMATS:
+            return re.sub(r"\s+", " ", name[:m.start()] + name[m.end():]).strip()
+    for m in _PLAIN.finditer(name):
+        fmt = m.group(2).upper().replace(".", "")
+        if fmt in BOTTLE_FORMATS:
+            return re.sub(r"\s+", " ", name[:m.start()] + name[m.end():]).strip()
+    for m in _LITER.finditer(name):
+        return re.sub(r"\s+", " ", name[:m.start()] + name[m.end():]).strip()
+    return name

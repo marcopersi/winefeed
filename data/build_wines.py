@@ -120,17 +120,33 @@ def _separate_vintage(conn):
 
 
 def _parse_bottle_formats(conn):
-    """Derive quantity + bottle_size_dl from '(6 BT)'-style name hints."""
-    from wine_resolution.bottle import parse_bottle_format
-    updates = []
-    for lot_id, raw_wine, description in conn.execute(
-            "SELECT id, raw_wine, description FROM lots WHERE quantity IS NULL"
-            " AND (raw_wine IS NOT NULL OR description IS NOT NULL)"):
+    """Derive quantity + bottle_size_dl from '(6 BT)'-style name hints, and
+    strip that same hint out of ``lots.wine`` so it never pollutes
+    ``alias_key`` (confirmed real case: "Sassicaia" vs. "Sassicaia (2 BT)"
+    vs. "Sassicaia Magnum" fragmenting into separate wines rows for the
+    same real wine -- 17,226 wines / 22,888 lots before this fix).
+    ``_separate_vintage`` already strips a *trailing* qty bracket for the
+    STATUS_EXTRACTED case; this covers every other vintage status too
+    (STRUCTURED, MISSING, NV, MV, AMBIGUOUS, ... -- cleaned_name is left
+    untouched there, so a mid-name or non-trailing hint survived)."""
+    from wine_resolution.bottle import parse_bottle_format, strip_bottle_format
+    qty_updates = []
+    wine_updates = []
+    for lot_id, raw_wine, wine, description in conn.execute(
+            "SELECT id, raw_wine, wine, description FROM lots"
+            " WHERE raw_wine IS NOT NULL OR description IS NOT NULL"):
+        if wine:
+            stripped = strip_bottle_format(wine)
+            if stripped != wine:
+                wine_updates.append((stripped, lot_id))
         qty, dl = parse_bottle_format(raw_wine, description)
         if qty is not None:
-            updates.append((qty, dl, lot_id))
+            qty_updates.append((qty, dl, lot_id))
     conn.executemany(
-        "UPDATE lots SET quantity=?, bottle_size_dl=? WHERE id=?", updates)
+        "UPDATE lots SET wine=? WHERE id=?", wine_updates)
+    conn.executemany(
+        "UPDATE lots SET quantity=?, bottle_size_dl=? WHERE id=?"
+        " AND quantity IS NULL", qty_updates)
 
 
 # --------------------------------------------------------------------------- #
@@ -213,8 +229,28 @@ def _classify_lots(conn):
 # Observations + resolution
 # --------------------------------------------------------------------------- #
 
+# Classification/state/provenance codes that land in a loader's raw
+# ``producer`` field but are not a producer name at all: VdT (Vino da
+# Tavola classification), OHK (Original-Holzkiste state marker), SBE/AGE
+# (Rioja ageing-category abbreviations), plus pure parse junk ("(B)",
+# "0") -- confirmed real cases, none of them resolve to any canonical
+# producer in producers.csv (verified: zero exact-alias matches). Same
+# category as sylvies' own bare "Mc"/"Neg"/"Dom"/"Dist" provenance codes
+# (build_db._SYLVIES_PROVENANCE_CODE, filtered at load time for that one
+# house only) -- generalized here so every house benefits, not just
+# sylvies. Rejecting these falls back to extracting a producer from the
+# wine text instead (§4.2), which can only be neutral-or-better: none of
+# them were ever a usable producer value in the first place.
+_JUNK_PRODUCER_CODES = {
+    "vdt", "ohk", "sbe", "age", "b", "0",
+    "mc", "neg", "dom", "dist",
+}
+
+
 def _match_producer_and_wine(matcher, wine, producer):
     """Apply §4.2/§4.3 to one (wine, producer) pair, return the resolved pair."""
+    if producer and normalize(producer) in _JUNK_PRODUCER_CODES:
+        producer = None
     if not producer:
         # §4.2: if the producer is missing, extract it from the name via
         # the reference-list token index.
@@ -320,6 +356,20 @@ def _resolve(conn, observations, overrides, idealwine_ref):
         for o in obs:
             by_producer.setdefault(o["producer_key"] or "", []).append(o)
 
+        # Absorption rule (confirmed real case: "Sassicaia" splits into
+        # producer=NULL and producer="Tenuta San Guido" -- the same real
+        # wine, wines_by_producer.csv already lists Sassicaia under Tenuta
+        # San Guido). When an alias_key group has exactly one *known*
+        # producer, its producer-less siblings almost certainly belong to
+        # that same producer too; merge them into the one sub-group so
+        # resolve_group sees them together (it already discards "" when
+        # checking for a producer conflict, so this does not change
+        # anything about how >=2 distinct producers are kept apart -- that
+        # AMBIGUOUS-splitting, §4.1, is untouched).
+        known = [k for k in by_producer if k]
+        if len(known) == 1 and "" in by_producer:
+            by_producer[known[0]].extend(by_producer.pop(""))
+
         forced = override_map.get(alias_key)
         idealwine_name = idealwine_ref.get(alias_key)
 
@@ -402,9 +452,21 @@ def _resolve(conn, observations, overrides, idealwine_ref):
 
 
 def _backfill_wine_ref(conn):
-    key_to_wine = {(r[0], r[1]): r[2] for r in conn.execute(
+    resolved = [r for r in conn.execute(
         "SELECT alias_key, discriminator_key, wine_id"
-        " FROM wine_alias_resolutions WHERE wine_id IS NOT NULL").fetchall()}
+        " FROM wine_alias_resolutions WHERE wine_id IS NOT NULL").fetchall()]
+    key_to_wine = {(alias_key, disc): wid for alias_key, disc, wid in resolved}
+    # Mirror of the absorption rule in _resolve(): an alias_key with
+    # exactly one resolved wine (regardless of its discriminator) is the
+    # target for a lot whose OWN producer is unknown -- the producer-less
+    # observation was merged into that single wine there, so the lot must
+    # be able to find it here too, not just the (key, "") exact match
+    # that no longer exists once it was absorbed away.
+    by_alias = {}
+    for alias_key, _, wid in resolved:
+        by_alias.setdefault(alias_key, set()).add(wid)
+    alias_to_single_wine = {k: next(iter(v)) for k, v in by_alias.items()
+                            if len(v) == 1}
     cache = {}
     updates = []
     for lot_id, wine, producer in conn.execute(
@@ -416,6 +478,8 @@ def _backfill_wine_ref(conn):
             cache[wine] = key
         pk = normalize(producer)
         wid = key_to_wine.get((key, pk)) or key_to_wine.get((key, ""))
+        if wid is None and not pk:
+            wid = alias_to_single_wine.get(key)
         if wid is not None:
             updates.append((wid, lot_id))
     conn.executemany("UPDATE lots SET wine_ref_id=? WHERE id=?", updates)

@@ -36,5 +36,34 @@ class TestProducerMatcher(unittest.TestCase):
         self.assertIsNone(self.matcher.match_producer("Unbekannter Wein 1990"))
 
 
+class TestMatchProducerAndWine(unittest.TestCase):
+    """Confirmed real cases: a classification/state/provenance code sitting
+    in the raw ``producer`` field (VdT, OHK, SBE, AGE, pure parse junk) is
+    not a producer at all and must be treated like a missing producer,
+    not carried through as a dead-end value -- see build_wines.py's
+    _JUNK_PRODUCER_CODES for the confirmed evidence per code."""
+
+    @classmethod
+    def setUpClass(cls):
+        import build_wines
+        cls.build_wines = build_wines
+        cls.matcher = ProducerMatcher()
+
+    def test_vdt_code_rejected_falls_back_to_name_extraction(self):
+        wine, producer = self.build_wines._match_producer_and_wine(
+            self.matcher, "Weingut Bernhard Huber Spätburgunder", "VdT")
+        self.assertEqual(producer, "Weingut Bernhard Huber")
+
+    def test_junk_parse_artifact_rejected(self):
+        wine, producer = self.build_wines._match_producer_and_wine(
+            self.matcher, "Unbekannter Wein 1990", "0")
+        self.assertIsNone(producer)
+
+    def test_real_producer_is_not_rejected(self):
+        wine, producer = self.build_wines._match_producer_and_wine(
+            self.matcher, "Meursault Les Perrières", "Coche-Dury")
+        self.assertEqual(producer, "Coche-Dury")
+
+
 if __name__ == "__main__":
     unittest.main()

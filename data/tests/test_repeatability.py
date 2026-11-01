@@ -16,6 +16,8 @@ FIXTURE_LOTS = [
     ("fx", "a2", "2", "Petrus", None, "Pomerol", 2009),
     ("fx", "a2", "3", "Château Petrus", None, "Pomerol", None),
     ("fx", "a3", "1", "Mixed lot Bordeaux", None, None, None),
+    ("fx", "a4", "1", "Sassicaia 2015", None, "Toscana", None),
+    ("fx", "a4", "2", "Sassicaia 2015", "Tenuta San Guido", "Toscana", None),
 ]
 
 
@@ -103,6 +105,25 @@ class TestRepeatability(unittest.TestCase):
             "SELECT count(*) FROM lots WHERE lot_kind='SINGLE'"
             " AND wine_ref_id IS NULL").fetchone()[0]
         self.assertEqual(missing, 0)
+
+    def test_producer_less_sibling_absorbed_into_known_producer(self):
+        # Confirmed real case (live DB): "Sassicaia" with producer=NULL and
+        # "Sassicaia" with producer="Tenuta San Guido" used to resolve into
+        # two separate wines rows for the same real wine. §4.1's own
+        # AMBIGUOUS-splitting already ignores "" when checking for a
+        # producer conflict; absorbing the producer-less sibling into the
+        # one known-producer group (instead of resolving it on its own)
+        # merges them into a single wines row.
+        conn = build_fixture()
+        wine_ids = {r[0] for r in conn.execute(
+            "SELECT wine_ref_id FROM lots WHERE auction_id ="
+            " (SELECT id FROM auctions WHERE auction_id='a4')")}
+        self.assertEqual(len(wine_ids), 1)
+        self.assertNotIn(None, wine_ids)
+        producer = conn.execute(
+            "SELECT producer FROM wines WHERE id = ?",
+            (next(iter(wine_ids)),)).fetchone()[0]
+        self.assertEqual(producer, "Tenuta San Guido")
 
 
 if __name__ == "__main__":

@@ -79,6 +79,30 @@ class TestVintage(unittest.TestCase):
         self.assertEqual(r["status"], v.STATUS_STRUCTURED)
         self.assertEqual(r["final"], 2005)
 
+    def test_christies_vintage_separator_is_removed(self):
+        """Confirmed real case: christies' own raw title format is
+        "<name>--Vintage <year>"; the year used to be removed but the
+        literal "--Vintage" marker survived into cleaned_name (36,390
+        wines project-wide), fragmenting identical wines by vintage
+        status/year alone."""
+        r = v.resolve_vintage("Armagnac--Vintage 1982")
+        self.assertEqual(r["status"], v.STATUS_EXTRACTED)
+        self.assertEqual(r["final"], 1982)
+        self.assertEqual(r["cleaned_name"], "Armagnac")
+
+    def test_vintage_keyword_separator_is_removed(self):
+        r = v.resolve_vintage("Croft--Vintage 1920 Level: base of neck")
+        self.assertEqual(r["final"], 1920)
+        self.assertNotIn("--Vintage", r["cleaned_name"])
+        self.assertNotIn("Vintage", r["cleaned_name"])
+
+    def test_non_vintage_separator_is_removed(self):
+        """Same convention, no year at all -- the NV branch returned
+        cleaned_name unchanged before this fix."""
+        r = v.resolve_vintage("Armagnac--Non-Vintage")
+        self.assertEqual(r["status"], v.STATUS_NV)
+        self.assertEqual(r["cleaned_name"], "Armagnac")
+
 
 if __name__ == "__main__":
     unittest.main()
