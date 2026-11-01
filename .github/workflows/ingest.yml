@@ -41,7 +41,7 @@ jobs:
         run: pip install -r data/requirements.txt
 
       - name: Download previous archive
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v27
         with:
           workflow: ingest.yml
           name: auction-archive
@@ -71,7 +71,7 @@ jobs:
           fi
 
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: auction-archive
           path: ${{ runner.temp }}/archive
