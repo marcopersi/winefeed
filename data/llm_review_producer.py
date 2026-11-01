@@ -127,7 +127,13 @@ def _process_batch(key, batch):
         if not r or not r.get("wine") or not r.get("producer"):
             rest.append((name, prod, "null/uncertain"))
         else:
-            overrides.append((name, r["producer"], r["wine"]))
+            # The model sometimes strips only the producer token itself,
+            # leaving the comma that separated it from the rest of the
+            # name (e.g. "ZD Wines, Petit Abacus..." -> ", Petit Abacus...").
+            # Confirmed real cases, 6 of 9435 in one run -- small but a
+            # real, mechanical leftover, not a guess.
+            wine = r["wine"].strip().lstrip(",").strip()
+            overrides.append((name, r["producer"], wine))
     return overrides, rest
 
 

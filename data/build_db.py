@@ -824,6 +824,50 @@ def _christies_directory():
     return {str(e.get("event_id")): e for e in load_json(path)}
 
 
+_NO_LETTER = re.compile(r"[A-Za-zÀ-ÿ]")
+
+
+def _resolve_christies_ditto_lots(lots):
+    """Christie's own historic catalogs use ditto marks ("same as the lot
+    above") instead of reprinting a repeated wine name across consecutive
+    lots; the scrape kept the literal ditto glyphs as the lot's title and
+    description instead of resolving them. Confirmed on auction 10025
+    (2000/01_Januar): lot 11 is "Armagnac--Vintage 1982" (Chateau de
+    Lacaze, 1 dozen bottles); lots 12-14 are each literally "1 ^,,^^,,^",
+    "1 ^,,^^,,^", "1 ^,,^^,,^" -- their own estimate/hammer price, but no
+    wine text at all. This is the single largest cause of unresolved
+    SINGLE lots project-wide: 8,549 of 8,713 lots with lot_kind='SINGLE'
+    and wine_ref_id IS NULL are christies, and 8,549 of those (100%) have
+    a title with zero letters in it (``^,,^``, ``''``, or mixes thereof --
+    the archive uses several ditto glyph styles). No real wine name is
+    letter-free, so that's the detection rule -- not a guess at any one
+    exact symbol sequence. Each ditto lot inherits title+description from
+    the nearest *preceding* non-ditto lot in the same auction (lots
+    appear in ascending lot_number order in the raw file); a ditto lot
+    never becomes the new "last real" reference for lots after it. A
+    ditto run with no preceding real lot (none observed, but possible at
+    the very start of a sale) is left untouched -- same as before this
+    fix, not a regression."""
+    last_title = last_desc = None
+    out = []
+    for lot in lots:
+        title = lot.get("title")
+        # An empty title (not just a ditto-glyph one) is the same "no wine
+        # text" case -- confirmed on auction 5689 (1998/02_Februar): lot
+        # 168 "Cote de Beaune. Ramonet", lot 169 title="", description
+        # "Above 4 bottles per lot" (a continuation sub-lot, not a
+        # withdrawn/blank lot).
+        is_ditto = not title or not _NO_LETTER.search(title)
+        if is_ditto:
+            if last_title is not None:
+                lot = dict(lot, title=last_title, description=last_desc)
+        else:
+            last_title = title
+            last_desc = lot.get("description")
+        out.append(lot)
+    return out
+
+
 def load_christies(b, limit):
     directory = _christies_directory()
     # The archive keeps BOTH the project's original flat-path scrape and
@@ -865,7 +909,7 @@ def load_christies(b, limit):
         a_id = b.add_auction(
             "christies", aid, a.get("title"), date, None, "HAMMER",
             a.get("landing_url"), location=location)
-        for lot in d.get("lots", []):
+        for lot in _resolve_christies_ditto_lots(d.get("lots", [])):
             sold = 1 if (lot.get("price_realised") and
                          not lot.get("lot_withdrawn")) else 0
             price = to_float(lot.get("price_realised"))

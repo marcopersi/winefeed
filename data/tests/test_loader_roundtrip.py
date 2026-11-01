@@ -667,6 +667,48 @@ class TestLoaderRoundtrip(unittest.TestCase):
         lot_9999 = [l for l in deduped if l["lot_no"] == "9999"]
         self.assertEqual(len(lot_9999), 2)
 
+    def test_resolve_christies_ditto_lots(self):
+        """Confirmed real case: auction 10025 (2000/01_Januar) lot 11 is
+        "Armagnac--Vintage 1982" (Chateau de Lacaze); lots 12-14 are each
+        literally "1 ^,,^^,,^" (Christie's own ditto-mark convention for
+        "same wine as above", kept as literal glyphs by the scrape). Also
+        confirmed: auction 5689 (1998/02_Februar) uses an outright empty
+        title for the same convention (lot 169 after "Cote de Beaune.
+        Ramonet"). Both styles must inherit the nearest preceding lot
+        that actually has letters in its title; a ditto lot must never
+        become the new reference for lots after it."""
+        real_11 = {"lot_number": "11", "title": "Armagnac--Vintage 1982",
+                   "description": "Armagnac--Vintage 1982 1 dozen bottles",
+                   "price_realised": "100.0"}
+        ditto_12 = {"lot_number": "12", "title": "1 ^,,^^,,^",
+                    "description": "1 ^,,^^,,^", "price_realised": "90.0"}
+        ditto_13 = {"lot_number": "13", "title": "1 ^,,^^,,^",
+                    "description": "1 ^,,^^,,^", "price_realised": "80.0"}
+        real_16 = {"lot_number": "16", "title": "Eau de Vie",
+                   "description": "Eau de Vie 2 bottles",
+                   "price_realised": "70.0"}
+        empty_17 = {"lot_number": "17", "title": "",
+                    "description": "Above 4 bottles per lot",
+                    "price_realised": "60.0"}
+        resolved = build_db._resolve_christies_ditto_lots(
+            [real_11, ditto_12, ditto_13, real_16, empty_17])
+        titles = [l["title"] for l in resolved]
+        self.assertEqual(titles, ["Armagnac--Vintage 1982"] * 3
+                          + ["Eau de Vie"] * 2)
+        self.assertEqual(resolved[1]["description"],
+                          "Armagnac--Vintage 1982 1 dozen bottles")
+        # The lot's own price is never touched by the inheritance.
+        self.assertEqual(resolved[1]["price_realised"], "90.0")
+
+    def test_resolve_christies_ditto_lots_no_preceding_real_lot(self):
+        """A ditto run with nothing real before it (none observed in the
+        archive, but possible in principle at the very start of a sale)
+        is left untouched -- not a regression, same as before this fix."""
+        ditto_only = {"lot_number": "1", "title": "1 ^,,^^,,^",
+                      "description": "1 ^,,^^,,^"}
+        resolved = build_db._resolve_christies_ditto_lots([ditto_only])
+        self.assertEqual(resolved, [ditto_only])
+
     def test_backfill_wine_ref_uses_alias_key(self):
         conn = sqlite3.connect(":memory:")
         conn.executescript(build_db.SCHEMA)
