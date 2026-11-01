@@ -11,7 +11,7 @@ import re
 
 from ..models import AuctionRef, FetchResult
 
-API_VERSION = "1.14"
+API_VERSION = "2.3"
 PAGE_SIZE = 50
 
 

@@ -75,9 +75,24 @@ class DorotheumFetcher:
 
 
 def _parse_price(text):
-    """European number format: 'EUR 1.500,-' -> 1500.0, 'EUR 800,-' -> 800.0."""
+    """European number format: 'EUR 1.500,-' -> 1500.0, 'EUR 800,-' -> 800.0.
+
+    An unsold lot's ``preis2`` can be an estimate *range* instead of one
+    value, e.g. "EUR 8.000,- bis EUR 10.000,-" -- confirmed real case,
+    broke CI with "could not convert string to float: '8000.10000.'"
+    (both thousands-separator dots survive the cleanup as if they were
+    decimal points, once the two numbers' digits run together). Takes the
+    low end in that case -- a real sub-value of the range, not a guess;
+    build_db.load_dorotheum already copies one number into both
+    estimate_low and estimate_high anyway.
+    """
     if not text:
         return None
     digits = re.sub(r"[^\d.]", "",
                     str(text).replace(".", "").replace(",", "."))
+    if not digits:
+        return None
+    parts = digits.split(".")
+    if len(parts) > 2:
+        digits = parts[0]
     return float(digits) if digits else None

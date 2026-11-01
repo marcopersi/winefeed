@@ -49,6 +49,14 @@ class FakeResponse:
 
 
 class TestWeinauktion(unittest.TestCase):
+    def test_sends_current_api_version(self):
+        """Confirmed real case: the live API moved from 1.14 to 2.3 and
+        started rejecting 1.14 with a bare 400 -- broke steinfels AND
+        weinboerse in CI (run 41257477575, 2026-11-01) until this was
+        caught and bumped."""
+        f = WeinauktionFetcher("steinfels", "https://auktionen.steinfelsweine.ch")
+        self.assertEqual(f._headers()["x-api-version"], "2.3")
+
     def test_discover(self):
         f = WeinauktionFetcher("steinfels", "https://auktionen.steinfelsweine.ch")
         refs = f.discover(FakeSession([]))
