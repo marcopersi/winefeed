@@ -1100,6 +1100,17 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
   Merge-Qualitäts-Fund oben entdeckt. **Noch offen:** echtes FTS5 (als
   Follow-up, nicht blockierend), Frontend nicht erneut gefahren (nur
   Backend live getestet).
-- [ ] Kapitel 8: GUI/UX — noch nicht angefasst in dieser Session.
+- [x] Kapitel 8 (Teilstatus): Chart-X-Achse jetzt `dd.MM.yyyy` statt roher
+  ISO-Zeichenkette, Auktions-Location im Tooltip (`auctions.location`,
+  98,8 % befüllt, nicht nur christies) — `api/main.py` liefert sie jetzt
+  mit, `PriceChart.jsx` formatiert/zeigt sie. Live gegen die Prod-DB
+  verifiziert, Vitest 6/6, `npm run build` ok.
+  **Nicht umgesetzt, bewusst nicht geraten:** „Ergebnisliste (Produzent ·
+  Wein · Jahrgang · Gebinde · Anzahl · OHK)" — Jahrgang/Gebinde/Anzahl/OHK
+  sind Pro-Lot-Attribute, `/search` liefert aber Wein-Aggregate; welche
+  Darstellung hier gemeint ist (pro Lot in einer Detailansicht? Spannweite
+  pro Wein?) ist nicht aus dem Plan ableitbar — Produktentscheidung nötig.
+  `price_per_bottle anzeigen` blockiert auf Kapitel 5 (Spalte existiert
+  noch nicht).
 - [x] Bug: canonical_source-Provenienz (gefixt im Zuge von Kapitel 4.2–4.3,
   s. o.)
