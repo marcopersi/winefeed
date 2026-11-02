@@ -44,6 +44,10 @@ ARCHIVE_DIRS = {
     # existing "wermuth-sa" DB provider rather than a new one.
     "denzauktionen": "Denz",
     "munich-wine-company": "MunichWineCompany",
+    # franzwermuth.ch: own house, own loader (load_franzwermuth) -- a
+    # binary (PDF) fetcher like denzauktionen above, not {auction, lots}
+    # JSON.
+    "franzwermuth": "FranzWermuth",
 }
 
 

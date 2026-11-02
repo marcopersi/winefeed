@@ -8,6 +8,7 @@ from .dorotheum import DorotheumFetcher
 from .sothebys import SothebysFetcher
 from .sylvies import SylviesFetcher
 from .finarte import FinarteFetcher
+from .franzwermuth import FranzWermuthFetcher
 from .hdh import HdhFetcher
 from .idealwine import IdealwineFetcher
 from .koppe import KoppeFetcher
@@ -41,6 +42,7 @@ FETCHERS = {
     "sylvies": SylviesFetcher(),
     "denzauktionen": DenzauktionenFetcher(),
     "munich-wine-company": MunichWineCompanyFetcher(),
+    "franzwermuth": FranzWermuthFetcher(),
 }
 
 

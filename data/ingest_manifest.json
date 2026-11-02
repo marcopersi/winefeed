@@ -827,6 +827,74 @@
     },
     "__last_run_at__": "2026-11-01T17:13:55.032611+00:00"
   },
+  "franzwermuth": {
+    "1": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.416639+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/FJWermuth_Collection1_Ergebnisliste.pdf"
+    },
+    "10": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.835115+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Coll10 2.11.2019_Ergebnisse.pdf"
+    },
+    "11": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.791861+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Coll11_6.6.2020_Ergebnisse.pdf"
+    },
+    "13": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.878045+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Ergebnisliste_Auktion_24.4.2021_Collection_13.pdf"
+    },
+    "14": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.926428+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Ergebnisliste_Auktion_6.11.2021_Collection_14.pdf"
+    },
+    "15": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.978265+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Ergebnisliste_Auktion_30.04.2022_Collection_15.pdf"
+    },
+    "16": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:35.018734+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Ergebnisse_Auktion_05.11.2022_Collection_16.pdf"
+    },
+    "17": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:35.076209+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Ergebnisliste_Auktion_29.04.2023_Collection_17.pdf"
+    },
+    "3": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.471562+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/FJWermuth_Coll3_Ergebnis.pdf"
+    },
+    "5": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.524901+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Coll5_Ergebnisse.pdf"
+    },
+    "6": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.575367+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Coll6_4.11.2017_Ergebnisliste.pdf"
+    },
+    "7": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.624575+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Coll7_21.04.2018_Ergebnisliste2.pdf"
+    },
+    "8": {
+      "etag": "",
+      "fetched_at": "2026-11-02T08:51:34.689639+00:00",
+      "url": "https://www.franzwermuth.ch/Auktionen/Coll8_3.11.2018_Ergebnis.pdf"
+    },
+    "__last_run_at__": "2026-11-02T08:53:35.385837+00:00"
+  },
   "hdh": {
     "1109": {
       "etag": "",
@@ -1479,10 +1547,10 @@
   "munich-wine-company": {
     "340": {
       "etag": "",
-      "fetched_at": "2026-11-02T08:01:04.186249+00:00",
+      "fetched_at": "2026-11-02T09:06:04.653096+00:00",
       "url": "https://cms.munichwinecompany.eu/api/auctions/340/wines?all=1"
     },
-    "__last_run_at__": "2026-11-02T08:01:04.377446+00:00"
+    "__last_run_at__": "2026-11-02T09:06:04.833294+00:00"
   },
   "pandolfini": {
     "1376": {

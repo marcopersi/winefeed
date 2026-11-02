@@ -442,6 +442,7 @@ PROVIDER_LOCATIONS = {
     "baghera": "Genf",
     "dobiaschofsky": "Bern",
     "wermuth-sa": "Zürich",
+    "franzwermuth": "Dietikon",
     "koppe": "Deutschland",
     "weinauktionator": "Deutschland",
     "finarte": "Italien",
@@ -3071,6 +3072,202 @@ def load_denz_wermuth(b, limit):
                 return
 
 
+# --- Franz Wermuth Auktionen (franzwermuth.ch) ----------------------------- #
+#
+# Confirmed real: a separate, still fully active auction house from
+# "Wermuth S.A." / Denz Weine above -- shares the "Wermuth" surname (the
+# person) but is legally and operationally distinct (own domain, own
+# auctioneer "Dr. Spengler & Partner AG"). Own provider, not merged with
+# wermuth-sa.
+#
+# Results PDF layout: one line per lot, but confirmed real across the
+# 2015-2023 archive that this house used at least three different
+# column conventions over the years (not even cleanly chronological --
+# collection 1 and collections 8+ already use the "modern" layout,
+# while 3/5/6/7 in between still use an older one):
+# - hammer price sometimes trails the lot line ("850,00 CHF"),
+#   sometimes leads its own tail ("CHF 260,00", "CHF   1 840,00" --
+#   the latter with a SPACE thousands separator, not period), and
+#   sometimes has no "CHF" at all (a bare "1050");
+# - vintage is sometimes its own column before the quantity, sometimes
+#   baked into the wine name with no separator ("Château Figeac
+#   1982"), and sometimes comma-joined right after the quantity+unit
+#   ("6 Flaschen, 2002");
+# - a long description makes pdftotext -layout wrap the tail starting
+#   at the quantity/OHK/Lot-Dz. marker onto its own physical line
+#   (confirmed: real lines 23/24 of the Collection 17 PDF), so a
+#   logical row can span two physical lines;
+# - the "Lot"/"Dz." per-unit-price marker is sometimes replaced
+#   outright by a condition marker ("OC", confirmed real lots
+#   127-132) instead of appearing alongside it;
+# - an unsold lot's hammer is a literal "-", or the word "fehlt" for a
+#   lot withdrawn after the catalog was printed (confirmed real, both
+#   with and without a trailing "CHF" on that line).
+#
+# Given that spread, the row regex only anchors on the one thing every
+# era agrees on -- "CHF <low>-<high>" for the estimate -- and treats
+# everything before it as one "description+quantity+vintage" blob and
+# everything after it as a free-form "hammer" tail, both torn apart by
+# dedicated helpers below instead of a second fixed column pattern.
+
+_FW_ROW_RE = re.compile(
+    r"^\s*(\d+)\s+(.+?)\s+CHF\s*([\d'.,]+)\s*-\s*([\d'.,]+)\s+(.*)$")
+_FW_ROW_START_RE = re.compile(r"^\s*\d+\s+\S")
+_FW_TRAILING_MARKER_RE = re.compile(
+    r"\s*(?:pro\s+)?(?:Lot|Dz\.?|\d*er-?OHK|OHK|OC|MS)\s*$", re.IGNORECASE)
+_FW_TRAILING_COMMA_VINTAGE_RE = re.compile(r",\s*(\d{4})\s*$")
+_FW_TRAILING_VINTAGE_RE = re.compile(r"\b(\d{4})\s*$")
+_FW_TRAILING_DIV_RE = re.compile(r"\bDiv\.\s*$", re.IGNORECASE)
+
+
+def _fw_money(tok):
+    """"1.050,00" -> 1050.0 (period = thousands, comma = decimal) and
+    "1 840,00" -> 1840.0 (an older era's results PDFs use a SPACE as
+    the thousands separator instead -- both confirmed real). Also
+    confirmed real: Collection 16's hammer prices use an apostrophe
+    thousands separator instead ("1'990 CHF"), the same convention
+    Denz's own PDFs use -- stripped the same way _wermuth_money does,
+    or to_float would ValueError on the leftover "'" and silently
+    turn a real hammer price into None. A literal "-"/"fehlt"
+    (unsold/withdrawn lot) has no digits left after cleanup and
+    correctly falls through to_float's own None return."""
+    cleaned = (tok.replace(" ", "").replace("'", "").replace("’", "")
+               .replace(".", "").replace(",", "."))
+    return to_float(cleaned)
+
+
+def _fw_hammer_from_tail(tail):
+    """The free-form text after "CHF <low>-<high>" on a row: strips
+    any "CHF" token (confirmed real in both a leading "CHF 260,00" and
+    a trailing "850,00 CHF" position) and parses whatever's left."""
+    cleaned = re.sub(r"CHF", "", tail, flags=re.IGNORECASE).strip()
+    return _fw_money(cleaned) if cleaned else None
+
+
+def _fw_strip_trailing_markers(text):
+    """Repeatedly strips a trailing "Lot"/"Dz."/OHK-ish token (in
+    whatever order/combination the PDF actually prints them in --
+    confirmed real combinations: "OHK Dz.", a bare "OC" standing in
+    for the Lot/Dz. marker entirely, "12er-OHK" alone) until only the
+    quantity+unit (and possibly vintage) text remains, tracking
+    whether any OHK-equivalent marker was seen along the way."""
+    is_ohk = False
+    while True:
+        m = _FW_TRAILING_MARKER_RE.search(text)
+        if not m:
+            break
+        if "ohk" in m.group(0).lower() or "oc" in m.group(0).lower():
+            is_ohk = True
+        text = text[:m.start()].rstrip()
+    return text, is_ohk
+
+
+def _fw_split_middle_blob(blob):
+    """Tears apart the "<desc> <qty+unit> [, <vintage>] [<vintage>]
+    [OHK/Lot/Dz.]" blob into (description, vintage, quantity,
+    bottle_size_dl, is_ohk) -- no fixed column order assumed, each
+    piece is found and stripped from the right instead (mirroring
+    _wermuth_parse_tail's approach for Denz's own equally
+    inconsistent older-era catalogs)."""
+    text, is_ohk = _fw_strip_trailing_markers(blob)
+    vintage = None
+    m = _FW_TRAILING_COMMA_VINTAGE_RE.search(text)
+    if m:
+        vintage = int(m.group(1))
+        text = text[:m.start()].rstrip()
+    quantity = bottle_size_dl = None
+    qm = _WERMUTH_QTY_UNIT_RE.search(text)
+    if qm:
+        quantity = int(qm.group(1))
+        if qm.group(2):
+            bottle_size_dl = (int(qm.group(2)) / int(qm.group(3))) * 10
+        else:
+            unit = qm.group(4).lower()
+            if "dutzend" in unit:
+                quantity *= 12
+                bottle_size_dl = 7.5
+            else:
+                bottle_size_dl = _WERMUTH_UNIT_DL.get(unit)
+        text = text[:qm.start()].rstrip()
+    if vintage is None:
+        m = _FW_TRAILING_VINTAGE_RE.search(text)
+        if m:
+            vintage = int(m.group(1))
+            text = text[:m.start()].rstrip()
+        elif _FW_TRAILING_DIV_RE.search(text):
+            text = _FW_TRAILING_DIV_RE.sub("", text).rstrip()
+    desc = text.strip().rstrip(",").strip()
+    return desc, vintage, quantity, bottle_size_dl, is_ohk
+
+
+def _fw_parse_rows(text):
+    lines = [l for l in text.splitlines() if l.strip()]
+    merged = []
+    for line in lines:
+        if _FW_ROW_START_RE.match(line):
+            merged.append(line)
+        elif merged and not _FW_ROW_RE.match(merged[-1]):
+            merged[-1] = merged[-1].rstrip() + " " + line.strip()
+    rows = []
+    for line in merged:
+        m = _FW_ROW_RE.match(line)
+        if not m:
+            continue
+        lot_no, middle, low, high, tail = m.groups()
+        desc, vintage, quantity, bottle_size_dl, is_ohk = \
+            _fw_split_middle_blob(middle)
+        hammer_price = _fw_hammer_from_tail(tail)
+        rows.append({
+            "lot_no": lot_no, "wine": desc, "vintage": vintage,
+            "quantity": quantity, "bottle_size_dl": bottle_size_dl,
+            "is_ohk": is_ohk, "condition_text": middle.strip(),
+            "price_basis": "HAMMER" if hammer_price is not None
+            else "UNKNOWN",
+            "estimate_low": _fw_money(low), "estimate_high": _fw_money(high),
+            "hammer_price": hammer_price, "currency": "CHF",
+        })
+    return rows
+
+
+def _fw_collection_number(path):
+    m = re.search(r"[Cc]oll(?:ection)?_?(\d+)", os.path.basename(path))
+    return m.group(1) if m else None
+
+
+def load_franzwermuth(b, limit):
+    # The archive mixes pre-sale catalog PDFs in with the results PDFs
+    # under the same tree (confirmed real: Collections 12/19 only have
+    # a "..._Katalog.pdf", no results file at all) -- a catalog PDF
+    # has no Zuschlag column, so _fw_parse_rows naturally returns no
+    # rows for one; skipped before add_auction so it can't create a
+    # phantom 0-lot auction. Some collections also have more than one
+    # PDF (e.g. Collection 6's catalog AND its results PDF side by
+    # side) -- processed_colls stops a second real-results file for an
+    # already-loaded collection from double-counting its lots.
+    n = 0
+    processed_colls = set()
+    for f in sorted(glob.glob(
+            os.path.join(ARCHIVE, "FranzWermuth", "**", "*.pdf"),
+            recursive=True)):
+        coll = _fw_collection_number(f)
+        if not coll or coll in processed_colls:
+            continue
+        text = _wermuth_pdf_text(f)
+        rows = _fw_parse_rows(text)
+        if not rows:
+            continue
+        processed_colls.add(coll)
+        date = _wermuth_date_from_text(text)
+        b.set_source(f)
+        a_id = b.add_auction("franzwermuth", f"coll-{coll}",
+                             f"Collection {coll}", date, "CHF", "HAMMER")
+        for row in rows:
+            b.add_lot(a_id, row)
+        n += 1
+        if limit and n >= limit:
+            return
+
+
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
@@ -3096,6 +3293,7 @@ HOUSES = [
     ("wermuth-sa", load_wermuth),
     ("wermuth-validated", load_wermuth_validated),
     ("denz-wermuth", load_denz_wermuth),
+    ("franzwermuth", load_franzwermuth),
     ("steinfels", load_steinfels),
     ("steinfels-staging", load_steinfels_staging),
     ("weinboerse", load_weinboerse),
@@ -3317,6 +3515,9 @@ PREMIUM_POLICY = {
     "besch-cannes": {"rate": 0.24},
     "munich-wine-company": {"rate": 0.15, "fees": 5.0},
     "sylvies": {"rate": 0.20},
+    # franzwermuth's own Auktionsbedingungen.pdf: "ein einheitliches
+    # Aufgeld von 9 %" + a flat CHF 8.00 "Abwicklungsgebühr" per lot.
+    "franzwermuth": {"rate": 0.09, "fees": 8.0},
 }
 
 
@@ -3408,6 +3609,11 @@ TAX_POLICY = {
     "koppe": 0.19,
     "weinauktionator": 0.19,
     "munich-wine-company": 0.19,
+    # franzwermuth's own terms PDF says "8 %", but that figure reads as
+    # a stale pre-2024 printing -- wermuth-sa (same CH jurisdiction) is
+    # already correctly 0.081, so using the current real rate here too
+    # rather than the PDF's unverified wording.
+    "franzwermuth": 0.081,
 }
 
 

@@ -1282,14 +1282,63 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
     sylvies/sothebys. **Blockiert:** `BAGHERA_USER`/`BAGHERA_PWD` fehlen
     noch in `.env_local` (geprüft: nicht vorhanden, trotz Nutzer-Aussage
     "schon eingetragen"). Noch nicht gebaut.
-  - [ ] **franzwermuth.ch**: eigenständige Firma, nicht dasselbe wie Denz
-    (bestätigt: separate Domain, läuft aktuell Collection #24 am
-    7.11.2026). Archiv-Seite (`Archiv.html`) ist seit 2023 nicht mehr
-    aktualisiert (stoppt bei #17); die aktuellsten 2-3 Collections' Links
-    sitzen nur auf der Startseite, mit sehr inkonsistenten Dateinamen/
-    Labels (Leerzeichen in Dateinamen, falsch zugeordnete Links, sowohl
-    .pdf als auch .xls als Ergebnisformat). Resultate-PDF-Format geprüft
-    (eine Zeile pro Los, Komma-Dezimal/Punkt-Tausender — anders als Denz'
-    Apostroph-Format, braucht eigenen Parser). Noch nicht gebaut — eigener
-    DB-Provider vorgesehen (nicht in wermuth-sa gemischt, da eigenständige
-    Firma), vergleichbarer Aufwand wie ein komplettes neues Haus.
+  - [x] **munich-wine-company Manifest-Bug gefixt:** der erste
+    munich-wine-company-Testlauf schrieb mit einem Scratch-`ARCHIVE_PATH`
+    (`/tmp/...`), aber `MANIFEST_PATH` ist davon unabhängig und zeigt
+    immer auf das echte `data/ingest_manifest.json` — Auktion 340 wurde
+    dadurch im echten Manifest als "fetched" markiert, ohne dass die
+    Daten je ins echte Archiv kamen. Gefunden beim echten Produktions-
+    lauf ("0 neu" statt erwartet "1 neu"), Manifest-Eintrag entfernt,
+    echter Lauf nachgeholt (1440 Lots jetzt wirklich im Samsung-Archiv,
+    `munich-wine-company` DB-Summe 4.150 → 5.590 lots).
+  - [x] **franzwermuth.ch** (neuer Fetcher `ingest/fetchers/
+    franzwermuth.py` + neuer Loader `load_franzwermuth`, eigener
+    DB-Provider `franzwermuth` — eigenständige Firma, nicht dasselbe wie
+    Denz, bestätigt: separate Domain, läuft aktuell Collection #24 am
+    7.11.2026): `discover()` liest Startseite + `Archiv.html` (letztere
+    seit 2023 nicht mehr aktualisiert, stoppt bei #17) nach
+    "Ergebnis"-Dateien, Collection-Nummer aus dem Dateinamen
+    (`Coll(ection)?_?<n>`). `fetch()` lädt die rohe PDF (kein Login, kein
+    AJAX nötig). **Grosser Fund beim ersten echten Lauf:** es existiert
+    bereits ein umfangreiches, von früher/dem Nutzer befülltes
+    `FranzWermuth/`-Archiv auf der Samsung-Disk (Jahresordner 2015–2024,
+    Collections 1–19!) — der Loader liest dieses automatisch mit (gleicher
+    Ordnername), nicht nur die neu gefetchten Dateien.
+    **Drei echte Bugs beim ersten Durchlauf gefunden und gefixt:**
+    1. Live-Site verlinkt für Collection 9 einen veralteten, 404
+       zurückgebenden Dateinamen (`Coll9_27.4.2018_Ergebnisse.pdf`, Tippfehler
+       im Jahr) — Fetcher prüft jetzt den HTTP-Status und wirft bei
+       Nicht-200 einen `RuntimeError` statt die 404-HTML-Seite als PDF
+       zu archivieren; wird dadurch korrekt übersprungen/retried statt
+       permanent falsch markiert. Die echte Collection 9 kam stattdessen
+       aus dem schon vorhandenen historischen Archiv (609 Lots).
+    2. Das Archiv mischt Katalog- und Ergebnis-PDFs im selben Baum
+       (Collections 12/19 haben nur eine `..._Katalog.pdf`, kein
+       Ergebnis) — Loader erzeugte zunächst Phantom-Auktionen mit 0 Lots;
+       gefixt, indem eine Datei nur verarbeitet wird, wenn `_fw_parse_rows`
+       tatsächlich Zeilen findet, und eine bereits geladene Collection
+       nicht durch eine zweite Datei doppelt gezählt wird.
+    3. **Der grösste Fund:** franzwermuth hat über die Jahre mindestens
+       drei verschiedene PDF-Layouts benutzt, nicht chronologisch sauber
+       getrennt (Collection 1 und 8+ nutzen schon das "moderne" Format,
+       3/5/6/7 dazwischen ein älteres) — Zuschlag mal mit "CHF" davor,
+       mal danach, mal gar keins; Jahrgang mal eigene Spalte, mal in den
+       Weinnamen eingebacken ("Château Figeac 1982"), mal Komma-getrennt
+       NACH der Menge ("6 Flaschen, 2002"); Tausender-Trennzeichen mal
+       Punkt, mal Leerzeichen ("1 840,00"); eine "pro"-Spalte vor
+       "Lot"/"Dz" in manchen Jahrgängen. Ursprünglicher Parser (nur ans
+       moderne Format angepasst) lieferte für die älteren Collections 0
+       oder nur eine Handvoll Zeilen. Komplett neu gebaut: der Zeilen-Regex
+       ankert nur noch auf das, was jede Ära gemeinsam hat ("CHF
+       <tief>-<hoch>" für die Schätzung), alles davor/danach wird von
+       dedizierten Right-to-Left-Strippern zerlegt (Vorbild:
+       `_wermuth_parse_tail`). Nach dem Fix: alle 14 ladbaren Collections
+       551-699 Lots je (vorher teils 0/4/9), Gesamt 8.726 Lots,
+       `integrity_check` ok, 0 FK-Verletzungen.
+    **Bekannte, bewusst offene Lücke:** Collections 2 (Dateiname ohne
+    Collection-Nummer, nicht zuordenbar), 4/18/20/21/22/23 haben nirgends
+    (weder live noch im historischen Archiv) eine Ergebnis-Datei — wie
+    bei koppe/2025 und munich-wine-company stehen gelassen statt geraten.
+    9% Aufgeld + CHF 8 Gebühr laut `Auktionsbedingungen.pdf`, 8,1% MwSt
+    (aktueller CH-Satz verwendet, nicht die vermutlich veraltete "8%" aus
+    dem PDF). In CI aufgenommen (16 Häuser gesamt).

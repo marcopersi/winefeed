@@ -32,7 +32,7 @@ PROVIDERS = [
     "steinfels", "weinboerse", "weinauktionator", "hdh", "koppe",
     "langtons", "winefields", "dorotheum", "pandolfini",
     "finarte", "besch-cannes", "dobiaschofsky", "winebarrel",
-    "denzauktionen", "munich-wine-company",
+    "denzauktionen", "munich-wine-company", "franzwermuth",
     # Sothebys needs camoufox (heavy) + a residential IP to solve the
     # Cloudflare Turnstile login; it only runs locally, not in CI.
     "sothebys",
