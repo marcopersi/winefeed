@@ -16,6 +16,8 @@ FIXTURE_LOTS = [
     ("fx", "a2", "2", "Petrus", None, "Pomerol", 2009),
     ("fx", "a2", "3", "Château Petrus", None, "Pomerol", None),
     ("fx", "a3", "1", "Mixed lot Bordeaux", None, None, None),
+    ("fx", "a4", "1", "Sassicaia 2015", None, "Toscana", None),
+    ("fx", "a4", "2", "Sassicaia 2015", "Tenuta San Guido", "Toscana", None),
 ]
 
 
@@ -65,9 +67,14 @@ class TestRepeatability(unittest.TestCase):
 
     def test_margaux_merged(self):
         conn = build_fixture()
+        # §4.2/4.3: the producer-index + fuzzy match splits "Château
+        # Margaux" into producer="Château Margaux" / wine="Margaux" (the
+        # pure wine name, per the Wine.name/Wine.producer model in §0 of
+        # wine-pipeline-v2.md), so both raw spellings merge under
+        # canonical_key='margaux' with producer_key='chateau margaux'.
         cnt = conn.execute(
-            "SELECT count(*) FROM wines WHERE canonical_key="
-            "'chateau margaux'").fetchone()[0]
+            "SELECT count(*) FROM wines WHERE canonical_key='margaux'"
+            " AND producer_key='chateau margaux'").fetchone()[0]
         self.assertEqual(cnt, 1)
 
     def test_petrus_merged_via_override(self):
@@ -83,6 +90,40 @@ class TestRepeatability(unittest.TestCase):
             "SELECT count(*) FROM lots WHERE lot_kind='MIXED'"
             " AND wine_ref_id IS NOT NULL").fetchone()[0]
         self.assertEqual(bad, 0)
+
+    def test_single_lots_backfilled(self):
+        # Regression gate for the exact "stiller Datenverlust" §4.1 exists
+        # to prevent: a SINGLE lot that was correctly resolved into
+        # wine_alias_resolutions must come back out with a wine_ref_id.
+        # This caught a real bug where producer/wine matching (§4.2/4.3)
+        # rewrote the in-memory alias but never wrote it back to
+        # lots.wine/lots.producer, so _backfill_wine_ref looked up a key
+        # the resolutions table never had — every matched lot lost its
+        # wine_ref_id silently.
+        conn = build_fixture()
+        missing = conn.execute(
+            "SELECT count(*) FROM lots WHERE lot_kind='SINGLE'"
+            " AND wine_ref_id IS NULL").fetchone()[0]
+        self.assertEqual(missing, 0)
+
+    def test_producer_less_sibling_absorbed_into_known_producer(self):
+        # Confirmed real case (live DB): "Sassicaia" with producer=NULL and
+        # "Sassicaia" with producer="Tenuta San Guido" used to resolve into
+        # two separate wines rows for the same real wine. §4.1's own
+        # AMBIGUOUS-splitting already ignores "" when checking for a
+        # producer conflict; absorbing the producer-less sibling into the
+        # one known-producer group (instead of resolving it on its own)
+        # merges them into a single wines row.
+        conn = build_fixture()
+        wine_ids = {r[0] for r in conn.execute(
+            "SELECT wine_ref_id FROM lots WHERE auction_id ="
+            " (SELECT id FROM auctions WHERE auction_id='a4')")}
+        self.assertEqual(len(wine_ids), 1)
+        self.assertNotIn(None, wine_ids)
+        producer = conn.execute(
+            "SELECT producer FROM wines WHERE id = ?",
+            (next(iter(wine_ids)),)).fetchone()[0]
+        self.assertEqual(producer, "Tenuta San Guido")
 
 
 if __name__ == "__main__":

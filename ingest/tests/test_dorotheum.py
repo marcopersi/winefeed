@@ -64,6 +64,14 @@ class TestDorotheum(unittest.TestCase):
         self.assertEqual(_parse_price("EUR 12.345,67"), 12345.67)
         self.assertIsNone(_parse_price(""))
 
+    def test_parse_price_range_takes_low_end(self):
+        """Confirmed real case: an unsold lot's estimate can be a range
+        instead of one value -- broke CI (run 41257477575, 2026-11-01)
+        with "could not convert string to float: '8000.10000.'"."""
+        from ingest.fetchers.dorotheum import _parse_price
+        self.assertEqual(
+            _parse_price("EUR 8.000,- bis EUR 10.000,-"), 8000.0)
+
 
 if __name__ == "__main__":
     unittest.main()

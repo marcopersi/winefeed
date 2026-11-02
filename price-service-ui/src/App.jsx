@@ -1,79 +1,51 @@
-import React, { useState } from "react";
-import axios from "axios";
+import { useState } from "react";
+import SearchPanel from "./components/SearchPanel.jsx";
+import Tabs from "./components/Tabs.jsx";
+import TopWinesPanel from "./components/TopWinesPanel.jsx";
+
+const TABS = [
+  { id: "search", label: "Search" },
+  { id: "top", label: "Most price data" },
+];
 
 function App() {
-  const [file, setFile] = useState(null);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  const [activeTab, setActiveTab] = useState("search");
+  const [selectedWine, setSelectedWine] = useState(null);
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleFileUpload = async () => {
-    if (!file) {
-      alert("Please select a file to upload!");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await axios.post("/api/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      alert(response.data);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      alert("File upload failed!");
-    }
-  };
-
-  const handleSearch = async () => {
-    try {
-      const response = await axios.get(`/prices/search?keyword=${query}`);
-      setResults(response.data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      alert("Search failed!");
-    }
-  };
+  function openWineFromLeaderboard(wine) {
+    setSelectedWine(wine);
+    setActiveTab("search");
+  }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Price Service UI</h1>
+    <div className="app-shell">
+      <header className="app-header">
+        <p className="app-eyebrow">Winefeed</p>
+        <h1 className="app-title">Wine Price Search</h1>
+      </header>
 
-      <div>
-        <h2>Upload Excel File</h2>
-        <input type="file" onChange={handleFileChange} />
-        <button onClick={handleFileUpload}>Upload</button>
-      </div>
+      <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
 
-      <div style={{ marginTop: "20px" }}>
-        <h2>Search Prices</h2>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Enter search query"
-        />
-        <button onClick={handleSearch}>Search</button>
-      </div>
-
-      <div style={{ marginTop: "20px" }}>
-        <h2>Results</h2>
-        {results.length > 0 ? (
-          <ul>
-            {results.map((result, index) => (
-              <li key={index}>{JSON.stringify(result)}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>No results found.</p>
+      <div
+        role="tabpanel"
+        id="tabpanel-search"
+        aria-labelledby="tab-search"
+        hidden={activeTab !== "search"}
+        className="tab-panel"
+      >
+        {activeTab === "search" && (
+          <SearchPanel selectedWine={selectedWine} onSelectWine={setSelectedWine} />
         )}
+      </div>
+
+      <div
+        role="tabpanel"
+        id="tabpanel-top"
+        aria-labelledby="tab-top"
+        hidden={activeTab !== "top"}
+        className="tab-panel"
+      >
+        {activeTab === "top" && <TopWinesPanel onSelectWine={openWineFromLeaderboard} />}
       </div>
     </div>
   );

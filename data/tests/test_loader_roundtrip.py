@@ -75,6 +75,70 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (10.0, 5.0, 1.9, 116.9, "DERIVED"))
         conn.close()
 
+    def test_apply_fx_rates_uses_nearest_prior_trading_day(self):
+        """fx_rates only has one row per *trading* day; a lot dated on a
+        weekend/holiday must fall back to the nearest earlier rate, never
+        a future one, and record which date that rate actually came from
+        (fx_rate_date) since it can differ from the lot's own date."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("langtons", "1", "Langtons 1", None,
+                                   "AUD", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x", "currency": "AUD",
+                               "lot_date": "2020-01-04"})  # a Saturday
+        conn.executemany(
+            "INSERT INTO fx_rates(currency, date, per_eur, source)"
+            " VALUES (?,?,?,?)",
+            [("AUD", "2020-01-03", 1.6, "EODHD"),
+             ("AUD", "2020-01-06", 1.7, "EODHD")])
+        build_db._apply_fx_rates(conn)
+        row = conn.execute(
+            "SELECT fx_rate, fx_target_currency, fx_rate_date FROM lots"
+        ).fetchone()
+        self.assertEqual(row, (1.6, "EUR", "2020-01-03"))
+        conn.close()
+
+    def test_apply_fx_rates_no_rate_before_coverage_starts(self):
+        """A lot dated before the currency's earliest cached rate gets no
+        rate -- extrapolating backwards would be a guess, not a lookup."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("langtons", "1", "Langtons 1", None,
+                                   "AUD", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x", "currency": "AUD",
+                               "lot_date": "1998-01-01"})
+        conn.execute(
+            "INSERT INTO fx_rates(currency, date, per_eur, source)"
+            " VALUES ('AUD', '2006-03-01', 1.6, 'EODHD')")
+        build_db._apply_fx_rates(conn)
+        row = conn.execute(
+            "SELECT fx_rate, fx_target_currency, fx_rate_date FROM lots"
+        ).fetchone()
+        self.assertEqual(row, (None, None, None))
+        conn.close()
+
+    def test_sylvies_premium_is_20_percent_with_no_tax(self):
+        """sylvies.be Conditions of Sale: 20% buyer's premium excl. VAT, no
+        per-lot fee, VAT is destination-dependent (no single numeric rate) --
+        same treatment as sothebys/langtons/christies: tax_amount stays NULL."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("sylvies", "1", "Sylvies 1", None, "EUR",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x",
+                               "hammer_price": 100.0, "price_basis": "HAMMER",
+                               "currency": "EUR"})
+        build_db._apply_premium_policy(conn)
+        build_db._apply_tax(conn)
+        row = conn.execute(
+            "SELECT buyer_premium, fees, tax_amount, total_price, price_source"
+            " FROM lots").fetchone()
+        self.assertEqual(row, (20.0, None, None, 120.0, "DERIVED"))
+        conn.close()
+
     def test_fill_lot_date(self):
         conn = sqlite3.connect(":memory:")
         conn.executescript(build_db.SCHEMA)
@@ -199,6 +263,84 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual((count, hammer, wine), (1, 1, 1))
 
     def test_weinboerse(self):
+        # Real shape (not the old weinauktion-platform API this loader used
+        # to assume): a paginated export where each page embeds its own
+        # slice of the auction/catalog/part graph under "@related", and
+        # the lot description is one HTML blob to parse, not structured
+        # fields.
+        data = {
+            "@related": {
+                "auctions": [{"id": 1, "title": "Auktion 102",
+                              "startDate": "2020-11-14T00:00:00+00:00",
+                              "currency": "CHF"}],
+                "catalogs": [{"id": 1, "auctionId": 1}],
+                "parts": [{"id": 1, "auctionCatalogId": 1}],
+            },
+            "items": [
+                {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                 "description": ("Burgund rot / DOMAINE DUJAC<br />"
+                                  "Clos de la Roche gr.c., OHK<br />"
+                                  "Jahrgang: 2011<br /><b>3 Flaschen</b>"
+                                  "<br /><br /><b>Schätzpreis: 420 - 600 "
+                                  "CHF</b>"),
+                 "basePrice": 420, "upperBasePrice": 600,
+                 "hammerPrice": 540, "state": "sold"},
+            ],
+        }
+        count, hammer, wine = _run_loader(
+            "Weinboerse", "Resultfile1.json", data, "load_weinboerse")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_weinboerse_fields(self):
+        """Producer/vintage/quantity/size/OHK all come out of the blob."""
+        data = {
+            "@related": {
+                "auctions": [{"id": 1, "title": "Auktion 102",
+                              "startDate": "2020-11-14T00:00:00+00:00",
+                              "currency": "CHF"}],
+                "catalogs": [{"id": 1, "auctionId": 1}],
+                "parts": [{"id": 1, "auctionCatalogId": 1}],
+            },
+            "items": [
+                {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                 "description": ("Burgund rot / DOMAINE DUJAC<br />"
+                                  "Clos de la Roche gr.c., OHK<br />"
+                                  "Jahrgang: 2011<br /><b>3 Flaschen</b>"
+                                  "<br /><br /><b>Schätzpreis: 420 - 600 "
+                                  "CHF</b>"),
+                 "basePrice": 420, "upperBasePrice": 600,
+                 "hammerPrice": 540, "state": "sold"},
+            ],
+        }
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Weinboerse"), exist_ok=True)
+            with open(os.path.join(d, "Weinboerse", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_weinboerse(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT wine, producer, vintage, quantity, bottle_size_dl,"
+                " is_ohk, hammer_price, currency, region, color"
+                " FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, ("Clos de la Roche gr.c.", "DOMAINE DUJAC",
+                               2011, 3, 7.5, 1, 540.0, "CHF", "Burgund",
+                               "Rot"))
+
+    def test_weinboerse_also_loads_ci_fetcher_output(self):
+        """Going forward, the CI WeinauktionFetcher writes NEW auctions to
+        the lowercase "weinboerse/<id>.json" dir in the simpler {auction,
+        lots} shape (ingest/fetchers/weinauktion.py) -- a different
+        directory from the historical "Weinboerse/**/Resultfile*.json"
+        dump this loader primarily reads. Both must end up loaded."""
         data = {"auction": {"id": "627", "name": "eAuktion 116",
                             "date": "2026-01-31", "currency": "CHF"},
                 "lots": [{"lot_no": "1", "wine": "Barolo 2015",
@@ -209,6 +351,261 @@ class TestLoaderRoundtrip(unittest.TestCase):
             "weinboerse", "627.json", data, "load_weinboerse")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
 
+    def test_weinboerse_dedupes_rescraped_pages(self):
+        """Same (partId, id) key repeated byte-for-byte across pages (a
+        known re-scrape artifact, confirmed on the real archive) must only
+        load once, not once per occurrence."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "description": ("Burgund rot / DOMAINE DUJAC<br />"
+                                 "Clos de la Roche gr.c.<br />"
+                                 "Jahrgang: 2011<br /><b>3 Flaschen</b>"),
+                "basePrice": 420, "upperBasePrice": 600,
+                "hammerPrice": 540, "state": "sold"}
+        related = {"auctions": [{"id": 1, "title": "Auktion 102",
+                                 "startDate": "2020-11-14T00:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 1}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Weinboerse"), exist_ok=True)
+            for n in (1, 2, 3):
+                with open(os.path.join(d, "Weinboerse",
+                                       f"Resultfile{n}.json"),
+                          "w", encoding="utf-8") as fh:
+                    json.dump({"@related": related, "items": [item]}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_weinboerse(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            count = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+            conn.close()
+        self.assertEqual(count, 1)
+
+    def test_sylvies_txt_dedupes_a_block_repeated_within_one_file(self):
+        """A lot block repeated once inside an otherwise-unique file (a
+        page re-fetched on retry, printed twice -- confirmed on the real
+        archive: lot 1972 in 2018/May20218.txt) must only load once."""
+        block = ("\nLot Number: 1\nLot Name: 2007 Some Wine\n"
+                 "Lot Description: 1er Cru | Someone\n"
+                 "Lot Bottle: 3 Bottle\nLot Bottletype: \n"
+                 "Estimate: € 130 - € 180\nResult: € 170\n"
+                 "Lot My Bid: N/A\n")
+        text = block + "-" * 40 + block
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "sylvies"), exist_ok=True)
+            with open(os.path.join(d, "sylvies", "March2030.txt"),
+                      "w", encoding="utf-8") as fh:
+                fh.write(text)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_sylvies_txt(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            count = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+            conn.close()
+        self.assertEqual(count, 1)
+
+    def test_weinboerse_fetcher_output_supersedes_historical_dump(self):
+        """Once the CI fetcher has written its own file for a catalog, the
+        frozen historical dump's copy of that SAME auction must be
+        skipped -- not double-loaded on top of it. Catalog ids don't
+        cleanly partition from this dump's auction ids (168->167 etc. on
+        the real archive), so this has to be checked, not assumed."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "description": ("Burgund rot / DOMAINE DUJAC<br />"
+                                 "Clos de la Roche gr.c.<br />"
+                                 "Jahrgang: 2011<br /><b>3 Flaschen</b>"),
+                "basePrice": 420, "upperBasePrice": 600,
+                "hammerPrice": 540, "state": "sold"}
+        related = {"auctions": [{"id": 1, "title": "Auktion 102",
+                                 "startDate": "2020-11-14T00:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 1}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Weinboerse"), exist_ok=True)
+            with open(os.path.join(d, "Weinboerse", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": related, "items": [item]}, fh)
+            # The fetcher's own output for catalog id 1 -- filename is the
+            # catalog id (see data/orchestrate.py's default `_filename`).
+            with open(os.path.join(d, "Weinboerse", "1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "1", "name": "Auktion 102",
+                               "date": "2020-11-14", "currency": "CHF"},
+                    "lots": [{"lot_no": "1", "wine": "Clos de la Roche",
+                             "hammer_price": 540.0, "sold": 1,
+                             "currency": "CHF"}],
+                }, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_weinboerse(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            count = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+            conn.close()
+        self.assertEqual(count, 1)
+
+    def test_load_weinauktion_json_unsold_lot_price_basis_is_unknown(self):
+        """Senior-review finding: price_basis was hardcoded to "HAMMER"
+        regardless of sold state, unlike every other loader in this file
+        ("HAMMER" if sold else "UNKNOWN", e.g. load_koppe/load_dorotheum/
+        load_winefields). An unsold lot with no real hammer_price must
+        not be marked as if one were observed."""
+        data = {"auction": {"id": 1, "name": "Auktion", "date": None,
+                            "currency": "CHF"},
+                "lots": [{"lot_no": "1", "wine": "x", "hammer_price": None,
+                         "sold": False}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "weinboerse"), exist_ok=True)
+            with open(os.path.join(d, "weinboerse", "1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_weinauktion_json(builder, "weinboerse", None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT price_basis, sold FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, ("UNKNOWN", 0))
+
+    def test_load_weinauktion_json_skips_phantom_auction_files(self):
+        """A raw '@related'/'items'-shaped file (this house's own export,
+        not a run_ingest.py fetch) must not create a phantom auction with
+        id "None" -- that was the exact mechanism behind the original
+        "1 auction / 0 lots" weinboerse bug."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "weinboerse"), exist_ok=True)
+            with open(os.path.join(d, "weinboerse", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": {}, "items": []}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_weinauktion_json(builder, "weinboerse", None)
+            finally:
+                build_db.ARCHIVE = old
+            n_auctions = conn.execute(
+                "SELECT COUNT(*) FROM auctions").fetchone()[0]
+            conn.close()
+        self.assertEqual(n_auctions, 0)
+
+    def test_weinauktionator(self):
+        # Real shape (data/parse_results.py::parse_weinauktionator_xlsx's
+        # actual output, verified against all 30 archived xlsx files) --
+        # auction.id is always None; load_weinauktionator derives the real
+        # id from the filename ("results_<id>") instead.
+        data = {
+            "auction": {"id": None, "name": "Auktionsergebnisse: Test",
+                       "date": "2021-08-01", "source": "weinauktionator"},
+            "lots": [{"lot_no": "01868", "region": "Bordeaux",
+                      "wine": "Château Cheval Blanc, Ch. Cheval Blanc 1976",
+                      "hammer_price": 250.0,
+                      "format": "1 x 0.750 Château Cheval Blanc, "
+                                "Ch. Cheval Blanc 1976"}],
+        }
+        count, hammer, wine = _run_loader(
+            "weinauktionator", "weinauktionator_results_8.json", data,
+            "load_weinauktionator")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_christies_prefers_the_richer_year_month_subfolder_file(self):
+        """The archive keeps both the original flat-path scrape and a
+        later, richer re-scrape of the SAME sale under a year/month
+        subfolder (exact date_display, sale_total) -- not two different
+        auctions. Confirmed on real sale 20043: identical lot content,
+        the subfolder copy just has more metadata. Only one must load."""
+        old = {"auction": {"event_id": "20043", "title": "Fine and Rare "
+                           "Wines", "year": 2006, "month": 3,
+                           "location": "NewYork"},
+               "lots": [{"lot_number": "1", "title": "Dom Pérignon",
+                         "price_realised": "1292.0", "currency": "USD",
+                         "lot_withdrawn": False}]}
+        new = {"auction": {"event_id": "20043", "title": "Fine and Rare "
+                           "Wines", "year": 2006, "month": 3,
+                           "location": "New York", "date_display":
+                           "11 March"},
+               "lots": [{"lot_number": "1", "title": "Dom Pérignon",
+                         "price_realised": "1292.0", "currency": "USD",
+                         "lot_withdrawn": False}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Christies", "2006", "03_März"),
+                       exist_ok=True)
+            with open(os.path.join(d, "Christies", "20043.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(old, fh)
+            with open(os.path.join(d, "Christies", "2006", "03_März",
+                                   "20043.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(new, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old_archive = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_christies(builder, None)
+            finally:
+                build_db.ARCHIVE = old_archive
+            count = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+            location, date = conn.execute(
+                "SELECT location, auction_date FROM auctions").fetchone()
+            conn.close()
+        self.assertEqual(count, 1)
+        self.assertEqual(location, "New York")
+        self.assertEqual(date, "2006-03-11")
+
+    def test_christies_nlg_premium_rate_not_the_flat_25_percent(self):
+        """Historic NLG (pre-euro Amsterdam) lots used 20.825%, not the
+        25% wine rate -- 6,188 lots in the real archive carry currency
+        'NLG' and were silently getting the wrong rate."""
+        data = {"auction": {"event_id": "1", "title": "t", "year": 1995,
+                            "month": 1},
+                "lots": [{"lot_number": "1", "title": "Wine",
+                          "price_realised": "936.0", "currency": "NLG",
+                          "lot_withdrawn": False}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Christies"), exist_ok=True)
+            with open(os.path.join(d, "Christies", "1.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_christies(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            hammer = conn.execute(
+                "SELECT hammer_price FROM lots").fetchone()[0]
+            conn.close()
+        self.assertEqual(hammer, 774.67)  # 936 / 1.20825, not / 1.25
+
     def test_dobiaschofsky(self):
         data = {"auction": {"id": "wein", "name": None, "date": None},
                 "lots": [{"lot_nr": "12550", "name": "Domaine de la Romanee",
@@ -218,6 +615,502 @@ class TestLoaderRoundtrip(unittest.TestCase):
         count, hammer, wine = _run_loader(
             "Dobiaschofsky", "auktion-wein.json", data, "load_dobiaschofsky")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_steinfels_staging_dedupes_exact_row_repeats(self):
+        """Confirmed real case: the 04.05.2002 sheet in
+        vinoStagingFileSteinfels.xlsx repeats some lots' rows verbatim
+        11-12 times (a transcription artifact in that one worksheet, not
+        a loader bug -- one sheet, read once). The loader keeps only the
+        first occurrence per (lot_no, wine, vintage, quantity, region,
+        price) and leaves a genuinely different row sharing a lot_no
+        alone."""
+        import openpyxl
+
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "data"), exist_ok=True)
+            path = os.path.join(d, "data", "vinoStagingFileSteinfels.xlsx")
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Steinfels_04.05.2002"
+            header = ["name", "origin", "producer", "region", "vintage",
+                      "deciliters", "eventIdentifier", "isOHK", "noOfBottles",
+                      "providerOfferingId", "note", "offeringDate",
+                      "priceMin", "priceMax", "realizedPrice", "provider"]
+            ws.append(header)
+            repeated = ["Pommard", "null", "null", "null", "1970", "7.5",
+                        "null", "true", "12", "248", "null", "04.05.2002",
+                        "null", "null", "0", "Steinfels"]
+            for _ in range(11):
+                ws.append(repeated)
+            distinct_same_lot_no = ["Chambertin", "null", "null", "null",
+                                     "1983", "7.5", "null", "true", "4",
+                                     "248", "null", "04.05.2002", "null",
+                                     "null", "460", "Steinfels"]
+            ws.append(distinct_same_lot_no)
+            wb.save(path)
+
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old_repo = build_db.REPO
+            build_db.REPO = d
+            try:
+                build_db.load_steinfels_staging(builder, None)
+            finally:
+                build_db.REPO = old_repo
+            conn.commit()
+            rows = conn.execute(
+                "SELECT wine, hammer_price FROM lots ORDER BY wine"
+            ).fetchall()
+            conn.close()
+        self.assertEqual(
+            rows, [("Chambertin", 460.0), ("Pommard", 0.0)])
+
+    def test_munich_wine_company_reads_vintage_region_and_estimate(self):
+        """Live fetcher output (ingest/fetchers/munichwinecompany.py,
+        munichwinecompany.com's rebuilt cms.*.eu API) carries vintage/
+        region/estimate fields the old static-dump loader never read --
+        must come through, and an unsold lot (hammer_price None) must
+        not be mislabeled price_basis=HAMMER."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "MunichWineCompany"), exist_ok=True)
+            with open(os.path.join(d, "MunichWineCompany",
+                                   "auction-340.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "340", "title": "OA221", "date": None},
+                    "lots": [
+                        {"lot_no": 3, "name": "Pauillac 1er Cru Classe",
+                         "brand": "Ch. Mouton Rothschild", "vintage": "2020",
+                         "region": "Bordeaux, Frankreich",
+                         "count_fill": "1 Flasche", "hammer_price": "410.00",
+                         "estimate_low": 410, "estimate_high": 600},
+                        {"lot_no": 4, "name": "Pauillac 1er Cru Classe",
+                         "brand": "Ch. Mouton Rothschild", "vintage": "2019",
+                         "region": "Bordeaux, Frankreich",
+                         "count_fill": "1 Flasche", "hammer_price": None,
+                         "estimate_low": 420, "estimate_high": 620},
+                    ],
+                }, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_munich_wine_company(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            rows = conn.execute(
+                "SELECT lot_no, vintage, region, hammer_price, price_basis,"
+                " estimate_low, estimate_high FROM lots ORDER BY lot_no"
+            ).fetchall()
+            conn.close()
+        self.assertEqual(rows, [
+            ("3", 2020, "Bordeaux, Frankreich", 410.0, "HAMMER", 410.0,
+             600.0),
+            ("4", 2019, "Bordeaux, Frankreich", None, "UNKNOWN", 420.0,
+             620.0),
+        ])
+
+    def test_winebarrel_loads_fetcher_output_alongside_static_dump(self):
+        """The static winebarrel_lots.json dump and the live fetcher's
+        per-lot "<auction_id>.json" files (ingest/fetchers/winebarrel.py)
+        must both load into the same virtual "all" auction, with no
+        double-load if the fetcher ever re-covers an id already in the
+        static dump."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "winebarrel"), exist_ok=True)
+            with open(os.path.join(d, "winebarrel", "winebarrel_lots.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump([{"auction_id": 267, "name": "Old Static Lot",
+                           "winery": "X", "bottles": 1,
+                           "hammer_price": 100.0,
+                           "auction_end": "2019-03-29 18:05:05"}], fh)
+            # New fetched lot (not in the static dump).
+            with open(os.path.join(d, "winebarrel", "4183.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "4183", "name": None, "date": None},
+                    "lots": [{"lot_no": "4183", "wine": "New Fetched Lot",
+                             "producer": "Y", "quantity": "6",
+                             "bottle_size_dl": 7.5, "hammer_price": 360.0,
+                             "sold": 1, "auction_end": "2024-03-02",
+                             "currency": "CHF"}],
+                }, fh)
+            # A re-fetch of an id the static dump already covers -- must
+            # not be double-loaded.
+            with open(os.path.join(d, "winebarrel", "267.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "267", "name": None, "date": None},
+                    "lots": [{"lot_no": "267", "wine": "Old Static Lot",
+                             "hammer_price": 100.0, "sold": 1}],
+                }, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_winebarrel(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            rows = conn.execute(
+                "SELECT lot_no, wine FROM lots ORDER BY lot_no").fetchall()
+            conn.close()
+        self.assertEqual(rows, [("267", "Old Static Lot"),
+                                ("4183", "New Fetched Lot")])
+
+    def test_sylvies_fetched_json_parses_mixed_lot(self):
+        """Live fetcher output (ingest/fetchers/sylvies.py): a mixed lot
+        (several distinct wines sharing one lot number) must come out
+        fully -- the historic txt-captured archive's scraper only ever
+        read the first sub-wine (see load_sylvies_txt's module note),
+        this source never had that bug."""
+        data = {
+            "auction": {"id": "253",
+                       "name": "All lots in the auction of"
+                                " 15 - 17 October 2026"},
+            "lots": [{
+                "lot_no": "7",
+                "subs": [
+                    {"name": "1985 Château Grand Puy Ducasse",
+                     "description": "Pauillac | Mc",
+                     "bottle": "2 Bottle(s)", "bottle_type": "vts"},
+                    {"name": "1985 Château la Tour Carnet",
+                     "description": "Haut Médoc | Mc",
+                     "bottle": "2 Bottle(s)",
+                     "bottle_type": "1 neck, 1 vts"},
+                ],
+                "estimate_text": "€ 320 - € 480",
+                "result_text": "€ 340",
+            }],
+        }
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "sylvies"), exist_ok=True)
+            with open(os.path.join(d, "sylvies", "253.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_sylvies_fetched(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT a.auction_id, l.lot_no, l.wine, l.mixed_lot,"
+                " l.quantity, l.hammer_price FROM lots l"
+                " JOIN auctions a ON l.auction_id=a.id").fetchone()
+            conn.close()
+        self.assertEqual(row, (
+            "sylvies_2026-10", "7",
+            "1985 Château Grand Puy Ducasse; 1985 Château la Tour Carnet",
+            1, 4, 340.0))
+
+    def test_sylvies_fetched_title_uses_first_month_of_cross_month_span(self):
+        """Confirmed real case: a title spanning two months ("31 Aug & 1
+        Sep 2012") names the second month (abbreviated) right before
+        the year, but the archive's own bucketing convention uses the
+        FIRST day's month (the 2012 archive has "August2012.zip", no
+        "September2012.zip" for this exact auction) -- must key on
+        August, not September."""
+        data = {
+            "auction": {"id": "149",
+                       "name": "All lots in the auction of"
+                                " 31 Aug & 1 Sep 2012"},
+            "lots": [{"lot_no": "1", "subs": [{"name": "2010 Some Wine"}],
+                      "estimate_text": None, "result_text": None}],
+        }
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "sylvies"), exist_ok=True)
+            with open(os.path.join(d, "sylvies", "149.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_sylvies_fetched(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            auction_id = conn.execute(
+                "SELECT auction_id FROM auctions").fetchone()[0]
+            conn.close()
+        self.assertEqual(auction_id, "sylvies_2012-08")
+
+    def test_sylvies_fetched_covers_txt_month_to_avoid_double_load(self):
+        """load_sylvies_fetched must run before load_sylvies_txt so the
+        shared "sylvies_<year>-<month>" auction_id is already taken --
+        _sylvies_html_covered_months then makes load_sylvies_txt skip
+        that month instead of double-loading it from the lower-fidelity
+        capture (same mechanism as the html-vs-txt dedup it already
+        did)."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "sylvies"), exist_ok=True)
+            with open(os.path.join(d, "sylvies", "253.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "253",
+                               "name": "All lots in the auction of"
+                                        " 15 - 17 October 2026"},
+                    "lots": [{"lot_no": "1",
+                             "subs": [{"name": "2020 Some Wine"}],
+                             "estimate_text": None, "result_text": None}],
+                }, fh)
+            with open(os.path.join(d, "sylvies", "October2026.txt"),
+                      "w", encoding="utf-8") as fh:
+                fh.write("\nLot Number: 1\nLot Name: 2020 Other Wine\n"
+                        "Lot Description: \nLot Bottle: 1 Bottle(s)\n"
+                        "Lot Bottletype: \nEstimate: \nResult: \n")
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_sylvies_fetched(builder, None)
+                build_db.load_sylvies_txt(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            auctions = conn.execute(
+                "SELECT COUNT(*) FROM auctions WHERE auction_id="
+                "'sylvies_2026-10'").fetchone()[0]
+            wine = conn.execute(
+                "SELECT wine FROM lots").fetchone()[0]
+            conn.close()
+        self.assertEqual(auctions, 1)
+        self.assertEqual(wine, "Some Wine")
+
+    def test_steinfels_resultfile_json_parses_historical_dump(self):
+        """The historical raw export of the weinauktion platform's own
+        paginated API response (confirmed: 3,904 files, 2016-2026) --
+        same shape load_weinboerse already handles, but steinfels never
+        had an equivalent loader at all, which is why its data looked
+        "frozen since 2016" (the house itself is very much still
+        running -- "eAuktion 125" as of 2026-11-01)."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "shortDescription": "", "description": "Château X, 2015",
+                "basePrice": 100, "upperBasePrice": 180,
+                "hammerPrice": 150, "state": "sold"}
+        related = {"auctions": [{"id": 408, "title": "Auktion 408",
+                                 "startDate": "2023-06-09T08:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 408}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Steinfels"), exist_ok=True)
+            with open(os.path.join(d, "Steinfels", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": related, "items": [item]}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_steinfels_resultfile_json(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT a.auction_id, a.title, l.lot_no, l.wine, l.vintage,"
+                " l.estimate_low, l.estimate_high, l.hammer_price, l.sold"
+                " FROM lots l JOIN auctions a ON l.auction_id=a.id").fetchone()
+            conn.close()
+        self.assertEqual(row, ("api-408", "Auktion 408", "1",
+                               "Château X, 2015", 2015, 100.0, 180.0,
+                               150.0, 1))
+
+    def test_steinfels_resultfile_json_zero_is_not_a_real_estimate(self):
+        """Confirmed real case: upperBasePrice is exactly 0.0 for 26% of
+        a random sample of real items, always paired with
+        basePrice == startingBid -- a null sentinel (no estimate was
+        ever entered), not a genuine CHF-0 estimate."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "description": "Some wine", "basePrice": 10,
+                "upperBasePrice": 0, "startingBid": 10,
+                "hammerPrice": 62, "state": "sold"}
+        related = {"auctions": [{"id": 8, "title": "eAuktion 8",
+                                 "startDate": "2017-01-31T00:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 8}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Steinfels"), exist_ok=True)
+            with open(os.path.join(d, "Steinfels", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": related, "items": [item]}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_steinfels_resultfile_json(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT estimate_low, estimate_high FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, (10.0, None))
+
+    def test_steinfels_api_auction_id_does_not_collide_with_xlsx_aid(self):
+        """Confirmed real case: the platform's own auction id (e.g. 321,
+        a 2023-era sale) can coincidentally equal the unrelated
+        sequential file number of a 2002-03 XLSX batch file
+        (results_321.xlsx) -- without the aid_prefix, both landed under
+        one auction_id "321" and merged unrelated lots together under
+        duplicate lot numbers."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "description": "Unrelated 2023 wine", "basePrice": 100,
+                "upperBasePrice": 150, "hammerPrice": 120, "state": "sold"}
+        related = {"auctions": [{"id": 321, "title": "eAuktion 89",
+                                 "startDate": "2023-01-01T00:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 321}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Steinfels"), exist_ok=True)
+            with open(os.path.join(d, "Steinfels", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": related, "items": [item]}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            # The XLSX-sourced auction, same bare auction_id "321".
+            builder.add_auction("steinfels", "321", "321", "2003-01-01",
+                               "CHF", "HAMMER")
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_steinfels_resultfile_json(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            auction_ids = {r[0] for r in conn.execute(
+                "SELECT auction_id FROM auctions")}
+            conn.close()
+        self.assertEqual(auction_ids, {"321", "api-321"})
+
+    def test_zacky_prefers_sale_no_over_colliding_wayback_id(self):
+        """Confirmed real case: the wayback-generation archive (id 19-287,
+        Zachys' own auctionid) and the later, richer "structured"
+        generation (its own small sequential id, 56-169, plus a stable
+        sale_no) collide on id "72" for 87 of 97 structured files --
+        two unrelated real auctions get merged into one. sale_no is
+        unique and never collides with a wayback id; preferring it keeps
+        the two auctions apart."""
+        wayback = {"auction": {"id": 72, "name": "zCollections, June",
+                                "source": "wayback", "year": 2020,
+                                "month": 6},
+                   "lots": [{"lot_no": "1", "name": "Ausone 2000",
+                             "final_price": 930.0}]}
+        structured = {"auction": {"id": 72, "name": "zCollections, August",
+                                   "sale_no": "2409i"},
+                      "lots": [{"lot_no": "1", "name": "Cheval Blanc 1970",
+                                "final_price": 300.0}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Zacky"), exist_ok=True)
+            with open(os.path.join(d, "Zacky", "auction-72-old.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(wayback, fh)
+            with open(os.path.join(d, "Zacky", "auction-72-new.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(structured, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_zacky(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            conn.commit()
+            rows = conn.execute(
+                "SELECT auction_id, title FROM auctions ORDER BY auction_id"
+            ).fetchall()
+            conn.close()
+        self.assertEqual(
+            rows, [("2409i", "zCollections, August"),
+                   ("72", "zCollections, June")])
+
+    def test_dedupe_munich_lots(self):
+        """Confirmed real cases in the MunichWineCompany archive: an
+        exact byte-for-byte repeat (auction-111.json lot "81") is
+        dropped to one row; a lot scraped both before and after the
+        sale closed -- same wine/count_fill/description, one copy with
+        price_text="" and hammer_price=None, the other populated
+        (auction-89.json lot "101") -- keeps only the populated copy;
+        and a reused lot_no that genuinely differs (auction-65.json's
+        "9999" catch-all across four unrelated wines) is left alone."""
+        exact_dup = {"lot_no": "81", "name": "Pichon Baron", "count_fill": "3",
+                     "description": "d", "hammer_price": 490.0,
+                     "price_text": "x"}
+        before_close = {"lot_no": "101", "name": "Pichon Baron 1989",
+                         "count_fill": "3", "description": "d",
+                         "hammer_price": None, "price_text": ""}
+        after_close = {"lot_no": "101", "name": "Pichon Baron 1989",
+                        "count_fill": "3", "description": "d",
+                        "hammer_price": 440.0, "price_text": "x"}
+        sentinel_a = {"lot_no": "9999", "name": "Wine A", "count_fill": "1",
+                      "description": "a", "hammer_price": 50.0}
+        sentinel_b = {"lot_no": "9999", "name": "Wine B", "count_fill": "6",
+                      "description": "b", "hammer_price": 80.0}
+        deduped = build_db._dedupe_munich_lots(
+            [exact_dup, dict(exact_dup), before_close, after_close,
+             sentinel_a, sentinel_b])
+        self.assertEqual(len(deduped), 4)
+        lot_101 = [l for l in deduped if l["lot_no"] == "101"]
+        self.assertEqual(lot_101, [after_close])
+        lot_9999 = [l for l in deduped if l["lot_no"] == "9999"]
+        self.assertEqual(len(lot_9999), 2)
+
+    def test_resolve_christies_ditto_lots(self):
+        """Confirmed real case: auction 10025 (2000/01_Januar) lot 11 is
+        "Armagnac--Vintage 1982" (Chateau de Lacaze); lots 12-14 are each
+        literally "1 ^,,^^,,^" (Christie's own ditto-mark convention for
+        "same wine as above", kept as literal glyphs by the scrape). Also
+        confirmed: auction 5689 (1998/02_Februar) uses an outright empty
+        title for the same convention (lot 169 after "Cote de Beaune.
+        Ramonet"). Both styles must inherit the nearest preceding lot
+        that actually has letters in its title; a ditto lot must never
+        become the new reference for lots after it."""
+        real_11 = {"lot_number": "11", "title": "Armagnac--Vintage 1982",
+                   "description": "Armagnac--Vintage 1982 1 dozen bottles",
+                   "price_realised": "100.0"}
+        ditto_12 = {"lot_number": "12", "title": "1 ^,,^^,,^",
+                    "description": "1 ^,,^^,,^", "price_realised": "90.0"}
+        ditto_13 = {"lot_number": "13", "title": "1 ^,,^^,,^",
+                    "description": "1 ^,,^^,,^", "price_realised": "80.0"}
+        real_16 = {"lot_number": "16", "title": "Eau de Vie",
+                   "description": "Eau de Vie 2 bottles",
+                   "price_realised": "70.0"}
+        empty_17 = {"lot_number": "17", "title": "",
+                    "description": "Above 4 bottles per lot",
+                    "price_realised": "60.0"}
+        resolved = build_db._resolve_christies_ditto_lots(
+            [real_11, ditto_12, ditto_13, real_16, empty_17])
+        titles = [l["title"] for l in resolved]
+        self.assertEqual(titles, ["Armagnac--Vintage 1982"] * 3
+                          + ["Eau de Vie"] * 2)
+        self.assertEqual(resolved[1]["description"],
+                          "Armagnac--Vintage 1982 1 dozen bottles")
+        # The lot's own price is never touched by the inheritance.
+        self.assertEqual(resolved[1]["price_realised"], "90.0")
+
+    def test_resolve_christies_ditto_lots_no_preceding_real_lot(self):
+        """A ditto run with nothing real before it (none observed in the
+        archive, but possible in principle at the very start of a sale)
+        is left untouched -- not a regression, same as before this fix."""
+        ditto_only = {"lot_number": "1", "title": "1 ^,,^^,,^",
+                      "description": "1 ^,,^^,,^"}
+        resolved = build_db._resolve_christies_ditto_lots([ditto_only])
+        self.assertEqual(resolved, [ditto_only])
 
     def test_backfill_wine_ref_uses_alias_key(self):
         conn = sqlite3.connect(":memory:")

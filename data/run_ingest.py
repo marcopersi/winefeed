@@ -31,14 +31,28 @@ MANIFEST_PATH = os.environ.get("MANIFEST_PATH",
 PROVIDERS = [
     "steinfels", "weinboerse", "weinauktionator", "hdh", "koppe",
     "langtons", "winefields", "dorotheum", "pandolfini",
-    "finarte", "besch-cannes", "dobiaschofsky",
+    "finarte", "besch-cannes", "dobiaschofsky", "winebarrel",
+    "denzauktionen", "munich-wine-company", "franzwermuth", "baghera",
+    # christies: plain curl_cffi scrape, no login, no WAF -- discover() was
+    # rebuilt Nov 2026 (christies.com moved to the Next.js App Router,
+    # breaking the old regex) to read /en/calendar, which already dedupes
+    # correctly against the same shared manifest as the historical
+    # backfill (run_christies_backfill.py), so running both is safe.
+    "christies",
     # Sothebys needs camoufox (heavy) + a residential IP to solve the
     # Cloudflare Turnstile login; it only runs locally, not in CI.
     "sothebys",
+    # sylvies needs camoufox too (Azure WAF JS challenge), but only for the
+    # one-time login -- cookies then survive on a plain curl_cffi session
+    # for every subsequent request (see ingest/fetchers/sylvies.py). camoufox
+    # isn't in data/requirements.txt (not installed in CI), and whether the
+    # WAF challenge itself would even pass from a GitHub Actions runner IP
+    # is unverified -- so, like sothebys, this runs locally only for now.
+    "sylvies",
 ]
-# christies is deliberately not in PROVIDERS: its historical backfill runs
-# locally (run_christies_backfill.py) against the same shared manifest, and
-# running it in CI too would double-fetch / skip lots across the two archives.
+# christies IS in PROVIDERS now (Nov 2026) -- see the comment on its entry
+# above. run_christies_backfill.py remains for occasional re-backfills; it
+# shares the same manifest so the two never double-fetch.
 # idealwine is deliberately not listed: it runs via run_idealwine_delta.py
 # (Algolia -> normalize -> diff -> direct DB append), not the build_db chain.
 
@@ -53,7 +67,8 @@ def _env():
                 if "=" in line and not line.startswith("#"):
                     k, v = line.split("=", 1)
                     env[k.strip()] = v.strip()
-    prefixes = ("IDEALWINE_", "PANDOLFINI_", "SOTHEBYS_", "FINARTE_")
+    prefixes = ("IDEALWINE_", "PANDOLFINI_", "SOTHEBYS_", "FINARTE_",
+                "SYLVIES_")
     env.update({k: v for k, v in os.environ.items()
                 if k.startswith(prefixes)})
     return env

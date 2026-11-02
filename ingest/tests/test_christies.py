@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest.mock import patch
 
@@ -7,19 +8,48 @@ from ingest.fetchers.christies import (
     _validate_backfill_meta,
 )
 
-RESULTS_HTML = (
-    '\\"department\\":\\"Wine \\u0026 Spirits\\",\\"saleNumber\\":\\"24465\\",'
-    '\\"saleId\\":\\"31122\\"'
-    '\\"department\\":\\"Watches \\u0026 Wristwatches\\",\\"saleNumber\\":'
-    '\\"24477\\",\\"saleId\\":\\"31133\\"'
-    '\\"department\\":\\"Wine \\u0026 Spirits\\",\\"saleNumber\\":\\"24465\\",'
-    '\\"saleId\\":\\"31122\\"')
+
+def _rsc_html(*json_fragments):
+    """Build a fake /en/calendar page: one self.__next_f.push([1,"..."])
+    script tag per fragment, JS-string-escaped like the real payload."""
+    tags = []
+    for fragment in json_fragments:
+        escaped = json.dumps(fragment)[1:-1]
+        tags.append(f'<script>self.__next_f.push([1,"{escaped}"])</script>')
+    return "\n".join(tags)
+
+
+# Real shape confirmed live (Nov 2026) on christies.com/en/calendar: one
+# closed Wine & Spirits sale (discoverable), one closed non-wine sale
+# (excluded by department), one Wine & Spirits sale that hasn't closed yet
+# (excluded by endDate -- fetching it early would return lots with every
+# price_realised empty, bidding still open).
+CALENDAR_HTML = _rsc_html(
+    '{"followAnalyticsMetadata":{"department":"Wine & Spirits",'
+    '"saleNumber":"24465","saleId":"31122","location":"Hong Kong",'
+    '"saleType":"live","startDate":"2020-06-01","endDate":"2020-06-01"}}',
+    '{"followAnalyticsMetadata":{"department":"Watches & Wristwatches",'
+    '"saleNumber":"24477","saleId":"31133","location":"Geneva",'
+    '"saleType":"live","startDate":"2020-06-02","endDate":"2020-06-02"}}',
+    '{"followAnalyticsMetadata":{"department":"Wine & Spirits",'
+    '"saleNumber":"99999","saleId":"88888","location":"London",'
+    '"saleType":"online","startDate":"2099-01-01","endDate":"2099-01-15"}}',
+)
 
 AUCTION_HTML = (
     '{"sale_id":"31122","sale_location":"HongKong",'
     '"sale_number":"24465","sale_room_code":"HGK",'
     '"title":"The Cellar of the Hon. Henry Tang",'
     '"auction_status":{"start_date":"2026-10-10T00:00Z"}}')
+
+# Confirmed real (Nov 2026): the newer "online" sale template's landing
+# page embeds title/sale_location/start_date server-side, same as above,
+# but NOT sale_id/sale_number/sale_room_code -- those three are only
+# ever reachable via client-side JS on this template.
+ONLINE_AUCTION_HTML = (
+    '{"title":"Fine & Rare Wines Online: Los Angeles Edition",'
+    '"sale_location":"Los Angeles",'
+    '"auction_status":{"start_date":"2026-10-27T14:00:00.000Z"}}')
 
 LOT = {
     "lot_id_txt": "1",
@@ -53,14 +83,16 @@ class FakeSession:
         self._pages = lotsearch_pages or []
         self._url_responses = url_responses or {}
         self.request_log = []
+        self.lotsearch_params_log = []
 
     def get(self, url, params=None, headers=None):  # pylint: disable=unused-argument
         self.request_log.append(url)
         if url in self._url_responses:
             return self._url_responses[url]
-        if "/en/results" in url:
+        if "/en/calendar" in url:
             return FakeResponse(text=self._results)
         if "lotsearch" in url:
+            self.lotsearch_params_log.append(params)
             if self._pages:
                 return FakeResponse(payload=self._pages.pop(0))
             return FakeResponse(payload={"lots": [], "total_hits_filtered": 0})
@@ -68,10 +100,29 @@ class FakeSession:
 
 
 class TestChristies(unittest.TestCase):
-    def test_discover_filters_wine_auctions(self):
+    def test_discover_filters_wine_auctions_closed_only(self):
         f = ChristiesFetcher()
-        refs = f.discover(FakeSession(results=RESULTS_HTML))
+        refs = f.discover(FakeSession(results=CALENDAR_HTML))
         self.assertEqual([r.auction_id for r in refs], ["31122"])
+
+    def test_auction_meta_falls_back_to_salenumber_from_ref_url(self):
+        """Confirmed real: the "online" sale template's landing page has
+        no sale_number anywhere -- discover() carries it through as a
+        query param on ref.url instead."""
+        from ingest.fetchers.christies import _auction_meta
+        from ingest.models import AuctionRef
+        ref = AuctionRef(
+            "christies", "31293",
+            url="https://www.christies.com/en/auction/auction-31293"
+                "?saleNumber=24671")
+        meta = _auction_meta(ONLINE_AUCTION_HTML, ref)
+        self.assertEqual(meta["sale_number"], "24671")
+        self.assertEqual(meta["sale_id"], "31293")
+        self.assertEqual(meta["title"],
+                         "Fine & Rare Wines Online: Los Angeles Edition")
+        self.assertEqual(meta["location"], "Los Angeles")
+        self.assertEqual(meta["year"], 2026)
+        self.assertEqual(meta["month"], 10)
 
     def test_fetch_maps_lots(self):
         f = ChristiesFetcher()

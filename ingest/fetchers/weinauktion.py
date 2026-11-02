@@ -11,7 +11,7 @@ import re
 
 from ..models import AuctionRef, FetchResult
 
-API_VERSION = "1.14"
+API_VERSION = "2.3"
 PAGE_SIZE = 50
 
 
@@ -110,6 +110,12 @@ class WeinauktionFetcher:
             "hammer_price": lot.get("hammerPrice"),
             "sold": 1 if lot.get("state") == "sold" else 0,
             "currency": currency,
+            # Preserved for a future richer re-parse (see
+            # data/build_db.py's weinboerse description parser) -- the
+            # flattened "wine" text above loses the structured
+            # producer/quantity/OHK fields a fuller parse could recover,
+            # so the raw HTML is kept rather than discarded at this layer.
+            "description": lot.get("description"),
         }
 
 

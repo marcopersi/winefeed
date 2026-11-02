@@ -19,9 +19,12 @@ FILE_PARSERS = {
 
 # Provider -> archive directory name. Fetchers use lowercase provider names,
 # but the loaders in build_db.py read from CamelCase directories. Without this
-# mapping, freshly fetched JSONs would land in a directory the loader never
-# reads. Every provider listed here emits the canonical {auction, lots}
-# format; providers whose fetcher is not yet normalized must not be added.
+# mapping, freshly fetched results would land in a directory the loader never
+# reads. Every provider listed here emits either the canonical {auction, lots}
+# JSON format or raw binary files (XLSX/PDF) routed through _store_binary for
+# an existing file-based loader to parse (e.g. denzauktionen below); a
+# provider whose fetcher is not yet normalized to one of those two paths must
+# not be added.
 ARCHIVE_DIRS = {
     "hdh": "HDH",
     "langtons": "Langtons",
@@ -34,6 +37,22 @@ ARCHIVE_DIRS = {
     "dobiaschofsky": "Dobiaschofsky",
     "koppe": "Koppe",
     "christies": "Christies",
+    # denzauktionen is the live successor to the Wermuth/Denz PDF archive
+    # (see ingest/fetchers/denzauktionen.py) -- it's a binary (PDF) fetcher,
+    # so FILE_PARSERS doesn't apply; its raw PDFs just need to land in the
+    # SAME "Denz" directory load_denz_wermuth already reads, feeding the
+    # existing "wermuth-sa" DB provider rather than a new one.
+    "denzauktionen": "Denz",
+    "munich-wine-company": "MunichWineCompany",
+    # franzwermuth.ch: own house, own loader (load_franzwermuth) -- a
+    # binary (PDF) fetcher like denzauktionen above, not {auction, lots}
+    # JSON.
+    "franzwermuth": "FranzWermuth",
+    # baghera: PDF fetcher like denzauktionen/franzwermuth above, feeding
+    # the existing "baghera" DB provider's load_baghera (which also reads
+    # the 29 legacy pre-parsed {auction, lots} JSON files from the same
+    # directory -- see build_db.py).
+    "baghera": "Baghera",
 }
 
 
@@ -101,9 +120,14 @@ def _store_json(provider, result, archive_path):
 
 def _store_binary(provider, result, archive_path):
     directory = os.path.join(archive_path, _archive_dir(provider))
-    os.makedirs(directory, exist_ok=True)
-    with open(os.path.join(directory, result.filename or result.auction_id),
-              "wb") as fh:
+    full_path = os.path.join(directory, result.filename or result.auction_id)
+    # A filename may itself contain a subdirectory (e.g. denzauktionen's
+    # "live/<n>_Resultate.pdf" -- load_denz_wermuth only recurses into
+    # actual subdirectories of its archive root, so a file dropped
+    # directly there would never be found). makedirs on the full parent
+    # is a no-op for every other provider's flat filenames.
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+    with open(full_path, "wb") as fh:
         fh.write(result.content)
 
 
@@ -147,6 +171,7 @@ def _is_valid(result):
 _JSON_FILENAMES = {
     "besch-cannes": lambda ref: f"auction-{ref.auction_id}.json",
     "dobiaschofsky": lambda ref: f"auktion-{ref.auction_id}.json",
+    "munich-wine-company": lambda ref: f"auction-{ref.auction_id}.json",
 }
 
 

@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/api": "http://localhost:8081",
-      "/prices": "http://localhost:8081",
+      "/search": "http://localhost:8000",
+      "/wines": "http://localhost:8000",
     },
   },
   test: {

@@ -61,5 +61,40 @@ class TestBottleFormat(unittest.TestCase):
                          (2, 7.5))
 
 
+class TestStripBottleFormat(unittest.TestCase):
+    """Confirmed real case: "Sassicaia" vs. "Sassicaia (2 BT)" vs.
+    "Sassicaia (3 BT)" fragment into separate wines rows for the same
+    real wine because the bottle-format hint was never removed from the
+    name used to build alias_key."""
+
+    def test_strips_trailing_bracket(self):
+        self.assertEqual(b.strip_bottle_format("Sassicaia (2 BT)"),
+                          "Sassicaia")
+
+    def test_strips_mid_name_bracket(self):
+        self.assertEqual(
+            b.strip_bottle_format("Sassicaia (6 BT) 1990"), "Sassicaia 1990")
+
+    def test_strips_plain_form(self):
+        self.assertEqual(b.strip_bottle_format("Krug 1 Magnum"), "Krug")
+
+    def test_strips_liter_form(self):
+        self.assertEqual(b.strip_bottle_format("Petrus 2014 3 Ltr"),
+                          "Petrus 2014")
+
+    def test_no_match_is_unchanged(self):
+        self.assertEqual(b.strip_bottle_format("Château Margaux"),
+                          "Château Margaux")
+
+    def test_label_state_code_not_stripped(self):
+        self.assertEqual(
+            b.strip_bottle_format("Pomerol (e.t.h dont 1 e.t.a)"),
+            "Pomerol (e.t.h dont 1 e.t.a)")
+
+    def test_empty_is_unchanged(self):
+        self.assertEqual(b.strip_bottle_format(""), "")
+        self.assertIsNone(b.strip_bottle_format(None))
+
+
 if __name__ == "__main__":
     unittest.main()
