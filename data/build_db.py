@@ -568,13 +568,97 @@ def _json_files(house, pattern=None):
             and not f.endswith("wines_directory.json")]
 
 
+# --- baghera.ch live PDF parsing ------------------------------------- #
+# The 29 legacy auctions (ids 25-175) were captured by a now-lost ad-hoc
+# script as pre-parsed JSON with hammer/buyer_premium/total_price already
+# split out, using Baghera's own stated 22% buyer's premium rate (see
+# PREMIUM_POLICY["baghera"]). The live fetcher (ingest/fetchers/baghera.py)
+# instead downloads the raw results PDF -- which only ever prints ONE
+# number per lot (the combined hammer+premium "RESULT (CHF)"/"PRICE
+# (CHF)"), never a hammer/premium breakdown. Reverse-deriving a hammer
+# price from that one number via the 22% rate would be inventing data the
+# source document doesn't contain, so new auctions are loaded as
+# HAMMER_PLUS_BUYERS_PREMIUM (realised_price only, hammer_price left NULL)
+# -- the same convention load_zacky/load_hdh already use for "only the
+# combined total is known". This means baghera auctions from before vs.
+# after this fetcher existed carry different price_basis values; that is
+# a real, intentional difference, not a bug.
+_BAG_ROW_RE = re.compile(
+    r"^\s*(\d+)\s+(.+?)\s{2,}(Unsold|\d[\d'’]*(?:\.\d+)?)\s*$",
+    re.IGNORECASE)
+_BAG_ROW_FALLBACK_RE = re.compile(r"^\s*(\d+)\s+(.+\S)\s*$")
+_BAG_MONEY_RE = re.compile(r"^\d[\d'’]*(?:\.\d+)?$")
+_BAG_FILENAME_RE = re.compile(r"(\d+)(?:_(\d{8}))?_results\.pdf$")
+_BAG_HEADER_CUR_RE = re.compile(r"\(([A-Z]{3})\)")
+
+
+def _bag_money(tok):
+    if not tok or not _BAG_MONEY_RE.match(tok):
+        return None
+    return to_float(tok.replace("’", "").replace("'", ""))
+
+
+def _bag_parse_rows(text):
+    """Parse a baghera results PDF's lot rows.
+
+    Confirmed real cases (checked across sales spanning 2018-2026):
+    - a sold lot's row ends in an apostrophe-thousands money token
+      ("42’700", "7'320.00") -- both the U+2019 and plain ASCII
+      apostrophe appear, depending on the sale's PDF generator era;
+    - an unsold lot's row ends in the literal word "Unsold" instead of a
+      number (confirmed on a ~500-lot mixed-cellar sale; the icon
+      single-owner sales checked all sold 100%, so show no "Unsold" rows
+      at all);
+    - occasionally an unsold lot's row has NO trailing token whatsoever
+      (confirmed: a PDF rendering gap, not a different kind of lot --
+      it sits among otherwise-identical "Unsold" neighbours in the same
+      sale) -- the fallback regex below still captures the lot number and
+      description for these, with no price, same as an explicit "Unsold".
+    The strict money pattern (no comma) matters: a description ending in
+    a bare multi-vintage list like "13,14,15,17,18" must NOT be mistaken
+    for a price -- to_float()'s own comma-handling would silently turn
+    that into 17.18.
+    """
+    rows = []
+    for line in text.splitlines():
+        m = _BAG_ROW_RE.match(line)
+        if m:
+            lot_no, desc, price_tok = m.groups()
+            if price_tok.lower() == "unsold":
+                price, sold = None, 0
+            else:
+                price = _bag_money(price_tok)
+                sold = 1 if price is not None else 0
+            rows.append({
+                "lot_no": lot_no, "description": desc.strip(),
+                "realised_price": price, "sold": sold})
+            continue
+        m2 = _BAG_ROW_FALLBACK_RE.match(line)
+        if m2:
+            lot_no, desc = m2.groups()
+            rows.append({
+                "lot_no": lot_no, "description": desc.strip(),
+                "realised_price": None, "sold": 0})
+    return rows
+
+
+def _bag_title(text):
+    for line in text.splitlines():
+        s = line.strip()
+        if s and s != "—":
+            return s
+    return None
+
+
 def load_baghera(b, limit):
     n = 0
+    seen_ids = set()
     for f in _json_files("Baghera", "**/auction-*.json"):
         d = load_json(f)
         b.set_source(f)
         a = d.get("auction", {})
         aid = str(a.get("id"))
+        seen_ids.add(aid)
         cur = a.get("currency") or "CHF"
         a_id = b.add_auction(
             "baghera", aid, a.get("title"), ym_date(a.get("year"), a.get("month")),
@@ -590,7 +674,46 @@ def load_baghera(b, limit):
             })
         n += 1
         if limit and n >= limit:
-            break
+            return
+
+    for f in sorted(glob.glob(os.path.join(ARCHIVE, "Baghera", "live", "*.pdf"))):
+        fm = _BAG_FILENAME_RE.search(os.path.basename(f))
+        if not fm:
+            continue
+        aid, ymd = fm.groups()
+        if aid in seen_ids:
+            # Defensive dedup beyond the ingest manifest: never double-load
+            # a legacy id even if a live PDF for it somehow also exists.
+            continue
+        text = _wermuth_pdf_text(f)
+        rows = _bag_parse_rows(text)
+        if not rows:
+            # Confirmed real: a sale whose results aren't published yet
+            # still gets a RuntimeError from the fetcher (so it's never
+            # archived) -- but guard here too in case a PDF ever has a
+            # catalog-only layout with no lot rows.
+            continue
+        seen_ids.add(aid)
+        b.set_source(f)
+        title = _bag_title(text)
+        cur_m = _BAG_HEADER_CUR_RE.search(text)
+        cur = cur_m.group(1) if cur_m else "CHF"
+        date = (f"{ymd[0:4]}-{ymd[4:6]}-{ymd[6:8]}" if ymd else None)
+        a_id = b.add_auction(
+            "baghera", aid, title, date, cur,
+            "HAMMER_PLUS_BUYERS_PREMIUM",
+            f"https://www.bagherawines.auction/fr/catalogue/voir/{aid}")
+        for row in rows:
+            b.add_lot(a_id, {
+                "lot_no": row["lot_no"], "wine": None,
+                "description": row["description"],
+                "realised_price": row["realised_price"],
+                "price_basis": "HAMMER_PLUS_BUYERS_PREMIUM",
+                "currency": cur, "sold": row["sold"],
+            })
+        n += 1
+        if limit and n >= limit:
+            return
 
 
 def load_hdh(b, limit):

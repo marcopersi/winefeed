@@ -1,4 +1,5 @@
 """Fetcher registry."""
+from .baghera import BagheraFetcher
 from .beschcannes import BeschCannesFetcher
 from .christies import (ChristiesFetcher, MalformedResponse, MetaInvalid,
                         ReconciliationMismatch)
@@ -21,6 +22,7 @@ from .winebarrel import WinebarrelFetcher
 from .winefields import WinefieldsFetcher
 
 FETCHERS = {
+    "baghera": BagheraFetcher(),
     "steinfels": WeinauktionFetcher(
         provider="steinfels", base_url="https://auktionen.steinfelsweine.ch"),
     "weinboerse": WeinauktionFetcher(

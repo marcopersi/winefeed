@@ -48,6 +48,11 @@ ARCHIVE_DIRS = {
     # binary (PDF) fetcher like denzauktionen above, not {auction, lots}
     # JSON.
     "franzwermuth": "FranzWermuth",
+    # baghera: PDF fetcher like denzauktionen/franzwermuth above, feeding
+    # the existing "baghera" DB provider's load_baghera (which also reads
+    # the 29 legacy pre-parsed {auction, lots} JSON files from the same
+    # directory -- see build_db.py).
+    "baghera": "Baghera",
 }
 
 

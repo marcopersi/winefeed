@@ -1,4 +1,152 @@
 {
+  "baghera": {
+    "100": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "102": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "113": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "120": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "131": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "134": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "136": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "140": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "144": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "153": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "174": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "175": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "25": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "27": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "32": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "38": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "40": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "50": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "57": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "61": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "65": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "67": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "75": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "78": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "82": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "87": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "88": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "93": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "94": {
+      "etag": "",
+      "fetched_at": "static-archive-preseed",
+      "url": ""
+    },
+    "__last_run_at__": "2026-11-02T13:32:51.893825+00:00"
+  },
   "besch-cannes": {
     "397": {
       "etag": "",
