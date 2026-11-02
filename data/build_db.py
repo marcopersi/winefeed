@@ -1547,12 +1547,17 @@ def _dedupe_munich_lots(lots):
     touching genuinely different lots that happen to share a lot_no --
     e.g. auction-65.json's "9999" catch-all (four unrelated wines) or
     auction-124.json lot "153" (two different vintages in the name
-    text) keep their own key and are left alone."""
+    text) keep their own key and are left alone. ``vintage`` is included
+    in the key too: the live fetcher (ingest/fetchers/munichwinecompany.py)
+    carries it as its own field rather than baked into ``name``/
+    ``description`` text, so two genuinely distinct lots that happen to
+    share a lot_no/name/count_fill/description but differ in vintage
+    must not collapse into one row."""
     best = {}
     order = []
     for lot in lots:
         key = (lot.get("lot_no"), lot.get("name"), lot.get("count_fill"),
-               lot.get("description"))
+               lot.get("description"), lot.get("vintage"))
         if key not in best:
             best[key] = lot
             order.append(key)
@@ -1575,15 +1580,20 @@ def load_munich_wine_company(b, limit):
             parse_date(a.get("date")), cur, "HAMMER",
             None, a.get("snapshot_timestamp"))
         for lot in _dedupe_munich_lots(d.get("lots", [])):
+            hammer = to_float(lot.get("hammer_price"))
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_no")),
                 "wine": lot.get("name"), "producer": lot.get("brand") or None,
+                "vintage": to_int(lot.get("vintage")),
+                "region": lot.get("region"),
                 "quantity": parse_qty_text(lot.get("count_fill")),
-                "hammer_price": to_float(lot.get("hammer_price")),
-                "price_basis": "HAMMER",
+                "hammer_price": hammer,
+                "price_basis": "HAMMER" if hammer is not None else "UNKNOWN",
                 "currency": lot.get("currency") or cur,
                 "description": lot.get("description"),
                 "condition_text": lot.get("count_fill"),
+                "estimate_low": to_float(lot.get("estimate_low")),
+                "estimate_high": to_float(lot.get("estimate_high")),
             })
         n += 1
         if limit and n >= limit:

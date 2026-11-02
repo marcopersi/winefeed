@@ -1209,3 +1209,87 @@ für `price_per_bottle` (nur gesetzt wenn `lot_kind='SINGLE'` und ein Jahrgang).
   davon im Repo/Git-Historie/Samsung-Disk; wartet auf Nutzer-Input von
   DeepSeeks Suche. wermuth-sa/Denz-Automatisierung (nächste Priorität
   laut Nutzer) noch nicht begonnen.
+- [x] **Nutzer-Korrektur zur Häuser-Liste** (nach obigem Stand): "weinauktion.de"
+  ist kein neues Haus, sondern die bestehende `koppe`-Quelle; "wermuth-sa"
+  zerfällt in Denz (jetzt `denzauktionen.ch`) und die separate, eigenständige
+  "Franz Wermuth Auktionen" (`franzwermuth.ch`). Nutzer will fünf Quellen
+  vollständig automatisiert: **Munich Wine Company, Baghera, Denzauktionen,
+  Franz Wermuth Auktionen, weinauktion.de** — alle laufen weiterhin reale
+  Auktionen, seit dem letzten Download gibt es neue.
+  - [x] **weinauktion.de (koppe)**: Bestehender Fetcher (`ingest/fetchers/
+    koppe.py`) funktioniert bereits und läuft in CI — live getestet
+    (`run_ingest.py --only koppe` → "0 neu", weil heute schon gelaufen).
+    Kein neuer Code nötig. **Bekannte Lücke:** fast das ganze Jahr 2025
+    (~#489-529) fehlt zwischen dem letzten statischen PDF-Dump (#488, 2024)
+    und dem ID-Neustart der redesignten Seite (2026) — alte PHP-URLs
+    redirecten ins Leere, kein Directory-Listing, Wayback Machine hilft
+    nicht (nächster Snapshot schon nach dem Redesign). Nicht geschlossen,
+    bewusst als Lücke stehen gelassen (wie bei den anderen Redesign-Fällen).
+  - [x] **wermuth-sa/Denz lokale Dateien geprüft** (Nutzer-Frage: schon
+    normalisiert/importiert?): `data/vinoStagingFile2015-2008.xlsx` wird
+    von `load_wermuth` **bereits** von genau diesem Pfad
+    (`VinoImporter/validatedOutput/...`) gelesen — vollständig importiert,
+    kein neuer Code nötig. `data/vinoStagingFileSteinfels.xlsx` (Steinfels,
+    nicht Wermuth) wird ebenso bereits von `load_steinfels_staging`
+    gelesen — auch das schon erledigt. Das lokale Denz-PDF-Archiv ist
+    bereits bis WZ-297 (3.9.2026) importiert (direkt gegen die Prod-DB
+    verifiziert: `denz-297` / `2026-09-03` vorhanden).
+  - [x] **denzauktionen.ch** (neuer Fetcher, `ingest/fetchers/
+    denzauktionen.py`): wermuth.ch/denz.ch sind tot (denz.ch → Redirect
+    auf eine fremde Büromöbel-Firma, wermuth.ch → abgelaufenes generisches
+    Zertifikat, HTTP 403) — Nachfolgeseite ist `denzauktionen.ch`.
+    `discover()` liest `/vergangene-auktionen/` (statisch, kein Login,
+    kein AJAX nötig — neue Auktionen erscheinen immer unter den neuesten
+    ~4). `fetch()` lädt die Resultate-PDF roh herunter; **kein neuer
+    Parser** — die Datei landet im bestehenden `Denz/`-Ordner
+    (`_archive_dir`/`_store_binary` erweitert, inkl. Subdirectory-Fix für
+    `live/<id>_Resultate.pdf`), `load_denz_wermuth` parst sie unverändert.
+    106 bereits lokal vorhandene WZ-Nummern im Manifest vor-geseedet, live
+    getestet (discover findet #294-297 korrekt, fetch lädt die echte
+    PDF, `run_ingest.py --only denzauktionen` → "0 neu" wie erwartet). In
+    CI aufgenommen (14 Häuser). Senior Review: 1 echter Fund gefixt
+    (ARCHIVE_DIRS-Docstring widersprach der neuen Binary-Fetcher-Variante),
+    1 Test ergänzt (`_store_binary`-Subdirectory-Erstellung), 1 Finding als
+    Fehlalarm verifiziert (WZ-297 war beim Pre-Seed bereits real im
+    Archiv vorhanden, direkt per `glob` nachgeprüft).
+  - [x] **munich-wine-company** (neuer Fetcher, `ingest/fetchers/
+    munichwinecompany.py`): alte Scrape-URL (`/de/{id}/live-wineauction-
+    pN.html`) liefert jetzt 404 — Seite wurde zu einer Alpine.js-SPA mit
+    separatem Headless-CMS (`cms.munichwinecompany.eu/api`) umgebaut.
+    Echten API-Call im Seiten-JS gefunden (`GET /api/auctions` für die
+    aktuellen Slots, `GET /api/auctions/{id}/wines?all=1` für die Lots) —
+    kein Login nötig. **Bestätigter echter Befund:** die Katalog-/"live"-
+    Auktionsform wurde eingestellt (`"Unsere Katalogauktionen sind
+    eingestellt"`, letzte war A87/Nov 2025); nur noch "online"-Auktionen
+    laufen. **Bestätigte Einschränkung:** `/wines` liefert nur Daten,
+    während die Auktion noch in ihrem Aftersale-Fenster ist — sequenzielle
+    Probe über IDs 300-341 und `?aftersale=1` auf eine alte ID bestätigen
+    das (beide weiterhin `{"success":false}`). Historische Auktionen vor
+    dem Redesign bleiben unerreichbar (gleiche Art Lücke wie bei koppe/2025).
+    `load_munich_wine_company` erweitert: liest jetzt zusätzlich `vintage`/
+    `region`/`estimate_low`/`estimate_high` (vorher stillschweigend
+    ignoriert) und leitet `price_basis` jetzt korrekt aus `hammer_price`
+    ab (vorher unbedingt `"HAMMER"`, fixt denselben Bug-Typ wie bei
+    steinfels/winebarrel). Live gegen die echte API getestet: Auktion 340
+    (OA221, 1440 Lots, 777 verkauft/663 nicht verkauft) korrekt geladen
+    und über den Loader verifiziert. In CI aufgenommen.
+  - [ ] **baghera**: Login für die Lospreise bestätigt nötig (öffentliche
+    Archiv-Seite `/fr/catalogue/archive` listet alle 186 Auktionen seit
+    2015 vollständig, aber weder die Auktions- noch die Einzellos-Seite
+    zeigt Zuschlagspreise ohne Login). Login-Formular gefunden (`POST
+    /fr/auth/login`, Felder `email`/`password`), aber mit reCAPTCHA-v3
+    (invisible) gesichert — braucht vermutlich das Camoufox-Muster wie bei
+    sylvies/sothebys. **Blockiert:** `BAGHERA_USER`/`BAGHERA_PWD` fehlen
+    noch in `.env_local` (geprüft: nicht vorhanden, trotz Nutzer-Aussage
+    "schon eingetragen"). Noch nicht gebaut.
+  - [ ] **franzwermuth.ch**: eigenständige Firma, nicht dasselbe wie Denz
+    (bestätigt: separate Domain, läuft aktuell Collection #24 am
+    7.11.2026). Archiv-Seite (`Archiv.html`) ist seit 2023 nicht mehr
+    aktualisiert (stoppt bei #17); die aktuellsten 2-3 Collections' Links
+    sitzen nur auf der Startseite, mit sehr inkonsistenten Dateinamen/
+    Labels (Leerzeichen in Dateinamen, falsch zugeordnete Links, sowohl
+    .pdf als auch .xls als Ergebnisformat). Resultate-PDF-Format geprüft
+    (eine Zeile pro Los, Komma-Dezimal/Punkt-Tausender — anders als Denz'
+    Apostroph-Format, braucht eigenen Parser). Noch nicht gebaut — eigener
+    DB-Provider vorgesehen (nicht in wermuth-sa gemischt, da eigenständige
+    Firma), vergleichbarer Aufwand wie ein komplettes neues Haus.

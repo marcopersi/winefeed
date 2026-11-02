@@ -68,6 +68,25 @@ class TestOrchestrate(unittest.TestCase):
                 "langtons", AuctionRef("langtons", "8212")),
             "8212.json")
 
+    def test_store_binary_creates_nested_filename_subdirectory(self):
+        """denzauktionen's filename is "live/<id>_Resultate.pdf" --
+        load_denz_wermuth only recurses into actual subdirectories of
+        the Denz archive root, so a file dropped flat there would
+        never be found. _store_binary must create that subdirectory,
+        not just the provider's top-level archive directory."""
+        from ingest.models import FetchResult
+        with tempfile.TemporaryDirectory() as d:
+            result = FetchResult(
+                provider="denzauktionen", auction_id="298",
+                content=b"%PDF-fake",
+                filename="live/298_01122026_Resultate.pdf")
+            orchestrate._store_binary("denzauktionen", result, d)
+            path = os.path.join(
+                d, "Denz", "live", "298_01122026_Resultate.pdf")
+            self.assertTrue(os.path.exists(path))
+            with open(path, "rb") as fh:
+                self.assertEqual(fh.read(), b"%PDF-fake")
+
     def test_runs_and_parses_file_fetcher(self):
         with tempfile.TemporaryDirectory() as d:
             manifest = os.path.join(d, "manifest.json")

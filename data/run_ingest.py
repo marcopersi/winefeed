@@ -31,7 +31,8 @@ MANIFEST_PATH = os.environ.get("MANIFEST_PATH",
 PROVIDERS = [
     "steinfels", "weinboerse", "weinauktionator", "hdh", "koppe",
     "langtons", "winefields", "dorotheum", "pandolfini",
-    "finarte", "besch-cannes", "dobiaschofsky",
+    "finarte", "besch-cannes", "dobiaschofsky", "winebarrel",
+    "denzauktionen", "munich-wine-company",
     # Sothebys needs camoufox (heavy) + a residential IP to solve the
     # Cloudflare Turnstile login; it only runs locally, not in CI.
     "sothebys",

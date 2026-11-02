@@ -666,6 +666,53 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(
             rows, [("Chambertin", 460.0), ("Pommard", 0.0)])
 
+    def test_munich_wine_company_reads_vintage_region_and_estimate(self):
+        """Live fetcher output (ingest/fetchers/munichwinecompany.py,
+        munichwinecompany.com's rebuilt cms.*.eu API) carries vintage/
+        region/estimate fields the old static-dump loader never read --
+        must come through, and an unsold lot (hammer_price None) must
+        not be mislabeled price_basis=HAMMER."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "MunichWineCompany"), exist_ok=True)
+            with open(os.path.join(d, "MunichWineCompany",
+                                   "auction-340.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "340", "title": "OA221", "date": None},
+                    "lots": [
+                        {"lot_no": 3, "name": "Pauillac 1er Cru Classe",
+                         "brand": "Ch. Mouton Rothschild", "vintage": "2020",
+                         "region": "Bordeaux, Frankreich",
+                         "count_fill": "1 Flasche", "hammer_price": "410.00",
+                         "estimate_low": 410, "estimate_high": 600},
+                        {"lot_no": 4, "name": "Pauillac 1er Cru Classe",
+                         "brand": "Ch. Mouton Rothschild", "vintage": "2019",
+                         "region": "Bordeaux, Frankreich",
+                         "count_fill": "1 Flasche", "hammer_price": None,
+                         "estimate_low": 420, "estimate_high": 620},
+                    ],
+                }, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_munich_wine_company(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            rows = conn.execute(
+                "SELECT lot_no, vintage, region, hammer_price, price_basis,"
+                " estimate_low, estimate_high FROM lots ORDER BY lot_no"
+            ).fetchall()
+            conn.close()
+        self.assertEqual(rows, [
+            ("3", 2020, "Bordeaux, Frankreich", 410.0, "HAMMER", 410.0,
+             600.0),
+            ("4", 2019, "Bordeaux, Frankreich", None, "UNKNOWN", 420.0,
+             620.0),
+        ])
+
     def test_winebarrel_loads_fetcher_output_alongside_static_dump(self):
         """The static winebarrel_lots.json dump and the live fetcher's
         per-lot "<auction_id>.json" files (ingest/fetchers/winebarrel.py)

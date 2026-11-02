@@ -2,6 +2,7 @@
 from .beschcannes import BeschCannesFetcher
 from .christies import (ChristiesFetcher, MalformedResponse, MetaInvalid,
                         ReconciliationMismatch)
+from .denzauktionen import DenzauktionenFetcher
 from .dobiaschofsky import DobiaschofskyFetcher
 from .dorotheum import DorotheumFetcher
 from .sothebys import SothebysFetcher
@@ -11,6 +12,7 @@ from .hdh import HdhFetcher
 from .idealwine import IdealwineFetcher
 from .koppe import KoppeFetcher
 from .langtons import LangtonsFetcher
+from .munichwinecompany import MunichWineCompanyFetcher
 from .pandolfini import PandolfiniFetcher
 from .weinauktion import WeinauktionFetcher
 from .weinauktionator import WeinauktionatorFetcher
@@ -37,6 +39,8 @@ FETCHERS = {
     "christies": ChristiesFetcher(),
     "winebarrel": WinebarrelFetcher(),
     "sylvies": SylviesFetcher(),
+    "denzauktionen": DenzauktionenFetcher(),
+    "munich-wine-company": MunichWineCompanyFetcher(),
 }
 
 
