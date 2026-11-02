@@ -1,17 +1,38 @@
 """Fetcher for Christie's wine auction results (server-rendered + JSON API).
 
-- discover: parse ``/en/results`` and filter the embedded auction metadata
-  (``followAnalyticsMetadata``) to the Wine & Spirits department.
+- discover: parse ``/en/calendar`` (NOT ``/en/results`` -- confirmed real,
+  Nov 2026: christies.com was rebuilt on the Next.js App Router since this
+  fetcher was first written. ``/en/results`` now only ever embeds ONE
+  "featured" sale regardless of department; ``/en/calendar`` is the actual
+  comprehensive listing, server-rendering every sale -- past (within a
+  retention window), current, and upcoming -- across all departments. Its
+  sale cards are streamed via React Server Component payloads
+  (``self.__next_f.push([1,"..."])`` script tags carrying single-escaped
+  JSON), not the old pages-router double-escaped ``followAnalyticsMetadata``
+  string this fetcher originally looked for -- ``_rsc_payload`` decodes
+  that back into one plain string first. Sales are filtered to the
+  Wine & Spirits department and to ones whose own ``endDate`` has already
+  passed: confirmed real, the calendar lists "online" timed sales weeks
+  before they close, and fetching one early returns real lots with every
+  ``price_realised`` empty (bidding still open), not missing/error data.
 - fetch: page through the ``lotsearch`` API for each auction until all lots
   (``total_hits_filtered``) are collected, and map them onto the
-  ``load_christies`` format.
+  ``load_christies`` format. Confirmed real: "online"-type sale landing
+  pages (a newer, fully client-rendered template) embed no sale_number
+  anywhere reachable by a plain HTTP GET -- unlike sale_id (ref.auction_id
+  is already the fallback), title, location and start_date, which this
+  template DOES still render server-side. discover() already knows
+  saleNumber from the calendar page, so it rides along as a query param on
+  ref.url for _auction_meta to fall back to.
 
-Note: ``discover`` only sees the current results-page window (newest auctions),
-so historical wine auctions are not backfilled.
+Note: ``discover`` only sees the calendar's current retention window
+(observed Nov 2026: roughly the last few days through the next ~2 months),
+so historical wine auctions before that are not backfilled this way.
 """
 import datetime
 import re
 import time
+from urllib.parse import parse_qs, urlparse
 
 from ..models import AuctionRef, FetchResult
 
@@ -33,11 +54,13 @@ LOTSEARCH_URL = ("https://www.christies.com/api/discoverywebsite/"
 PAGE_SIZE = "84"
 SITEMAP_INDEX_URL = "https://www.christies.com/LotFinder_Sitemap1.xml"
 
-# The results feed embeds, per auction, a single-escaped JSON string
-# ``followAnalyticsMetadata`` carrying the department and sale id. Filter to
-# the Wine & Spirits department.
-WINE_AUCTION = re.compile(
-    r'\\"department\\":\\"(Wine|Spirits).*?\\"saleId\\":\\"(\d+)\\"', re.S)
+# /en/calendar's RSC payload embeds, per sale card, a plain (single-escaped)
+# JSON object carrying the department, sale id/number, location and
+# start/end dates -- field order confirmed stable (live, Nov 2026).
+CALENDAR_ENTRY = re.compile(
+    r'"followAnalyticsMetadata":\{"department":"([^"]+)","saleNumber":"(\d+)",'
+    r'"saleId":"(\d+)","location":"([^"]*)","saleType":"([^"]*)",'
+    r'"startDate":"([^"]*)","endDate":"([^"]*)"')
 
 # Legacy (past-sales) pages carry no department field, so the wine/spirits
 # filter is a title heuristic.  Three-way classification: WINE (unambiguous),
@@ -57,18 +80,27 @@ class ChristiesFetcher:
         self.base_url = base_url.rstrip("/")
 
     def discover(self, session):
-        html = session.get(f"{self.base_url}/en/results").text
+        html = session.get(f"{self.base_url}/en/calendar").text
+        full = _rsc_payload(html)
+        today = datetime.date.today().isoformat()
         refs = []
         seen = set()
-        for match in WINE_AUCTION.finditer(html):
-            sale_id = match.group(2)
+        for (dept, sale_number, sale_id, location, _sale_type,
+             start_date, end_date) in CALENDAR_ENTRY.findall(full):
+            if not (dept.startswith("Wine") or dept.startswith("Spirits")):
+                continue
+            if end_date and end_date > today:
+                continue
             if sale_id in seen:
                 continue
             seen.add(sale_id)
             refs.append(AuctionRef(
                 provider=self.provider,
                 auction_id=sale_id,
-                url=f"{self.base_url}/en/auction/auction-{sale_id}",
+                url=f"{self.base_url}/en/auction/auction-{sale_id}"
+                    f"?saleNumber={sale_number}",
+                title=f"{dept} ({location})" if location else dept,
+                date=start_date or "",
             ))
         return refs
 
@@ -184,6 +216,19 @@ class ChristiesFetcher:
         return lots
 
 
+def _rsc_payload(html):
+    """Decode the Next.js App Router RSC streaming payload embedded via
+    ``self.__next_f.push([1,"..."])`` script tags into one plain string.
+
+    The sale cards on /en/calendar are server-rendered React components
+    streamed this way, with ordinary (single-escaped) JSON inside -- not
+    the old pages-router double-escaped JSON string this fetcher's
+    regexes were originally written against.
+    """
+    chunks = re.findall(r'self\.__next_f\.push\(\[1,"(.*?)"\]\)', html, re.S)
+    return "".join(c.encode().decode("unicode_escape") for c in chunks)
+
+
 def _auction_meta(html, ref):
     meta = {"sale_id": ref.auction_id, "url": ref.url}
 
@@ -194,14 +239,27 @@ def _auction_meta(html, ref):
     sale_id = _field(r'"sale_id":"(\d+)"')
     if sale_id:
         meta["sale_id"] = sale_id
-    meta["title"] = _field(r'"title":"([^"]+)"')
+    meta["title"] = _field(r'"title":"([^"]+)"') or ref.title or None
     meta["location"] = _field(r'"sale_location":"([^"]+)"')
     meta["sale_number"] = _field(r'"sale_number":"([^"]+)"')
+    if not meta["sale_number"]:
+        # Confirmed real: "online"-type sale landing pages embed no
+        # sale_number anywhere reachable by a plain GET. discover()
+        # already knows it from the calendar page and carries it as a
+        # query param on ref.url for exactly this case.
+        qs = parse_qs(urlparse(ref.url).query)
+        if qs.get("saleNumber"):
+            meta["sale_number"] = qs["saleNumber"][0]
     meta["saleroomcode"] = _field(r'"sale_room_code":"([^"]+)"')
     match = re.search(r'"start_date":"(\d{4})-(\d{2})', html)
     if match:
         meta["year"] = int(match.group(1))
         meta["month"] = int(match.group(2))
+    elif ref.date:
+        dm = re.match(r"(\d{4})-(\d{2})", ref.date)
+        if dm:
+            meta["year"] = int(dm.group(1))
+            meta["month"] = int(dm.group(2))
     return meta
 
 
