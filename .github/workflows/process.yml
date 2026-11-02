@@ -30,7 +30,7 @@ jobs:
         run: pip install -r data/requirements.txt
 
       - name: Download archive
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: auction-archive
           path: ${{ runner.temp }}/archive
@@ -44,7 +44,7 @@ jobs:
         run: python data/build_db.py
 
       - name: Upload DB
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wine-auction-db
           path: ${{ runner.temp }}/wine_auction_prices.sqlite
