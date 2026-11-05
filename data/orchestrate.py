@@ -53,6 +53,11 @@ ARCHIVE_DIRS = {
     # the 29 legacy pre-parsed {auction, lots} JSON files from the same
     # directory -- see build_db.py).
     "baghera": "Baghera",
+    # bestwineauctions: emits the canonical {auction, lots} JSON shape (one
+    # file per lot, see ingest/fetchers/bestwineauctions.py), not binary --
+    # just needs its own CamelCase directory like the others above.
+    "bestwineauctions": "BestWineAuctions",
+    "ackerwines": "Ackerwines",
 }
 
 

@@ -41,6 +41,11 @@ def _run_loader(house_dir, filename, data, loader_name):
         return count, hammer, wine
 
 
+# pylint: disable=protected-access,too-many-public-methods
+# -- protected-access: exercising build_db's internal _apply_* /_load_*
+# helpers directly is the point of these round-trip tests; a test class
+# naturally accumulates one test_ method per case, past any general
+# public-method budget.
 class TestLoaderRoundtrip(unittest.TestCase):
     def test_apply_premium_policy(self):
         conn = sqlite3.connect(":memory:")
@@ -1129,6 +1134,20 @@ class TestLoaderRoundtrip(unittest.TestCase):
         ref = conn.execute("SELECT wine_ref_id FROM lots").fetchone()[0]
         self.assertEqual(ref, 42)
         conn.close()
+
+
+class ParseDlTest(unittest.TestCase):
+    def test_double_magnum_is_not_shadowed_by_plain_magnum_check(self):
+        """Confirmed real bug: "double magnum" (3L) contains the
+        substring "magnum", so checking for a plain magnum first always
+        matched before jeroboam/double-magnum could, silently resolving
+        every Double Magnum to 15.0 (1.5L) instead of 30.0 -- a 2x
+        price-per-bottle error wherever this text appears (e.g.
+        load_ackerwines' raw bottleSize field)."""
+        self.assertEqual(build_db.parse_dl("double magnum"), 30.0)
+        self.assertEqual(build_db.parse_dl("Double Magnum"), 30.0)
+        self.assertEqual(build_db.parse_dl("magnum"), 15.0)
+        self.assertEqual(build_db.parse_dl("jeroboam"), 30.0)
 
 
 if __name__ == "__main__":

@@ -46,6 +46,9 @@ manueller Schritt** (CI hat keinen Zugriff auf `/Volumes/samsung`): Artifact
 herunterladen, nach `/Volumes/samsung/winefeed-data/WeinAuktionspreise/`
 legen, dann lokal `python3 build_db.py` laufen lassen.
 
-Nicht in CI abgedeckt: **sothebys** (oben), **idealwine**
-(`run_idealwine_delta.py`, direkter DB-Append), **christies** (Backfill
-`run_christies_backfill.py`).
+Nicht in CI abgedeckt: **sothebys** (oben), **sylvies** (camoufox-Login nur
+lokal). **idealwine** läuft inzwischen als eigener CI-Schritt
+(`run_idealwine_delta.py`, archiviert neue Zuschläge als JSON statt
+direktem DB-Append, siehe AGENTS.md); **christies** läuft ebenfalls im
+regulären CI-Ingest, `run_christies_backfill.py` bleibt nur für
+gelegentliche Re-Backfills (lokal).

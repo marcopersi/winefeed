@@ -13,12 +13,21 @@
 
 - **Sothebys** läuft nur lokal (camoufox + residential IP, Turnstile).
   Quick-Start: `docs/runbook.md`.
-- **idealwine**: `data/run_idealwine_delta.py` (direkter DB-Append, nicht CI).
+- **idealwine**: läuft jetzt im CI mit (`data/run_idealwine_delta.py`,
+  eigener Schritt in `ingest.yml`) — archiviert neue Zuschläge als JSON
+  unter `IDealwine_normalized/_delta/` statt sie direkt in die DB zu
+  schreiben, mit eigenem zeitstempel-basiertem Checkpoint
+  (`ingest_manifest.json`'s `idealwine.last_sold_at`, volle ISO-Präzision --
+  ein reines Datum würde Zuschläge vom selben Tag doppelt archivieren)
+  statt der
+  ID-basierten Standard-Dedup — die Cote-Seiten ändern sich über Zeit,
+  ein einmal "erledigter" Eintrag wäre hier falsch.
 - **christies** (Backfill): `data/run_christies_backfill.py` (lokal).
 
 ## Daten-Pipeline (Überblick)
 
-- Monatlicher CI-Ingest (18 Häuser): `.github/workflows/ingest.yml` (cron `0 0 1 * *`)
+- Monatlicher CI-Ingest (20 Häuser, plus iDealwine als eigener Schritt --
+  siehe oben): `.github/workflows/ingest.yml` (cron `0 0 1 * *`)
   → `.github/workflows/process.yml` (DB-Build als Artifact).
 - Lokaler DB-Build: `python3 data/build_db.py` (atomar, tmp + `os.replace`).
 - Preis-Annotation in `data/build_db.py`: `_annotate_fx` (NLG→EUR),

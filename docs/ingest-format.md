@@ -80,14 +80,19 @@ geklärt.
 
 ## idealwine (Sonderweg, nicht über diese Kette)
 
-idealwine wird **nicht** über `run_ingest`/`build_db`-Loader abgewickelt. Der
-Fetcher (`ingest/fetchers/idealwine.py`) liefert `productVintageRatings`
-(kein `{auction, lots}`); die eigene Pipeline `data/run_idealwine_delta.py`
-→ `idealwine_diff.py` normalisiert und schreibt **direkt** in die DB
-(`Builder.insert_new_lots`), ohne `build_db`-Rebuild. `load_idealwine`
-(`build_db.py:948`) liest stattdessen einen abweichenden Bestand
-(`IDealwine_normalized`) und ist nicht Teil dieses Nachlade-Scopes. idealwine
-ist daher aus `run_ingest.PROVIDERS` entfernt (Entscheidung D1).
+idealwine wird **nicht** über `run_ingest`/die ID-basierte Standard-Dedup
+abgewickelt. Der Fetcher (`ingest/fetchers/idealwine.py`) liefert
+`productVintageRatings` (kein `{auction, lots}`); die eigene Pipeline
+`data/run_idealwine_delta.py` → `idealwine_diff.py` normalisiert und
+archiviert neue Zuschläge als JSON unter `IDealwine_normalized/_delta/`
+(datums-/zeitstempel-basierter Checkpoint statt ID-Dedup, siehe AGENTS.md),
+statt sie direkt in die DB zu schreiben -- ein früherer Direkt-DB-Insert-Pfad
+(`insert_new_lots`/`Builder`) wurde entfernt, damit idealwine ohne DB-Zugriff
+als gewöhnlicher CI-Schritt läuft. `load_idealwine` (`build_db.py`) liest
+diesen Delta-Bestand ganz normal beim nächsten `build_db`-Rebuild ein -- ist
+also, anders als zuvor, Teil des normalen Nachlade-Scopes. idealwine ist
+weiterhin aus `run_ingest.PROVIDERS` entfernt (Entscheidung D1), da es einen
+eigenen Checkpoint-Mechanismus statt der Standard-Dedup braucht.
 
 ## Offene Punkte (in den folgenden Schritten zu klären)
 
