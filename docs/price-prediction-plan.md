@@ -51,6 +51,73 @@ Prognose (explizites `INSUFFICIENT_DATA`).
 
 ---
 
+## 1a. Fortschritts-Übersicht & nächste Schritte (Stand 2026-11-05)
+
+Dieser Block wird bei jedem Review-Durchlauf aktualisiert — Detail-Status
+und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
+
+| Stufe/Schritt | Status |
+|---|---|
+| 0.1 Datumsbereinigung | ✅ erledigt, in Master-DB verifiziert |
+| 0.1b / D17 Winebarrel-Epoch-Artefakt (680 Zeilen) | 🟡 entschieden (NULL setzen) — Code-Fix ausstehend |
+| 0.2 Historische FX-Tabelle (EODHD) | ✅ erledigt |
+| 0.2b TWD fehlt in FX-Fetch | 🟡 offen — kleiner Nachtrag |
+| D16 `fx_rate` für EUR | 🟡 entschieden (1.0 setzen) — Code-Fix ausstehend |
+| 0.3 `_annotate_fx`/`_apply_fx_rates` | 🟡 Code fertig, Abdeckungs-AC nicht nachgerechnet |
+| 0.4 Flaschengrösse klären | ⬅️ **NÄCHSTER SCHRITT** — nicht begonnen |
+| 0.5 `price_per_bottle_eur` befüllen | ⬜ nicht begonnen (blockiert durch 0.4) |
+| 0.6 Outlier-/Dubletten-Bereinigung | ⬜ nicht begonnen |
+| 0.7 View `forecast_input` | ⬜ nicht begonnen |
+| **Gate G0** (Review Stufe 0) | ⬜ noch nicht fällig |
+| Stufe 1 – Baselines & Eval-Harness | ⬜ nicht begonnen, kein `data/forecast/`-Paket im Repo |
+| Stufe 2 – Local-Level-Modell (Kalman) | ⬜ nicht begonnen |
+| Stufe 3 – Gruppenindex/Fallback | ⬜ nicht begonnen |
+| Stufe 4 – Konforme Kalibrierung | ⬜ nicht begonnen |
+| Stufe 5 – Serving (API/UI) | ⬜ nicht begonnen |
+
+**Todo-Liste, in Reihenfolge:**
+
+1. ~~D-Entscheide nachholen~~ — **erledigt 2026-11-05**, D12/D15/D16/D17
+   entschieden (§6). Code-Umsetzung von D16/D17 steht noch aus, siehe 2./3.
+2. **D16/D17 umsetzen** (S, < 1 h zusammen): `fx_rate = 1.0` für
+   `currency = 'EUR'` in `_annotate_fx` ergänzen (gleiches Muster wie
+   `_FX_FIX`); `lot_date = NULL` für winebarrel-Zeilen mit
+   `auction_end` beginnend `"1970-01-01"` in `load_winebarrel` oder einer
+   neuen Bereinigungsstelle in `build_db.py` (nicht im Fetcher — das sind
+   bereits archivierte Rohdaten, der Fix gehört in den Loader). Je ein
+   kleiner Test (`data/tests/test_fx_rates.py` erweitern;
+   `test_loader_roundtrip.py` für winebarrel).
+3. **0.2b — TWD zu `fetch_fx.py` ergänzen** (S, < 1 h): `CURRENCIES`-Liste
+   erweitern, einmalig `EODHD_API_TOKEN=... python3 data/fetch_fx.py
+   --currencies TWD` laufen lassen, Build erneut prüfen (568 Zeilen sollten
+   dann `fx_rate` haben). Kein Review-Gate nötig, trivialer Nachtrag.
+5. **0.3 — Abdeckungs-AC nachrechnen** (S): echten Nenner (`lot_date IS NOT
+   NULL`) rechnen (jetzt mit D16/D17/0.2b sollte die Lücke fast nur noch
+   "vor 1998"/AUD-USD-Restlücken sein), AC offiziell grün/rot vermerken.
+6. **0.4 — Flaschengrösse klären** (M) — **eigentlicher nächster grosser
+   Arbeitsschritt.** Untersuchung je Haus (welche liefern `bottle_size_dl`
+   nativ, wo steht es nur im Freitext), Parser-Erweiterung in
+   `data/wine_resolution/bottle.py`, Klärung der verdächtigen `1,0 dl`
+   (24 256 Zeilen). Eigener Branch + eigener Commit + Test, wie bei 0.1.
+7. **0.5 — `price_per_bottle_eur` befüllen** (M), erst nach 6.
+8. **0.6 — Outlier/Dubletten** (M), erst nach 7.
+9. **0.7 — View `forecast_input`** (S), erst nach 8. Baut jetzt auch D15
+   ein (nur aktive Weine, letzte Beobachtung ≤ 36 M).
+10. **Gate G0** — Senior-Review aller Stufe-0-Schritte, inkl. aller in
+    diesem Durchlauf gefundenen Lücken (0.1b/D17, 0.2b, 0.3-AC). **Ohne G0
+    kein Start von Stufe 1.**
+11. Erst danach Stufe 1 (Paket-Gerüst `data/forecast/`, `statsmodels` in
+    `requirements.txt`, Baselines, Rolling-Origin-Evaluator) — siehe §5,
+    unverändert seit 2026-10-29, noch nichts davon existiert im Repo.
+
+**Reihenfolge-Begründung:** 0.4/0.5 sind der grösste Hebel laut eigenem
+Risiko-Ranking (§1) — ohne `price_per_bottle_eur` ist jede spätere Stufe
+(1–5) Scheingenauigkeit auf einer nicht normalisierten Zielgrösse. 0.2b/0.3
+sind klein und schnell erledigt, aber **vor** G0 nötig, weil G0 explizit
+„Stimmen Flaschenpreise/FX stichprobenartig?" prüft (§7).
+
+---
+
 ## 2. Established Facts (live gegen Master-DB verifiziert, 2026-10-29)
 
 Quelle: `/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite`, View
@@ -166,24 +233,66 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
   per `auction_date` füllen (existiert), Rest bleibt NULL + Zähler in `build_metrics`.
 - AC: `select count(*) from lots where lot_date not like '____-__-__%' and lot_date is not null` = 0.
 - Test: `data/tests/test_lot_date.py` (Format-Matrix inkl. 29.02., 1.1.1900, ungültig, Idempotenz).
-- **Status: erledigt 2026-10-29** (`_normalize_lot_date` in `build_db.py`, vor `_fill_lot_date`). Verifiziert auf Kopie der Master-DB: 147 Zeilen konvertiert (alle steinfels), 0 Nicht-ISO übrig; `unittest discover -s data/tests` 115 Tests grün. Noch nicht in die Master-DB gebaut (nächster regulärer Build).
-- **Neuer Befund 0.1b:** 680 Lose (winebarrel) haben `lot_date = 1970-01-01` (Epoch-Artefakt). Nicht stillschweigend ändern; Entscheid im Review: auf NULL setzen und aus `auction_date` füllen, oder aus `forecast_input` ausschliessen (`lot_date >= '1990-01-01'`). Bis dahin gilt der Ausschluss.
+- **Status: erledigt 2026-10-29**, in der Master-DB verifiziert 2026-11-05
+  (`_normalize_lot_date` in `build_db.py`, vor `_fill_lot_date`): 4 203 026
+  Zeilen ISO, 0 Nicht-ISO, 94 321 NULL (unverändert erwartet, Häuser ohne
+  Datum).
+- **Neuer Befund 0.1b, entschieden 2026-11-05 (D17), Code-Fix ausstehend:**
+  680 Lose (winebarrel) haben `lot_date = 1970-01-01` — bestätigt ein
+  Rohdaten-Artefakt (`auction_end: "1970-01-01 01:00:00"` steht so im
+  Archiv, kein zweites Datumsfeld im Lot, `auction_date` der virtuellen
+  "all"-Auktion ist selbst NULL, also kein Backfill möglich). D17:
+  `lot_date` auf NULL setzen. Betrifft `forecast_input` ohnehin nicht
+  (alle 680 Zeilen haben `sold IS NULL` → D14 filtert sie schon raus) —
+  der Fix ist nur für andere Konsumenten von `lot_date` relevant (GUI
+  o.ä.), damit nirgends "1970" als echtes Datum erscheint.
 
 **0.2 Historische FX-Tabelle** (M)
 - Neue Tabelle `fx_rates(date, currency, per_eur)`; Quelle: **EODHD** (EOD-Forex, Paare `<CCY>EUR.FOREX`; Tagesschlusskurse, Monatsmittel werden abgeleitet). Abruf-Skript `data/fetch_fx.py` liest den Key aus `EODHD_API_TOKEN`, cached Rohantworten im Archiv (Samsung), ist idempotent; Test mit gemockter HTTP-Antwort, kein Netz in CI. Abdeckung der Historie je Währung vorab prüfen (Start der Zeitreihe; Pre-Euro-Währungen). Für Zeiträume vor 1999: Fallback auf ein dokumentiertes Verfahren oder Ausschluss (`fx_missing`).
 - Quelle **im Dokument festhalten** (URL, Abrufdatum, Lizenz). Das Skript ist idempotent und lädt keine Daten ohne explizite Aktion.
 - AC: für alle (currency, Monat) der Lose existiert ein Kurs, ausser Währungen mit Flag; Bericht der Lücken.
 - Test: Stichproben-Kurse gegen publizierte Werte (3 Datenpunkte als Fixture).
+- **Status: erledigt** (genaues Datum nicht im Log, vor 2026-11-05 verifiziert;
+  `data/fetch_fx.py` + `fx_rates`-Tabelle + `_load_fx_rates` existieren und
+  sind getestet, `data/tests/test_fx_rates.py`). EODHD-Cache liegt unter
+  `/Volumes/samsung/winefeed-data/fx/` für `AUD, USD, GBP, CHF, HKD, SGD,
+  CNY` (je ein `EUR<CCY>.json`, 1998→heute).
+- **Befund 0.2b (neu, 2026-11-05): `TWD` fehlt in `fetch_fx.py`'s
+  `CURRENCIES`-Liste**, obwohl 568 Lose in `TWD` fakturiert sind — diese
+  bleiben ohne `fx_rate`, bis die Liste ergänzt und `fetch_fx.py` erneut
+  gegen die API gelaufen ist. Kleiner, klar umrissener Nachtrag, siehe
+  Todo unten.
 
 **0.3 `_annotate_fx` erweitern** (M)
 - `fx_rate` (Einheiten je 1 EUR) und `fx_target_currency='EUR'` für *alle* Währungen via Lotdatum-Monat; Zeilen ohne Kurs: `fx_rate` NULL + `fx_status='MISSING'`.
 - AC: `fx_rate`-Abdeckung ≥ 99 % der Zeilen mit Datum; NLG-Bestand unverändert (Regression: Hash der 4 854 NLG-Zeilen vor/nach identisch).
+- **Status: Code erledigt, Abdeckungs-AC noch nicht nachgerechnet (Stand
+  2026-11-05).** `_apply_fx_rates` existiert und läuft bei jedem Build.
+  Live-Zahlen: `fx_rate` gesetzt bei 3 466 935 / 4 297 347 Zeilen. Die AC
+  „≥ 99 % der Zeilen **mit Datum**" ist noch nicht gegen den richtigen
+  Nenner (`lot_date IS NOT NULL`, nicht alle Zeilen) nachgerechnet.
+  Ausstehende Lücken ohne `fx_rate`: EUR 569 131 — **entschieden 2026-11-05
+  (D16): `fx_rate` auf 1.0 setzen, Code-Fix in `_annotate_fx`/
+  `_apply_fx_rates` noch ausstehend** —, AUD 158 920, USD 84 491,
+  HKD 6 519, CHF 3 372, TWD 568 (→ 0.2b). Vermutlich grösstenteils Daten
+  ausserhalb der EODHD-Cache-Spanne (vor 1998) oder `lot_date IS
+  NULL`-Zeilen — noch nicht aufgeschlüsselt. NLG-Regressionstest (4 854
+  Zeilen unverändert) nicht erneut verifiziert seit dem ackerwines-Fix.
 
 **0.4 Flaschengrösse klären** (M)
 - Untersuchung: Welche Häuser liefern `bottle_size_dl`? Wo steht Info in `description`/`raw_wine` („Magnum", „1.5L", „75cl", „Jeroboam")? Einheit `1.0` (21 k Zeilen) prüfen: vermutlich Liter statt dl.
 - Output: Entscheidungstabelle + Parser-Erweiterung in `data/wine_resolution/bottle.py` (existiert, ist aktuell modifiziert → vorher `git diff` lesen, nicht überschreiben).
 - Default-Regel: `NULL` → 7,5 dl **nur** mit Flag `size_assumed=1`; Magnum etc. werden als eigene Serie geführt oder per Äquivalent-Faktor normiert (Entscheidung D10, siehe §6 offene Punkte).
 - AC: Verteilung `bottle_size_dl` nach Fix dokumentiert; `NULL`-Anteil < 10 % oder je Haus begründet; Stichprobe 100 Lose manuell geprüft, Fehlerquote < 3 %.
+- **Status: NICHT begonnen — ⬅ NÄCHSTER SCHRITT.** Zwischenstand (Stand
+  2026-11-05, zufällig durch andere Arbeit verbessert, nicht gezielt
+  angegangen): `bottle_size_dl` NULL bei 1 999 535 / 4 297 347 (46,5 %,
+  war 90 % am 2026-10-29) — AC-Ziel < 10 % noch weit offen. Verteilung der
+  gesetzten Werte: 7,5 dl 1 929 516, 15 dl (Magnum) 187 809, 3,75 dl
+  39 188, 30 dl 24 777, **1,0 dl 24 256 (unverändert verdächtig,
+  Einheitenfehler wie am 2026-10-29 vermerkt)**, 12 dl 16 395. Die
+  Entscheidungstabelle (welches Haus liefert was, wo steckt die Info im
+  Freitext) wurde noch nicht erstellt.
 
 **0.5 `price_per_bottle` befüllen** (M)
 - Formel: `realised_price / quantity / (bottle_size_dl/7.5)`, Basis gemäss D1; bei fehlendem `realised_price`: aus `hammer_price + buyer_premium` ableiten (`price_source=DERIVED`).
@@ -191,6 +300,10 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 - Neue Spalten: `price_per_bottle_eur`, `ppb_flags`.
 - AC: ≥ 85 % der `single_wine_prices` haben `price_per_bottle_eur`; Verteilung je Haus (Median, P1, P99) im Report; keine Werte ≤ 0.
 - Test: Tabelle von Los-Konstellationen → erwarteter Flaschenpreis.
+- **Status: nicht begonnen.** Die Roh-Spalte `price_per_bottle` existiert im
+  Schema (Passthrough aus den Loadern), ist aber in 100 % der Zeilen NULL —
+  keine Verwechslung mit der hier geforderten, noch zu bauenden
+  `price_per_bottle_eur`.
 
 **0.6 Outlier- und Dubletten-Bereinigung** (M)
 - Dubletten: gleiche (wine_ref_id, Jahrgang, Datum, Preis ±1 %, Haus) → eine Zeile; idealwine („cote") als eigene Preisart `price_kind='COTE'` ausschliessen oder getrennt führen (Entscheid in Review).
@@ -292,13 +405,22 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 | D13 | FX-Quelle und Auflösung (monatlich vs. täglich)? | Stufe 0.2 |
 | D14 | `sold IS NULL` (62 %): als verkauft werten? | Haus-Audit nötig; sonst Zensur-Verzerrung unbekannt |
 | D15 | Fokus auf Produktabdeckung: nur Bestandsweine mit Aktivität ≤ 36 M? | Verhindert Prognosen für „tote" Weine |
+| D16 | `fx_rate` für EUR-Zeilen (569 131 Zeilen, 13 %): NULL oder 1.0? | Beeinflusst 0.5-Formel (Sonderfall nötig oder nicht) |
+| D17 | winebarrel-Epoch-Artefakt (`lot_date='1970-01-01'`, 680 Zeilen, Rohdaten selbst korrupt, kein Backfill möglich) | 0.1b/0.7 |
 
 **Entschieden am 2026-10-29:**
 D10 Grossformate = **eigene Reihen** (Schlüssel `wine_ref_id · vintage · size_class`, kein Äquivalent-Faktor) ·
 D11 idealwine-`cote` / Schätzwerte = **nicht in die Serien** (`price_kind='COTE'` ausgeschlossen) ·
 D13 FX-Quelle = **EODHD** (vorhandenes Abo; API-Key nur via Umgebungsvariable, nie im Repo; Quelle/Abrufdatum in der Doku festhalten) ·
 D14 `sold IS NULL` = **nicht werten** (Filter in `forecast_input`: `sold = 1`; Folge: ~62 % der Zeilen entfallen → Dichte in §2.10 neu messen, siehe 0.7).
-Offen bleiben D12 (Anzeigewährung) und D15.
+
+**Entschieden am 2026-11-05:**
+D12 Anzeigewährung = **nur EUR** (entspricht direkt D1/der Modell-Berechnung; keine Umrechnung in Heimwährung des Hauses in v1) ·
+D15 Produktabdeckung = **nur aktive Weine** (letzte Beobachtung ≤ 36 M, wie in D5 für Stufe 2 bereits verlangt — gilt jetzt auch für den Gruppenindex-Fallback aus Stufe 3: ein „totes" Wein-Jahrgang bekommt keine Prognose, auch keine breite) ·
+D16 `fx_rate` für EUR = **1.0 setzen** (nicht NULL) — einheitliche Formel in 0.5 (`preis_eur = preis_ccy / fx_rate`), kein Sonderfall nötig, kein Risiko dass EUR-Zeilen bei einem vergessenen Sonderfall stillschweigend NULL werden ·
+D17 winebarrel-1970-Epoch = **`lot_date` auf NULL setzen** — einzig technisch mögliche Option (Rohdaten enthalten buchstäblich `"auction_end": "1970-01-01 01:00:00"`, kein zweites Datumsfeld im Lot, `auction_date` der virtuellen "all"-Auktion ist selbst NULL); betrifft `forecast_input` ohnehin nicht, da alle 680 Zeilen `sold IS NULL` haben (→ D14).
+
+Alle D-Entscheide (D10–D17) sind damit getroffen.
 
 ---
 
