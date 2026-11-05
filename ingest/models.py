@@ -11,6 +11,10 @@ class AuctionRef:
     title: str = ""
     date: str = ""
     etag: str = ""
+    # Provider-specific context discover() already has but fetch() cannot
+    # re-derive on its own (e.g. idealwine's wine identity, read once from
+    # the Algolia hit since the SSR page no longer carries it per-sale).
+    meta: dict = field(default_factory=dict)
 
 
 @dataclass
