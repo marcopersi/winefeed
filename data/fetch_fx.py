@@ -22,9 +22,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# Currencies present in the master DB with a market rate. NLG is excluded: it
-# has a legal fix rate (build_db._FX_FIX).
-CURRENCIES = ["AUD", "USD", "GBP", "CHF", "HKD", "SGD", "CNY"]
+# Currencies present in the master DB with a market rate. NLG and EUR are
+# excluded: both have a legal/trivial fix rate (build_db._FX_FIX), not a
+# market quote. TWD added 2026-11-05 (0.2b) -- confirmed real gap: 568 lots
+# in TWD had no fx_rate at all because this list never covered it.
+CURRENCIES = ["AUD", "USD", "GBP", "CHF", "HKD", "SGD", "CNY", "TWD"]
 DEFAULT_FROM = "1998-01-01"
 MAX_RATE = 1e6  # sanity bound; HKD/CNY/AUD are < 100 per EUR
 BASE_URL = "https://eodhd.com/api/eod/"

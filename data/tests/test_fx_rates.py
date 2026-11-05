@@ -37,6 +37,16 @@ def _eod(*pairs):
 
 
 class FetchTest(unittest.TestCase):
+    def test_currencies_covers_all_non_fixed_db_currencies(self):
+        """0.2b: confirmed real gap -- TWD is a real currency in the master
+        DB (568 lots) but was missing from this list, so those lots never
+        got a market fx_rate at all. Regression guard: every currency this
+        list is meant to cover stays covered. NLG/EUR are deliberately
+        excluded (build_db._FX_FIX, legal/trivial fixed rates, not a
+        market quote)."""
+        for ccy in ("AUD", "USD", "GBP", "CHF", "HKD", "SGD", "CNY", "TWD"):
+            self.assertIn(ccy, fetch_fx.CURRENCIES)
+
     def test_url_and_parse_sorted_deduped(self):
         seen = []
         rows = fetch_fx.fetch_pair(

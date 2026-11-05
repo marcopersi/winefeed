@@ -3718,8 +3718,13 @@ def _annotate_fx(conn):
 
 
 def _apply_fx_rates(conn):
-    """Annotate market currencies (AUD/USD/GBP/CHF/HKD/SGD/CNY) with their
-    historical EUR rate on ``lot_date`` (Issue #97).
+    """Annotate market currencies (whatever ``fetch_fx.CURRENCIES`` covers --
+    AUD/USD/GBP/CHF/HKD/SGD/CNY/TWD as of 2026-11-05) with their historical
+    EUR rate on ``lot_date`` (Issue #97). This function itself is
+    currency-agnostic -- it loops over whatever currency/date rows are
+    actually present in ``fx_rates``, so extending ``CURRENCIES`` and
+    re-running ``fetch_fx.py`` is the only change needed to cover a new
+    market currency; nothing here needs to change.
 
     ``fx_rates`` (loaded by ``_load_fx_rates`` from the EODHD cache) has one
     row per currency per *trading* day -- weekends/holidays have no row.
