@@ -135,8 +135,11 @@ class BestwineauctionsFetcher:
                     return None
             finally:
                 page.close()
+        return None
 
-    def discover(self, session):
+    def discover(self, session):  # pylint: disable=unused-argument
+        # -- _render() opens its own Playwright/Chromium page per call,
+        # not the caller's session.
         cutoff = (datetime.date.today()
                   - datetime.timedelta(days=self.cutoff_days)
                   if self.cutoff_days else None)
@@ -208,7 +211,9 @@ class BestwineauctionsFetcher:
                     return
             page_num += 1
 
-    def fetch(self, session, ref):
+    def fetch(self, session, ref):  # pylint: disable=unused-argument
+        # -- _render() opens its own Playwright/Chromium page per call,
+        # not the caller's session.
         html = self._render(
             ref.url, ".bwa-bidpanel",
             settle_js="() => { const el = "

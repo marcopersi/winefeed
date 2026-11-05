@@ -150,7 +150,9 @@ CONCURRENCY = 8
 class AckerwinesFetcher:
     provider = "ackerwines"
 
-    def discover(self, session):  # noqa: ARG002 -- see _post_with_retry
+    def discover(self, session):  # pylint: disable=unused-argument
+        # -- see _post_with_retry's own note on why every call opens its
+        # own session instead of using the caller's.
         refs = []
         found_any = False
         consecutive_zero = 0
@@ -214,7 +216,9 @@ class AckerwinesFetcher:
             auction_id += CONCURRENCY
         return refs
 
-    def fetch(self, session, ref):  # noqa: ARG002 -- see _post_with_retry
+    def fetch(self, session, ref):  # pylint: disable=unused-argument
+        # -- see _post_with_retry's own note on why every call opens its
+        # own session instead of using the caller's.
         auction_id = int(ref.auction_id)
         body = dict(_BODY_TEMPLATE, pageRequested=1, auctionId=auction_id)
         resp = _post_with_retry(f"{BASE_URL}/NapaLots/Browse", body)
@@ -393,7 +397,10 @@ def _parallel_post(requests_list, concurrency, tolerant=False):
             sem.release()
 
     for i, (url, body) in enumerate(requests_list):
-        sem.acquire()
+        # `with sem:` doesn't fit: this acquire() and its matching release()
+        # (in worker()'s `finally`, above) run in two different threads, not
+        # the same block.
+        sem.acquire()  # pylint: disable=consider-using-with
         t = threading.Thread(target=worker, args=(i, url, body), daemon=True)
         t.start()
         threads.append(t)

@@ -540,8 +540,8 @@ class Builder:
             " sold, mixed_lot,"
             " condition_text, description, source_url, scraped_at,"
             " is_ohk, note, price_per_bottle)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"
-            "?,?)",
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"
+            "?,?,?,?,?,?)",
             (auction_id, row.get("lot_no"), row.get("lot_date"),
              source_file, source_record_locator,
              raw_wine, raw_producer, raw_vintage,
@@ -3056,7 +3056,7 @@ def _wermuth_parse_catalog_pdf(text):
             continue
         lot_m = re.match(r"^(\d+)\s+(.+)$", line)
         if lot_m:
-            rest, qty, dl, vintage, is_ohk, est_low, est_high, _ = (
+            _rest, qty, dl, vintage, is_ohk, est_low, est_high, _ = (
                 _wermuth_parse_tail(lot_m.group(2)))
             if qty is None:
                 continue  # not actually a lot line (e.g. a page number)
@@ -3218,11 +3218,14 @@ def load_denz_wermuth(b, limit):
                 files_by_wz.setdefault(fwz, []).append(f)
 
         def _resolve_date(wz):
-            for cand in files_by_wz.get(wz, []):
+            # False positive below: files_by_wz is built by the for loop
+            # above, not reassigned inside one; this closure is defined
+            # once, not recreated per loop iteration.
+            for cand in files_by_wz.get(wz, []):  # pylint: disable=cell-var-from-loop
                 d = _wermuth_date_from_filename(cand)
                 if d:
                     return d
-            for cand in files_by_wz.get(wz, []):
+            for cand in files_by_wz.get(wz, []):  # pylint: disable=cell-var-from-loop
                 d = _wermuth_date_from_text(_wermuth_pdf_text(cand))
                 if d:
                     return d
@@ -4003,7 +4006,6 @@ def _check_duplicate_lot_numbers(conn):
 
 
 def _record_build_metadata(conn):
-    import hashlib
     import platform
 
     from wine_resolution import (LOADER_VERSION, NORMALIZER_VERSION,
