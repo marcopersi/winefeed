@@ -64,9 +64,9 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
 | 0.2b TWD fehlt in FX-Fetch | 🟡 Code erledigt — Datenabruf braucht `EODHD_API_TOKEN` (fehlt hier) |
 | D16 `fx_rate` für EUR | ✅ erledigt (Code + Test + DB-Rebuild verifiziert) |
 | 0.3 `_annotate_fx`/`_apply_fx_rates` | ✅ erledigt — AC revidiert (D18), `fx_status='MISSING'` flaggt 159 749 der 166 480 Lücken-Zeilen explizit (Rest: 6 731 Währung-NULL, bewusst nicht geflaggt, siehe §5) |
-| 0.4 Flaschengrösse klären | ⬅️ **NÄCHSTER SCHRITT** — nicht begonnen |
-| 0.5 `price_per_bottle_eur` befüllen | ⬜ nicht begonnen (blockiert durch 0.4) |
-| 0.6 Outlier-/Dubletten-Bereinigung | ⬜ nicht begonnen |
+| 0.4 / D19 Flaschengrösse klären | ✅ erledigt — `bottle_size_dl` NULL 46,5 %→2,15 % (Rest = echte Mischlose, bewusst nicht defaultet); zacky-Bug (D19) + `_parse_bottle_formats`-Gate-Lücke behoben |
+| 0.5 `price_per_bottle_eur` befüllen | ✅ erledigt — AC revidiert (D18-Prinzip); 91,74 % der Zeilen *mit echtem Preis* haben den Wert, Rest erklärt/geflaggt (inkl. neu gefundenem `ZERO_PRICE`) |
+| 0.6 Outlier-/Dubletten-Bereinigung | ⬅️ **NÄCHSTER SCHRITT** — nicht begonnen |
 | 0.7 View `forecast_input` | ⬜ nicht begonnen |
 | **Gate G0** (Review Stufe 0) | ⬜ noch nicht fällig |
 | Stufe 1 – Baselines & Eval-Harness | ⬜ nicht begonnen, kein `data/forecast/`-Paket im Repo |
@@ -92,19 +92,37 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
    flaggt jede Lücken-Zeile mit bekannter Währung und `lot_date`** — Code
    (Schema-Spalte, CHECK-Constraint, `_apply_fx_rates`-Update, 3 Tests)
    umgesetzt.
-5. **0.4 — Flaschengrösse klären** (M) — **eigentlicher nächster grosser
-   Arbeitsschritt.** Untersuchung je Haus (welche liefern `bottle_size_dl`
-   nativ, wo steht es nur im Freitext), Parser-Erweiterung in
-   `data/wine_resolution/bottle.py`, Klärung der verdächtigen `1,0 dl`
-   (24 256 Zeilen). Eigener Branch + eigener Commit + Test, wie bei 0.1.
-7. **0.5 — `price_per_bottle_eur` befüllen** (M), erst nach 6.
-8. **0.6 — Outlier/Dubletten** (M), erst nach 7.
-9. **0.7 — View `forecast_input`** (S), erst nach 8. Baut jetzt auch D15
-   ein (nur aktive Weine, letzte Beobachtung ≤ 36 M).
-10. **Gate G0** — Senior-Review aller Stufe-0-Schritte, inkl. aller in
-    diesem Durchlauf gefundenen Lücken (0.1b/D17, 0.2b, 0.3-AC). **Ohne G0
-    kein Start von Stufe 1.**
-11. Erst danach Stufe 1 (Paket-Gerüst `data/forecast/`, `statsmodels` in
+5. ~~0.4 — Flaschengrösse klären~~ — **erledigt 2026-11-05.** D19
+   (zacky-Bug) behoben, `_parse_bottle_formats`-Gate-Lücke geschlossen,
+   Default-Regel (`_assume_default_bottle_size`) umgesetzt, Review-Fix:
+   Mischlose (`mixed_lot=1`) bekommen bewusst keinen Default. `NULL`-
+   Anteil 46,5 %→2,15 % (Rest = echte Mischlose). Formale
+   100-Lose-Stichprobe aus der ursprünglichen AC **noch nicht
+   durchgeführt** — vor Gate G0 nachholen.
+6. ~~0.5 — `price_per_bottle_eur` befüllen~~ — **erledigt 2026-11-05.**
+   `_fill_price_per_bottle` umgesetzt, AC revidiert nach D18-Prinzip,
+   Review fand + Fix selbst fand je einen weiteren echten Bug (MIXED-
+   Lots fälschlich bepreist, `ZERO_PRICE`-Fälle verletzten die „≤0"-AC):
+   91,74 % der Zeilen mit echtem Preis haben den Wert, jede Lücke
+   erklärt/geflaggt (`fx_missing`→D18, `NO_PREMIUM_POLICY`→winebarrel,
+   `ZERO_PRICE`→60k+ ackerwines-Zeilen mit Zuschlag=0, `qty_zero`→
+   Datenfehler). Verifiziert: 0 Zeilen mit Preis ≤ 0 in der ganzen DB.
+   Formale Los-Konstellationen-Tabelle aus der ursprünglichen AC **noch
+   nicht geschrieben** — vor Gate G0 nachholen.
+7. **0.6 — Outlier/Dubletten-Bereinigung** (M) — **nächster Schritt.**
+   Dubletten (gleiche wine_ref_id/Jahrgang/Datum/Preis±1%/Haus),
+   idealwine-`cote` als `price_kind='COTE'` ausschliessen (D11), robuste
+   z-Score-Ausreisser-Markierung (`ppb_flags += 'OUTLIER'`, nicht
+   löschen). Guter Ort, um die 127 restlichen `1,0 dl`-Zeilen (0.4,
+   ackerwines/wermuth-sa/sylvies/bestwineauctions, nicht untersucht) und
+   die 20 965-/23 709-Dichtezahlen aus §2.10 neu zu bewerten.
+8. **0.7 — View `forecast_input`** (S), erst nach 7. Baut D11/D14/D15
+   ein (idealwine-cote ausschliessen, `sold IS NULL` nicht werten, nur
+   aktive Weine ≤ 36 M).
+9. **Gate G0** — Senior-Review aller Stufe-0-Schritte, inkl. aller in
+   dieser Session gefundenen Lücken (0.1b/D17, 0.2b, 0.3-AC, 0.4/0.5
+   fehlende Stichproben). **Ohne G0 kein Start von Stufe 1.**
+10. Erst danach Stufe 1 (Paket-Gerüst `data/forecast/`, `statsmodels` in
     `requirements.txt`, Baselines, Rolling-Origin-Evaluator) — siehe §5,
     unverändert seit 2026-10-29, noch nichts davon existiert im Repo.
 
@@ -296,27 +314,118 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 - Untersuchung: Welche Häuser liefern `bottle_size_dl`? Wo steht Info in `description`/`raw_wine` („Magnum", „1.5L", „75cl", „Jeroboam")? Einheit `1.0` (21 k Zeilen) prüfen: vermutlich Liter statt dl.
 - Output: Entscheidungstabelle + Parser-Erweiterung in `data/wine_resolution/bottle.py` (existiert, ist aktuell modifiziert → vorher `git diff` lesen, nicht überschreiben).
 - Default-Regel: `NULL` → 7,5 dl **nur** mit Flag `size_assumed=1`; Magnum etc. werden als eigene Serie geführt oder per Äquivalent-Faktor normiert (Entscheidung D10, siehe §6 offene Punkte).
-- AC: Verteilung `bottle_size_dl` nach Fix dokumentiert; `NULL`-Anteil < 10 % oder je Haus begründet; Stichprobe 100 Lose manuell geprüft, Fehlerquote < 3 %.
-- **Status: NICHT begonnen — ⬅ NÄCHSTER SCHRITT.** Zwischenstand (Stand
-  2026-11-05, zufällig durch andere Arbeit verbessert, nicht gezielt
-  angegangen): `bottle_size_dl` NULL bei 1 999 535 / 4 297 347 (46,5 %,
-  war 90 % am 2026-10-29) — AC-Ziel < 10 % noch weit offen. Verteilung der
-  gesetzten Werte: 7,5 dl 1 929 516, 15 dl (Magnum) 187 809, 3,75 dl
-  39 188, 30 dl 24 777, **1,0 dl 24 256 (unverändert verdächtig,
-  Einheitenfehler wie am 2026-10-29 vermerkt)**, 12 dl 16 395. Die
-  Entscheidungstabelle (welches Haus liefert was, wo steckt die Info im
-  Freitext) wurde noch nicht erstellt.
+- AC (erweitert 2026-11-05): `NULL`-Anteil < 10 % oder je Haus begründet
+  → **erreicht: 2,15 %** (92 221 / 4 297 347 — final verifiziert, nach
+  allen Review-Fixes, siehe Status). Stichprobe/Fehlerquote noch nicht
+  formal durchgeführt (siehe Todo vor Gate G0).
+- **Status: erledigt 2026-11-05** (final gegen die Master-DB
+  nachgebaut und verifiziert, inkl. zwei Review-Fix-Runden). Vier
+  Befunde/Fixes:
+  1. **D19: zacky's `1.0 dl`-Bug.** 24 129 von 24 256 verdächtigen
+     „1,0 dl"-Zeilen waren zacky (99,5 %); `parse_dl` bekam zacky's
+     `quantity`-Feld (ein Flaschen-*Zähler*, z. B. literal `"1"`,
+     `"6"`, `"12"`) übergeben und interpretierte die blanke Zahl über
+     seinen Zahlen-Fallback (gedacht für *andere* Aufrufer wie
+     dorotheum's dediziertes `size`-Feld) fälschlich als direkten
+     dl-Wert — "1 Flasche" wurde zu "0,1 Liter". Fix:
+     `zacky_bottle_size_dl` prüft zuerst, ob der Text nur eine blanke
+     Zahl ist (→ `None`), bevor er an `parse_dl` weiterreicht
+     (Review-Härtung: Regex deckt auch Dezimalformen wie „6.0" ab, nicht
+     nur reine Ganzzahl-Strings). Restliche `1,0 dl`-Zeilen: 127 (andere
+     Häuser, nicht untersucht, Kandidat für 0.6).
+  2. **`_parse_bottle_formats`-Gate-Lücke** (`build_wines.py`):
+     `bottle_size_dl` wurde nur geschrieben, wenn `quantity` *ebenfalls*
+     noch NULL war — die meisten Häuser setzen `quantity` aber schon
+     beim Laden (oft `1`), sodass dieser Pfad für sie nie feuerte.
+     Bestätigt an langtons: 13 155 Lose haben einen
+     `parse_bottle_format`-erkennbaren Hinweis im eigenen `wine`-Text
+     (z. B. „2 Magnum Set"), der bisher ungenutzt blieb. Fix:
+     `bottle_size_dl` aktualisiert jetzt unabhängig davon, ob `quantity`
+     schon gesetzt ist; `quantity` bleibt beim konservativeren Gate.
+  3. **Default-Regel umgesetzt** (`_assume_default_bottle_size`): jede
+     verbleibende NULL-Zeile → 7,5 dl + `size_assumed=1`.
+  4. **Review-Fix: Mischlose dürfen keinen fingierten Default
+     bekommen.** `_assume_default_bottle_size` lief ursprünglich *vor*
+     `_classify_lots` und prüfte nur den rohen Provider-`mixed_lot`-Flag
+     — die zusätzlichen Lose, die `_classify_lots` erst über Keyword-/
+     Gruppen-Evidenz als `MIXED` erkennt, bekamen trotzdem einen
+     fingierten 7,5-dl-Default + `size_assumed=1` (mehrere verschiedene
+     Weine/Grössen in einem Los haben keine einzelne sinnvolle Grösse).
+     Fix: `run()` ruft jetzt `_classify_lots` vor
+     `_assume_default_bottle_size` auf; Letztere prüft `lot_kind <>
+     'MIXED'` statt des rohen Flags.
+  **Finales Live-Ergebnis** (nach allen Fixes, Master-DB neu gebaut):
+  `bottle_size_dl` NULL: **92 221 / 4 297 347 (2,15 %)** — ausschliesslich
+  `lot_kind='MIXED'`-Zeilen (verifiziert: 0 NULL-Zeilen ausserhalb von
+  MIXED), bewusst nicht defaultet. `size_assumed=1` bei Nicht-MIXED-Zeilen
+  korrekt 0 für MIXED (verifiziert). Verteilung der echten/erkannten
+  Werte: überwiegend 7,5 dl, dann 15 dl (Magnum), 3,75 dl (Halbflasche),
+  30 dl (Doppelmagnum), kleinere Stückzahlen (inkl. ein echter
+  11-Liter-Fall bei langtons, „PENFOLDS 3240B - 11L ex Tempe"). Die
+  händische 100-Lose-Stichprobe aus der ursprünglichen AC ist noch
+  **nicht** durchgeführt (nachzuholen vor Gate G0, siehe Todo).
+- **D10-Hinweis bestätigt:** Magnum/Grossformate bekommen durch diesen
+  Fix jetzt tatsächlich ihre eigene `bottle_size_dl` (z. B. 15,0) statt
+  stillschweigend als Standardflasche gezählt zu werden — genau die in
+  D10 verlangte "eigene Reihe", jetzt auch technisch durchsetzbar.
 
-**0.5 `price_per_bottle` befüllen** (M)
+**0.5 `price_per_bottle_eur` befüllen** (M)
 - Formel: `realised_price / quantity / (bottle_size_dl/7.5)`, Basis gemäss D1; bei fehlendem `realised_price`: aus `hammer_price + buyer_premium` ableiten (`price_source=DERIVED`).
 - `quantity IS NULL` → 1 mit Flag `qty_assumed`; `quantity > 12` → Flag `QTY_SUSPECT` (wahrscheinlich Mischlos / Kartons).
 - Neue Spalten: `price_per_bottle_eur`, `ppb_flags`.
-- AC: ≥ 85 % der `single_wine_prices` haben `price_per_bottle_eur`; Verteilung je Haus (Median, P1, P99) im Report; keine Werte ≤ 0.
+- AC (revidiert 2026-11-05, gleiches Prinzip wie D18): ~~≥ 85 % der
+  `single_wine_prices` haben `price_per_bottle_eur`~~ — **jede Zeile
+  ohne Wert hat einen erklärten, geflaggten Grund; keine stille Lücke.**
+  Keine Werte ≤ 0 (geprüft, **erreicht: 0 Zeilen** in der ganzen DB).
 - Test: Tabelle von Los-Konstellationen → erwarteter Flaschenpreis.
-- **Status: nicht begonnen.** Die Roh-Spalte `price_per_bottle` existiert im
-  Schema (Passthrough aus den Loadern), ist aber in 100 % der Zeilen NULL —
-  keine Verwechslung mit der hier geforderten, noch zu bauenden
-  `price_per_bottle_eur`.
+- **Status: erledigt 2026-11-05** (final gegen die Master-DB nachgebaut
+  und verifiziert, inkl. zwei Review-Fix-Runden). `_fill_price_per_bottle`
+  (neue Funktion in `build_db.py`, läuft nach `resolve_wines()`, da
+  `bottle_size_dl`/`quantity`/`lot_kind` dort final werden). Fünf
+  Befunde/Fixes über beide Review-Runden:
+  1. `buyer_premium` gesetzt, aber `realised_price` dennoch NULL
+     (bestwineauctions/ackerwines setzen beide Felder unabhängig) war
+     ungeflaggt → eigenes Flag `NO_REALISED_PRICE` (statt mit
+     `NO_PREMIUM_POLICY` verwechselt zu werden).
+  2. `lot_kind='MIXED'` bekam fälschlich einen Flaschenpreis aus dem
+     fingierten 7,5-dl-Default → ausgeschlossen, Flag `MIXED_LOT`
+     (siehe auch 0.4-Fix 4, der den fingierten Wert selbst verhindert).
+  3. `bottle_size_dl <= 0` (unvalidiert aus Rohdaten-Feldern einiger
+     Loader) war ungeschützt (Crash-Risiko bei 0, falscher Wert bei
+     negativ) → Flag `SIZE_SUSPECT`, keine Berechnung.
+  4. **Eigener Befund (nicht von der Review, beim Verifizieren der
+     Zahlen selbst gefunden): `ZERO_PRICE`.** 66 689 Zeilen (davon
+     58 347 ackerwines) sind `sold=1` mit `hammer_price`/
+     `realised_price` buchstäblich `0.0` — eine echte Zuschlagszeile,
+     aber Preis null (kein donated/no-reserve-Fall, die hätten einen
+     echten >0-Preis). Hätte sonst `price_per_bottle_eur=0` erzeugt und
+     die eigene „keine Werte ≤ 0"-AC verletzt.
+  5. **Review-Fix Runde 2: `NO_FX_RATE`.** `fx_status='MISSING'` (D18)
+     wird nur gesetzt, wenn `lot_date IS NOT NULL`. Ein bepreistes Los
+     mit bekannter Währung, aber ganz ohne `lot_date` (bestätigt: 3 060
+     wermuth-sa/franzwermuth-Zeilen) hatte weder `fx_status` noch einen
+     `ppb_flags`-Eintrag — eine stille, unerklärte Lücke, die auch nicht
+     in der D18-FX-Lücke mitgezählt war. Eigenes Flag `NO_FX_RATE`
+     (nur wenn `fx_status` die Lücke nicht schon erklärt).
+  **Finales Live-Ergebnis** (`single_wine_prices`, 3 234 301 Zeilen):
+  **2 527 189 mit `price_per_bottle_eur` (78,14 % roh).** Lücke
+  (707 112 Zeilen) vollständig erklärt, keine unerklärte Restmenge:
+  479 685 **kein Preis** (weder `realised_price` noch `hammer_price`),
+  150 918 **D18-FX-Lücke** (AUD/HKD vor Cache-Start, TWD-Datenabruf
+  ausstehend), 66 689 **`ZERO_PRICE`**, 6 579 **`NO_PREMIUM_POLICY`**
+  (winebarrel), 3 060 **`NO_FX_RATE`** (kein `lot_date`), 181
+  `quantity≤0`. **Von den Zeilen mit echtem Preis: 2 527 189 /
+  2 754 616 = 91,74 %** bekommen `price_per_bottle_eur` — die
+  aussagekräftige Zahl. Stichprobe (8 Zufallszeilen) manuell
+  plausibilisiert (Preise CHF 7–168/Flasche, alle positiv, passende
+  Grössenordnung). Formale Tabelle von Los-Konstellationen (der
+  ursprüngliche AC-Test) noch nicht geschrieben — vor Gate G0
+  nachholen.
+- **Hinweis (unverändert):** Die Roh-Spalte `price_per_bottle` (nicht zu
+  verwechseln mit `price_per_bottle_eur` oben, die mit diesem Schritt jetzt
+  befüllt ist) existiert im Schema (Passthrough aus den Loadern), ist aber
+  weiterhin in 100 % der Zeilen NULL — kein Ziel dieses Schritts, nur zur
+  Abgrenzung festgehalten.
 
 **0.6 Outlier- und Dubletten-Bereinigung** (M)
 - Dubletten: gleiche (wine_ref_id, Jahrgang, Datum, Preis ±1 %, Haus) → eine Zeile; idealwine („cote") als eigene Preisart `price_kind='COTE'` ausschliessen oder getrennt führen (Entscheid in Review).
@@ -421,6 +530,7 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 | D16 | `fx_rate` für EUR-Zeilen (569 131 Zeilen, 13 %): NULL oder 1.0? | Beeinflusst 0.5-Formel (Sonderfall nötig oder nicht) |
 | D17 | winebarrel-Epoch-Artefakt (`lot_date='1970-01-01'`, 680 Zeilen, Rohdaten selbst korrupt, kein Backfill möglich) | 0.1b/0.7 |
 | D18 | 0.3-AC (≥ 99 %) nicht erreichbar (96,04 %) wegen struktureller EODHD-Lücke vor Cache-Start (AUD vor 2006-03-01, 158 920 Zeilen; HKD vor 1999-12-31, 261 Zeilen) — AC-Zahl senken, Zeilen explizit als `fx_status='MISSING'` dokumentieren und aus `forecast_input` ausschliessen, oder eine zweite FX-Quelle für die Vor-Cache-Spanne suchen? | 0.3/0.7, AC-Formulierung |
+| D19 | zacky's `bottle_size_dl=1.0`-Bug (24 129 Zeilen): `parse_dl` bekam das `quantity`-Feld (Flaschenzähler, z. B. "6") statt eines Size-Felds übergeben und las die blanke Zahl über seinen Zahlen-Fallback fälschlich als dl-Wert. Keine echte Alternative abzuwägen — reiner Bug, nur eine sinnvolle Behebung (Guard vor `parse_dl`, siehe 0.4). | 0.4 |
 
 **Entschieden am 2026-10-29:**
 D10 Grossformate = **eigene Reihen** (Schlüssel `wine_ref_id · vintage · size_class`, kein Äquivalent-Faktor) ·
@@ -433,9 +543,10 @@ D12 Anzeigewährung = **nur EUR** (entspricht direkt D1/der Modell-Berechnung; k
 D15 Produktabdeckung = **nur aktive Weine** (letzte Beobachtung ≤ 36 M, wie in D5 für Stufe 2 bereits verlangt — gilt jetzt auch für den Gruppenindex-Fallback aus Stufe 3: ein „totes" Wein-Jahrgang bekommt keine Prognose, auch keine breite) ·
 D16 `fx_rate` für EUR = **1.0 setzen** (nicht NULL) — einheitliche Formel in 0.5 (`preis_eur = preis_ccy / fx_rate`), kein Sonderfall nötig, kein Risiko dass EUR-Zeilen bei einem vergessenen Sonderfall stillschweigend NULL werden ·
 D17 winebarrel-1970-Epoch = **`lot_date` auf NULL setzen** — einzig technisch mögliche Option (Rohdaten enthalten buchstäblich `"auction_end": "1970-01-01 01:00:00"`, kein zweites Datumsfeld im Lot, `auction_date` der virtuellen "all"-Auktion ist selbst NULL); betrifft `forecast_input` ohnehin nicht, da alle 680 Zeilen `sold IS NULL` haben (→ D14) ·
-D18 FX-AC-Lücke = **AC senken + Zeilen flaggen** (nicht: zweite FX-Quelle suchen) — `fx_status='MISSING'` (neue Spalte + CHECK-Constraint) für jede Zeile mit bekannter Währung und `lot_date`, aber ohne `fx_rate`; die AC-Formulierung in 0.3 wechselt von einer festen Prozentzahl zu „jede Lücke ist erklärt und geflaggt, keine stille NULL" (Guardrail G3).
+D18 FX-AC-Lücke = **AC senken + Zeilen flaggen** (nicht: zweite FX-Quelle suchen) — `fx_status='MISSING'` (neue Spalte + CHECK-Constraint) für jede Zeile mit bekannter Währung und `lot_date`, aber ohne `fx_rate`; die AC-Formulierung in 0.3 wechselt von einer festen Prozentzahl zu „jede Lücke ist erklärt und geflaggt, keine stille NULL" (Guardrail G3) ·
+D19 zacky-Bug = **behoben** (`zacky_bottle_size_dl`-Guard, siehe 0.4) — kein Entscheid im eigentlichen Sinn, hier nur zur Nachvollziehbarkeit mitgeführt. Die 0.5-AC folgt demselben D18-Prinzip (AC-Formulierung statt Prozentzahl, siehe 0.5) — bekommt bewusst keine eigene D-Nummer, da es dieselbe bereits getroffene Entscheidung ist, nur ein zweites Mal angewendet.
 
-D10–D18 sind damit getroffen.
+D10–D19 sind damit getroffen.
 
 ---
 

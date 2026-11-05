@@ -233,6 +233,34 @@ class LoaderTest(unittest.TestCase):
             self.assertEqual(
                 conn.execute("SELECT COUNT(*) FROM fx_rates").fetchone()[0], 1)
 
+    def test_skip_resolution_also_skips_fill_price_per_bottle(self):
+        """Review fix: _fill_price_per_bottle depends on resolve_wines()
+        having finalized lot_kind (MIXED exclusion) and
+        bottle_size_dl/quantity (0.4's _parse_bottle_formats/
+        _assume_default_bottle_size) -- with --skip-resolution those never
+        run, so _fill_price_per_bottle must not run either (it used to run
+        unconditionally, computing against un-resolved loader-raw values
+        and never excluding MIXED lots since lot_kind stayed NULL)."""
+        calls = []
+        orig = build_db._fill_price_per_bottle
+        build_db._fill_price_per_bottle = lambda conn: calls.append(conn)
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                _cache(d, "USD", [["2020-01-02", 1.1]])
+                old_cache, old_arch = build_db.FX_CACHE, build_db.ARCHIVE
+                build_db.FX_CACHE, build_db.ARCHIVE = d, d
+                try:
+                    args = type("A", (), dict(limit=None, only="none",
+                                              skip_resolution=True))()
+                    conn = sqlite3.connect(":memory:")
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        build_db._build(conn, args)
+                finally:
+                    build_db.FX_CACHE, build_db.ARCHIVE = old_cache, old_arch
+        finally:
+            build_db._fill_price_per_bottle = orig
+        self.assertEqual(calls, [])
+
     def test_schema_rejects_nonpositive(self):
         for date, rate in (("2020-01-02", 0), ("2020-01-02", 1e9),
                            ("20200102", 1.1)):

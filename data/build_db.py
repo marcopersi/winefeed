@@ -194,6 +194,9 @@ CREATE TABLE lots (
   is_ohk              INTEGER,
   note                TEXT,
   price_per_bottle    REAL,
+  size_assumed        INTEGER,
+  price_per_bottle_eur REAL,
+  ppb_flags           TEXT,
   CHECK (vintage_final IS NULL OR vintage_final BETWEEN 1700 AND 2100),
   CHECK (lot_kind IS NULL OR lot_kind IN ('SINGLE', 'MIXED', 'UNKNOWN')),
   CHECK (lot_kind <> 'MIXED' OR wine_ref_id IS NULL),
@@ -201,7 +204,8 @@ CREATE TABLE lots (
     'STRUCTURED', 'EXTRACTED', 'NV', 'MV', 'MISSING',
     'AMBIGUOUS', 'CONFLICT', 'INVALID'
   )),
-  CHECK (fx_status IS NULL OR fx_status IN ('MISSING'))
+  CHECK (fx_status IS NULL OR fx_status IN ('MISSING')),
+  CHECK (size_assumed IS NULL OR size_assumed = 1)
 );
 
 CREATE TABLE wine_alias_observations (
@@ -440,6 +444,35 @@ def parse_qty_text(v):
         return int(v)
     m = re.search(r"(\d+)", str(v))
     return int(m.group(1)) if m else None
+
+
+_ZACKY_BARE_COUNT_RE = re.compile(r"\s*\d+(?:\.\d+)?\s*")
+
+
+def zacky_bottle_size_dl(quantity_text):
+    """0.4/D19: confirmed real bug -- zacky's ``quantity`` field is the only
+    source of bottle size for this house ("1 Bottle 750ml", "1 Magnum
+    1.5L"), but many lots have no size stated at all, just a bare count
+    ("1", "6", "12"). Passed straight to ``parse_dl``, its final fallback
+    (any bare number 1-60 is a direct dl value -- meant for *other*
+    callers that pass an explicit size field, e.g. dorotheum's "size") then
+    misreads that bare count as a size: 24,129 lots ended up with
+    ``bottle_size_dl=1.0`` ("1" bottle read as 1 deciliter). Bare-count
+    text has no size info to extract, so it must not reach that fallback
+    at all.
+
+    Review fix: the guard matches an optional decimal part too (not just
+    bare digits) -- the archived data's ``quantity`` field is currently
+    always a plain JSON ``int`` or a descriptive string, never a decimal
+    number, so ``str(int)`` (e.g. "6") always matched the digits-only
+    pattern already; but a decimal-shaped bare count (e.g. "6.0", or a
+    future scrape generation that emits ``quantity`` as a JSON float)
+    would silently slip past a digits-only regex and reach ``parse_dl``'s
+    bare-number fallback -- reproducing this exact bug for that shape."""
+    if quantity_text is not None and _ZACKY_BARE_COUNT_RE.fullmatch(
+            str(quantity_text)):
+        return None
+    return parse_dl(quantity_text)
 
 
 # Fixed auction location for houses bound to one physical saleroom. Houses with
@@ -1194,7 +1227,7 @@ def load_zacky(b, limit):
                 "lot_no": str(lot.get("lot_no")),
                 "wine": lot.get("name"),
                 "quantity": parse_qty_text(lot.get("quantity")),
-                "bottle_size_dl": parse_dl(lot.get("quantity")),
+                "bottle_size_dl": zacky_bottle_size_dl(lot.get("quantity")),
                 "realised_price": to_float(fp) if fp else None,
                 "price_basis": "HAMMER_PLUS_BUYERS_PREMIUM",
                 "currency": cur, "sold": sold,
@@ -3643,6 +3676,14 @@ def _build(conn, args):
     if not args.skip_resolution:
         from build_wines import run as resolve_wines
         resolve_wines(conn)
+        # Review fix: must stay inside this guard -- _fill_price_per_bottle
+        # depends on resolve_wines() having finalized lot_kind (MIXED
+        # exclusion) and bottle_size_dl/quantity (0.4's
+        # _parse_bottle_formats/_assume_default_bottle_size); with
+        # --skip-resolution those never run, so lot_kind stays NULL
+        # (MIXED lots would never be excluded) and bottle_size_dl/quantity
+        # stay at their raw, un-resolved loader values.
+        _fill_price_per_bottle(conn)
 
     _record_build_metadata(conn)
 
@@ -3786,6 +3827,138 @@ def _apply_fx_rates(conn):
     conn.execute(
         "UPDATE lots SET fx_status = 'MISSING' WHERE lot_date IS NOT NULL"
         " AND fx_rate IS NULL AND currency IS NOT NULL")
+
+
+def _fill_price_per_bottle(conn):
+    """0.5: ``price_per_bottle_eur`` = D1's target (brutto incl. buyer's
+    premium, ohne MwSt, je 0.75l, in EUR) = ``realised_price / fx_rate``
+    (EUR-ified, D16: fx_rate=1.0 for EUR already, so no special case) /
+    ``quantity`` / (``bottle_size_dl`` / 7.5).
+
+    Runs after ``resolve_wines()`` (called just before this in ``main()``)
+    because ``bottle_size_dl``/``quantity`` can still change there (0.4's
+    ``_parse_bottle_formats``/``_assume_default_bottle_size``) -- using
+    their pre-resolution state here would silently compute against a
+    since-overwritten value.
+
+    ``quantity`` defaults to 1 (flag ``QTY_ASSUMED``) rather than being
+    skipped when NULL, since "how many bottles" is knowable (1, by far
+    the most common case) even when a loader didn't record it; 0
+    (a data error -- a lot can't hold zero bottles) and >12 (likely a
+    case/carton lot, not priced per bottle) are flagged ``QTY_SUSPECT``,
+    but still computed when possible (except =0: can't divide by it) --
+    ``forecast_input`` (0.7) decides whether to filter on the flag, not
+    this function.
+
+    Confirmed real: 7,544 of 7,546 lots with a hammer price but no
+    computed ``realised_price`` are winebarrel, the one house with no
+    entry in ``PREMIUM_POLICY`` at all -- there is no documented premium
+    rate to derive one from, and guessing one would silently violate D1's
+    premium-inclusive definition (G3), so these get ``NO_PREMIUM_POLICY``
+    and no ``price_per_bottle_eur`` instead. A *different* lot can reach
+    this same ``realised_price IS NULL`` branch with ``buyer_premium``
+    already set by the loader itself (e.g. bestwineauctions/ackerwines
+    pass both fields independently from source JSON; a VAT-text parse
+    failure can leave ``total_price``/``realised_price`` NULL while
+    ``buyer_premium`` is already known) -- that case is NOT a missing
+    premium policy, so it gets its own ``NO_REALISED_PRICE`` flag instead
+    of being mistaken for the ``NO_PREMIUM_POLICY`` case (or, before this
+    fix, silently getting no flag at all -- a G3 violation this function
+    otherwise exists to prevent).
+
+    MIXED lots (``lot_kind='MIXED'``, set by ``_classify_lots`` in
+    ``resolve_wines()``, which runs before this) are excluded from the
+    price-per-bottle computation entirely (flag ``MIXED_LOT``): several
+    distinct wines/sizes share one lot number, so dividing the lot's
+    total price by one ``bottle_size_dl`` (real or
+    ``_assume_default_bottle_size``'s 7.5dl default) would produce a
+    fabricated, meaningless "per bottle" figure indistinguishable from a
+    real single-wine price.
+
+    ``bottle_size_dl <= 0`` (never produced by ``parse_dl``, which floors
+    at 1, but several loaders pass a raw archive field straight through
+    with no validation) is flagged ``SIZE_SUSPECT`` rather than divided
+    by -- dividing by zero would otherwise crash the whole build, and a
+    negative size would silently produce a negative price, violating this
+    step's own "keine Werte <= 0" AC.
+
+    A lot with no price information at all (``realised_price`` and
+    ``hammer_price`` both NULL -- unsold or simply never priced) is left
+    completely untouched: nothing to compute, and no flag is meaningful
+    without a price question to flag. Rows where nothing could be
+    computed and no flag applies either (e.g. the D18 FX gap --
+    ``fx_status='MISSING'`` already explains those) are likewise not
+    written at all, since every lot already starts with
+    ``price_per_bottle_eur``/``ppb_flags`` NULL and writing NULL over NULL
+    is a no-op.
+
+    Review fix: ``fx_status`` is only ever set to ``'MISSING'`` when
+    ``lot_date IS NOT NULL`` (D18, ``_apply_fx_rates`` -- a row with no
+    ``lot_date`` at all is a separate date gap, deliberately out of scope
+    for that flag). A priced lot with a known currency but no ``lot_date``
+    (confirmed real: 3,129 wermuth-sa/franzwermuth lots in the live DB)
+    therefore has ``fx_rate IS NULL`` *and* ``fx_status IS NULL`` -- the
+    "fx_status already explains those" assumption above does not hold for
+    this case, and without a flag of its own here the row silently ends
+    up with no ``price_per_bottle_eur`` and no explanation at all, a G3
+    violation this function otherwise exists to prevent. Flagged
+    ``NO_FX_RATE`` instead, but only when ``fx_status`` doesn't already
+    cover it, so a D18 ``'MISSING'`` row isn't double-flagged."""
+    updates = []
+    for (lot_id, realised_price, hammer_price, buyer_premium, quantity,
+         bottle_size_dl, fx_rate, fx_status, lot_kind) in conn.execute(
+            "SELECT id, realised_price, hammer_price, buyer_premium,"
+            " quantity, bottle_size_dl, fx_rate, fx_status, lot_kind"
+            " FROM lots"
+            " WHERE realised_price IS NOT NULL OR hammer_price IS NOT NULL"):
+        if lot_kind == "MIXED":
+            updates.append((None, "MIXED_LOT", lot_id))
+            continue
+
+        if realised_price is None:
+            flag = ("NO_PREMIUM_POLICY" if buyer_premium is None
+                     else "NO_REALISED_PRICE")
+            updates.append((None, flag, lot_id))
+            continue
+
+        flags = []
+        qty = quantity
+        if qty is None:
+            qty = 1
+            flags.append("QTY_ASSUMED")
+        elif qty <= 0:
+            flags.append("QTY_SUSPECT")
+        elif qty > 12:
+            flags.append("QTY_SUSPECT")
+
+        if bottle_size_dl is not None and bottle_size_dl <= 0:
+            flags.append("SIZE_SUSPECT")
+
+        # Confirmed real (ackerwines 58,347 of 70,825 total): a lot can be
+        # marked sold=1 with hammer_price/realised_price literally 0.0 --
+        # not a donated/no-reserve lot (those are a genuine >0 price), but
+        # a zero-value "sale" that would otherwise divide through to a
+        # price_per_bottle_eur of exactly 0, violating this step's own
+        # "keine Werte <= 0" AC. Flagged instead of computed; a deeper
+        # per-house audit of why belongs in 0.6, not here.
+        if realised_price <= 0:
+            flags.append("ZERO_PRICE")
+
+        if fx_rate is None and fx_status != "MISSING":
+            flags.append("NO_FX_RATE")
+
+        ppb = None
+        if (fx_rate is not None and bottle_size_dl is not None
+                and bottle_size_dl > 0 and qty > 0 and realised_price > 0):
+            price_eur = realised_price / fx_rate
+            ppb = price_eur / qty / (bottle_size_dl / 7.5)
+
+        if ppb is None and not flags:
+            continue
+        updates.append((ppb, ",".join(flags) or None, lot_id))
+    conn.executemany(
+        "UPDATE lots SET price_per_bottle_eur=?, ppb_flags=? WHERE id=?",
+        updates)
 
 
 # Buyer's premium policy per house. ``rate`` = flat premium fraction of the

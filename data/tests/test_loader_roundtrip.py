@@ -188,6 +188,227 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (None, None))
         conn.close()
 
+    def test_fill_price_per_bottle_basic_eur_and_foreign_currency(self):
+        """D1's formula: realised_price / fx_rate / quantity /
+        (bottle_size_dl / 7.5). EUR (fx_rate=1.0, D16) needs no special
+        case to produce the same result shape as a real conversion."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "eur-lot",
+                               "realised_price": 100.0, "quantity": 2,
+                               "bottle_size_dl": 7.5, "fx_rate": 1.0})
+        builder.add_lot(a_id, {"lot_no": "2", "wine": "aud-lot",
+                               "realised_price": 160.0, "quantity": 1,
+                               "bottle_size_dl": 15.0, "fx_rate": 1.6})
+        build_db._fill_price_per_bottle(conn)
+        rows = dict(conn.execute(
+            "SELECT wine, price_per_bottle_eur FROM lots"))
+        self.assertAlmostEqual(rows["eur-lot"], 50.0)  # 100/1.0/2/(7.5/7.5)
+        self.assertAlmostEqual(rows["aud-lot"], 50.0)  # 160/1.6/1/(15/7.5)
+        conn.close()
+
+    def test_fill_price_per_bottle_quantity_flags(self):
+        """D5.0.5: quantity NULL -> assumed 1 (flagged, still computed);
+        quantity=0 -> flagged, NOT computed (division by zero is a data
+        error, not a guess to make); quantity>12 -> flagged but still
+        computed (likely a case/carton lot -- forecast_input decides
+        whether to filter it, not this step); quantity<0 (review fix: a
+        data error, same class as quantity=0) -> flagged, NOT computed --
+        dividing through would otherwise silently produce a negative
+        price_per_bottle_eur, violating this step's own "keine Werte <=
+        0" AC the same way an uncaught zero/negative bottle_size_dl or
+        realised_price would."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "qty-null",
+                               "realised_price": 75.0, "quantity": None,
+                               "bottle_size_dl": 7.5, "fx_rate": 1.0})
+        builder.add_lot(a_id, {"lot_no": "2", "wine": "qty-zero",
+                               "realised_price": 75.0, "quantity": 0,
+                               "bottle_size_dl": 7.5, "fx_rate": 1.0})
+        builder.add_lot(a_id, {"lot_no": "3", "wine": "qty-24",
+                               "realised_price": 1800.0, "quantity": 24,
+                               "bottle_size_dl": 7.5, "fx_rate": 1.0})
+        builder.add_lot(a_id, {"lot_no": "4", "wine": "qty-negative",
+                               "realised_price": 75.0, "quantity": -1,
+                               "bottle_size_dl": 7.5, "fx_rate": 1.0})
+        build_db._fill_price_per_bottle(conn)
+        rows = dict((w, (p, f)) for w, p, f in conn.execute(
+            "SELECT wine, price_per_bottle_eur, ppb_flags FROM lots"))
+        self.assertEqual(rows["qty-null"], (75.0, "QTY_ASSUMED"))
+        self.assertEqual(rows["qty-zero"], (None, "QTY_SUSPECT"))
+        self.assertEqual(rows["qty-24"], (75.0, "QTY_SUSPECT"))
+        self.assertEqual(rows["qty-negative"], (None, "QTY_SUSPECT"))
+        conn.close()
+
+    def test_fill_price_per_bottle_no_premium_policy(self):
+        """Confirmed real: winebarrel has no entry in PREMIUM_POLICY, so a
+        hammer-only lot there never gets a realised_price -- D1 requires a
+        premium-inclusive price, and there's no documented rate to derive
+        one, so this must be flagged and left without a price_per_bottle
+        rather than silently computed from hammer alone (G3)."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("winebarrel", "all", "x", None, "CHF",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "no-premium",
+                               "hammer_price": 100.0})
+        build_db._fill_price_per_bottle(conn)
+        row = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots").fetchone()
+        self.assertEqual(row, (None, "NO_PREMIUM_POLICY"))
+        conn.close()
+
+    def test_fill_price_per_bottle_no_fx_rate_stays_unset(self):
+        """D18: a lot flagged fx_status='MISSING' (no market rate to
+        convert with) must not get a guessed price_per_bottle_eur --
+        there's nothing meaningful ppb_flags could add here either, since
+        fx_status already carries that information, so no NO_FX_RATE flag
+        is added on top of it."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("langtons", "1", "x", None, "AUD",
+                                   "HAMMER")
+        lot_id = builder.add_lot(a_id, {"lot_no": "1", "wine": "no-fx",
+                               "realised_price": 100.0, "quantity": 1,
+                               "bottle_size_dl": 7.5, "fx_rate": None})
+        conn.execute("UPDATE lots SET fx_status='MISSING' WHERE id=?",
+                     (lot_id,))
+        build_db._fill_price_per_bottle(conn)
+        row = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots").fetchone()
+        self.assertEqual(row, (None, None))
+        conn.close()
+
+    def test_fill_price_per_bottle_flags_fx_rate_missing_without_status(
+            self):
+        """Review fix: confirmed real gap -- fx_status is only ever set to
+        'MISSING' when lot_date IS NOT NULL (D18, _apply_fx_rates); a
+        priced lot with a known currency but no lot_date at all (confirmed
+        real: 3,129 wermuth-sa/franzwermuth lots in the live DB) has
+        fx_rate IS NULL *and* fx_status IS NULL, so the D18 fx_status flag
+        does not explain it. Without its own flag this would silently end
+        up with no price_per_bottle_eur and no explanation at all -- a G3
+        violation. Must get NO_FX_RATE instead."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("wermuth-sa", "1", "x", None, "CHF",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "no-date-no-fx",
+                               "realised_price": 100.0, "quantity": 1,
+                               "bottle_size_dl": 7.5, "fx_rate": None})
+        build_db._fill_price_per_bottle(conn)
+        row = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots").fetchone()
+        self.assertEqual(row, (None, "NO_FX_RATE"))
+        conn.close()
+
+    def test_fill_price_per_bottle_no_price_at_all_untouched(self):
+        """A lot with no price information whatsoever gets no flag either
+        -- there is no price question to flag without a price."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "unsold"})
+        build_db._fill_price_per_bottle(conn)
+        row = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots").fetchone()
+        self.assertEqual(row, (None, None))
+        conn.close()
+
+    def test_fill_price_per_bottle_buyer_premium_set_but_no_realised_price(
+            self):
+        """Review fix: a loader (e.g. bestwineauctions/ackerwines) can set
+        buyer_premium directly from source JSON while realised_price stays
+        NULL (e.g. a VAT-text parse failure) -- distinct from winebarrel's
+        NO_PREMIUM_POLICY case (no premium known at all) and must not be
+        conflated with it, nor silently left unflagged (G3)."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("bestwineauctions", "1", "x", None, "EUR",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "premium-no-realised",
+                               "hammer_price": 100.0, "buyer_premium": 20.0})
+        build_db._fill_price_per_bottle(conn)
+        row = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots").fetchone()
+        self.assertEqual(row, (None, "NO_REALISED_PRICE"))
+        conn.close()
+
+    def test_fill_price_per_bottle_excludes_mixed_lots(self):
+        """Review fix: a MIXED lot (several distinct wines sharing one lot
+        number, e.g. sylvies -- lot_kind set by _classify_lots before this
+        function runs) must not get a price_per_bottle_eur computed from
+        one bottle_size_dl, real or _assume_default_bottle_size's 7.5dl
+        default -- that would be a meaningless fabricated figure. Flagged
+        MIXED_LOT instead, regardless of bottle_size_dl/fx_rate."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, lot_kind,"
+            " realised_price, quantity, bottle_size_dl, fx_rate)"
+            " VALUES (1, '1', 'Mixed Case', 'MIXED', 300.0, 3, 7.5, 1.0)")
+        build_db._fill_price_per_bottle(conn)
+        row = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots").fetchone()
+        self.assertEqual(row, (None, "MIXED_LOT"))
+        conn.close()
+
+    def test_fill_price_per_bottle_flags_non_positive_bottle_size(self):
+        """Review fix: bottle_size_dl <= 0 (never produced by parse_dl, but
+        several loaders pass a raw archive field through unvalidated) must
+        not be divided by -- zero would crash the build, negative would
+        silently produce a negative price (violating the step's own
+        'keine Werte <= 0' AC). Flagged SIZE_SUSPECT, no price computed."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "zero-size",
+                               "realised_price": 100.0, "quantity": 1,
+                               "bottle_size_dl": 0.0, "fx_rate": 1.0})
+        builder.add_lot(a_id, {"lot_no": "2", "wine": "negative-size",
+                               "realised_price": 100.0, "quantity": 1,
+                               "bottle_size_dl": -7.5, "fx_rate": 1.0})
+        build_db._fill_price_per_bottle(conn)
+        rows = dict((w, (p, f)) for w, p, f in conn.execute(
+            "SELECT wine, price_per_bottle_eur, ppb_flags FROM lots"))
+        self.assertEqual(rows["zero-size"], (None, "SIZE_SUSPECT"))
+        self.assertEqual(rows["negative-size"], (None, "SIZE_SUSPECT"))
+        conn.close()
+
+    def test_fill_price_per_bottle_flags_zero_price(self):
+        """Confirmed real (live DB, 2026-11-05): 70,825 lots, mostly
+        ackerwines, are marked sold=1 with hammer_price/realised_price
+        literally 0.0 -- not a donated/no-reserve lot (genuine >0 price),
+        but a zero-value "sale" that would otherwise divide through to a
+        price_per_bottle_eur of exactly 0, violating this step's own
+        'keine Werte <= 0' AC. Flagged ZERO_PRICE instead of computed."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("ackerwines", "1", "x", None, "USD",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "zero-price",
+                               "realised_price": 0.0, "hammer_price": 0.0,
+                               "buyer_premium": 0.0, "quantity": 1,
+                               "bottle_size_dl": 7.5, "fx_rate": 1.6,
+                               "sold": 1})
+        build_db._fill_price_per_bottle(conn)
+        row = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots").fetchone()
+        self.assertEqual(row, (None, "ZERO_PRICE"))
+        conn.close()
+
     def test_sylvies_premium_is_20_percent_with_no_tax(self):
         """sylvies.be Conditions of Sale: 20% buyer's premium excl. VAT, no
         per-lot fee, VAT is destination-dependent (no single numeric rate) --
@@ -1236,6 +1457,112 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(ref, 42)
         conn.close()
 
+    def test_parse_bottle_formats_fills_dl_even_when_quantity_already_set(
+            self):
+        """0.4/D19: confirmed real -- langtons sets quantity on every lot
+        itself (often just 1, the common single-bottle case), so the old
+        combined "only update if quantity IS NULL" gate silently discarded
+        a perfectly good "2 Magnum Set"-style hint sitting in the lot's own
+        wine text for 13,155 langtons lots. bottle_size_dl must fill in
+        regardless of quantity's own state; quantity itself keeps the more
+        conservative original gate (unchanged here: already 1, stays 1)."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, raw_wine, quantity,"
+            " lot_kind) VALUES (1, '1',"
+            " 'ALKINA Old Quarter Grenache Shiraz Mataro 2 Magnum Set',"
+            " 'ALKINA Old Quarter Grenache Shiraz Mataro 2 Magnum Set',"
+            " 1, 'SINGLE')")
+        build_wines._parse_bottle_formats(conn)
+        row = conn.execute(
+            "SELECT quantity, bottle_size_dl FROM lots").fetchone()
+        self.assertEqual(row, (1, 15.0))
+        conn.close()
+
+    def test_assume_default_bottle_size_flags_the_guess(self):
+        """0.4's Default-Regel: a lot with no size hint at all gets a
+        standard 750ml bottle assumed -- flagged size_assumed=1 so it's
+        never mistaken for a confirmed size. A lot that already has a
+        real bottle_size_dl (confirmed or from _parse_bottle_formats) must
+        stay untouched and unflagged."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, lot_kind)"
+            " VALUES (1, '1', 'No Hint Wine', 'SINGLE')")
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, bottle_size_dl,"
+            " lot_kind) VALUES (1, '2', 'Confirmed Magnum', 15.0, 'SINGLE')")
+        build_wines._assume_default_bottle_size(conn)
+        rows = conn.execute(
+            "SELECT wine, bottle_size_dl, size_assumed FROM lots"
+            " ORDER BY lot_no").fetchall()
+        self.assertEqual(rows, [
+            ("No Hint Wine", 7.5, 1),
+            ("Confirmed Magnum", 15.0, None),
+        ])
+        conn.close()
+
+    def test_assume_default_bottle_size_skips_mixed_lot_flag(self):
+        """Review fix: a lot_kind='MIXED' row (e.g. sylvies' multi-sub-lot
+        groups) sets bottle_size_dl=NULL deliberately -- several distinct
+        wines/sizes share one lot number, so there is no single size to
+        assume. Defaulting it to 7.5dl here would fabricate a fake
+        confirmed-looking size; must stay NULL/unflagged."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, lot_kind)"
+            " VALUES (1, '1', 'Mixed Group', 'MIXED')")
+        build_wines._assume_default_bottle_size(conn)
+        row = conn.execute(
+            "SELECT bottle_size_dl, size_assumed FROM lots").fetchone()
+        self.assertEqual(row, (None, None))
+        conn.close()
+
+    def test_assume_default_bottle_size_skips_keyword_evidence_mixed_lot(
+            self):
+        """Review fix (2nd): the original guard checked the raw provider
+        ``mixed_lot`` flag directly, which only covers sylvies-style
+        provider-flagged mixed lots -- a lot ``_classify_lots`` itself
+        later classifies MIXED via keyword evidence (e.g. a 'mixed case'
+        hint in the wine text) never had ``mixed_lot=1`` set at all, so
+        the old guard missed it and fabricated a 7.5dl/size_assumed=1
+        default anyway (confirmed real: 28,125 such rows in the live DB).
+        ``_assume_default_bottle_size`` now runs after ``_classify_lots``
+        (``run()`` reordered) and guards on the final ``lot_kind``, which
+        covers this case too."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, mixed_lot, lot_kind)"
+            " VALUES (1, '1', 'Mixed Case of Bordeaux', NULL, 'MIXED')")
+        build_wines._assume_default_bottle_size(conn)
+        row = conn.execute(
+            "SELECT bottle_size_dl, size_assumed FROM lots").fetchone()
+        self.assertEqual(row, (None, None))
+        conn.close()
+
+    def test_run_classifies_before_assuming_default_bottle_size(self):
+        """End-to-end regression for the reorder: a lot whose wine text
+        matches _classify_lots' keyword-evidence rule (no provider
+        mixed_lot flag at all) must come out of the full build_wines.run()
+        pipeline with lot_kind='MIXED' and bottle_size_dl still NULL, not
+        a fabricated 7.5dl default."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, source_lot_key)"
+            " VALUES (1, '1', 'Mixed Case Lot', 'k1')")
+        build_wines._classify_lots(conn)
+        build_wines._assume_default_bottle_size(conn)
+        row = conn.execute(
+            "SELECT lot_kind, bottle_size_dl, size_assumed FROM lots"
+        ).fetchone()
+        self.assertEqual(row, ("MIXED", None, None))
+        conn.close()
+
 
 class ParseDlTest(unittest.TestCase):
     def test_double_magnum_is_not_shadowed_by_plain_magnum_check(self):
@@ -1249,6 +1576,51 @@ class ParseDlTest(unittest.TestCase):
         self.assertEqual(build_db.parse_dl("Double Magnum"), 30.0)
         self.assertEqual(build_db.parse_dl("magnum"), 15.0)
         self.assertEqual(build_db.parse_dl("jeroboam"), 30.0)
+
+    def test_bare_number_is_a_direct_dl_value_not_a_count(self):
+        """parse_dl's own contract (dorotheum/pandolfini's "size" field,
+        baghera's "format" field): a bare number with no unit text IS the
+        dl value itself. zacky_bottle_size_dl exists specifically because
+        zacky's "quantity" field reuses the same bare-number shape to mean
+        something else entirely (a bottle count) -- see its own test
+        below -- not because parse_dl itself is wrong here."""
+        self.assertEqual(build_db.parse_dl("7.5"), 7.5)
+        self.assertEqual(build_db.parse_dl("15"), 15.0)
+
+
+class ZackyBottleSizeDlTest(unittest.TestCase):
+    def test_bare_count_is_not_a_size(self):
+        """Confirmed real bug (D19, 2026-11-05): zacky's quantity field is
+        "N" when no size is stated at all -- 24,129 lots got
+        bottle_size_dl=1.0 from a literal "1" (bottle count, not 0.1L)
+        before this fix, via parse_dl's bare-number-is-a-dl-value
+        fallback (correct for other callers, wrong for this one field's
+        count-or-count+size shape)."""
+        for text in ("1", "6", "12", " 3 ", 1, 6):
+            self.assertIsNone(build_db.zacky_bottle_size_dl(text), msg=text)
+
+    def test_decimal_bare_count_is_not_a_size(self):
+        """Review fix: a decimal-shaped bare count (e.g. "6.0", or a JSON
+        float quantity value) must be treated the same as an integer bare
+        count -- the original digits-only guard regex missed this shape
+        and would have fallen through to parse_dl's bare-number fallback,
+        reproducing the D19 bug for it."""
+        for text in ("1.0", "6.0", " 3.0 ", 6.0):
+            self.assertIsNone(build_db.zacky_bottle_size_dl(text), msg=text)
+
+    def test_count_plus_size_still_parses(self):
+        """The common, correctly-handled case: most zacky quantity values
+        do carry a real size alongside the count."""
+        self.assertEqual(
+            build_db.zacky_bottle_size_dl("1 Bottle 750ml"), 7.5)
+        self.assertEqual(
+            build_db.zacky_bottle_size_dl("1 Magnum 1.5L"), 15.0)
+        self.assertEqual(
+            build_db.zacky_bottle_size_dl("1 Double Magnum 3L"), 30.0)
+
+    def test_empty_and_none_stay_none(self):
+        self.assertIsNone(build_db.zacky_bottle_size_dl(""))
+        self.assertIsNone(build_db.zacky_bottle_size_dl(None))
 
 
 if __name__ == "__main__":

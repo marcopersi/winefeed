@@ -37,6 +37,7 @@ def run(conn):
     _separate_vintage(conn)
     _parse_bottle_formats(conn)
     _classify_lots(conn)
+    _assume_default_bottle_size(conn)
     observations = _build_observations(conn)
     idealwine_ref = _idealwine_reference(conn)
     _resolve(conn, observations, load_overrides(), idealwine_ref)
@@ -128,9 +129,25 @@ def _parse_bottle_formats(conn):
     ``_separate_vintage`` already strips a *trailing* qty bracket for the
     STATUS_EXTRACTED case; this covers every other vintage status too
     (STRUCTURED, MISSING, NV, MV, AMBIGUOUS, ... -- cleaned_name is left
-    untouched there, so a mid-name or non-trailing hint survived)."""
+    untouched there, so a mid-name or non-trailing hint survived).
+
+    0.4/D19 (2026-11-05), confirmed real: ``bottle_size_dl`` was only ever
+    written here when ``quantity`` was *also* still NULL -- but most
+    houses' loaders already set ``quantity`` (often just 1, the common
+    single-bottle case), so this never fired for them at all. langtons
+    alone: a "2 Magnum Set"-style hint sat unused in 13,155 lots' own
+    ``wine`` text (confirmed: ``parse_bottle_format`` correctly extracts
+    it) because every one of them already had a loader-set ``quantity``.
+    ``bottle_size_dl`` now updates whenever it is itself still NULL,
+    independent of ``quantity`` -- the two are different questions (how
+    many bottles vs. how big each one is) and conflating their NULL-ness
+    silently discarded a size hint whenever a count happened to already be
+    known. ``quantity`` keeps its original, more conservative gate (only
+    fill it in when the loader didn't already supply one) since
+    overwriting an already-known count with this regex's guess is a
+    separate, not-yet-evaluated risk."""
     from wine_resolution.bottle import parse_bottle_format, strip_bottle_format
-    qty_updates = []
+    qty_dl_updates = []
     wine_updates = []
     for lot_id, raw_wine, wine, description in conn.execute(
             "SELECT id, raw_wine, wine, description FROM lots"
@@ -141,12 +158,48 @@ def _parse_bottle_formats(conn):
                 wine_updates.append((stripped, lot_id))
         qty, dl = parse_bottle_format(raw_wine, description)
         if qty is not None:
-            qty_updates.append((qty, dl, lot_id))
+            qty_dl_updates.append((qty, dl, lot_id))
     conn.executemany(
         "UPDATE lots SET wine=? WHERE id=?", wine_updates)
+    # COALESCE(column, ?) only overwrites a column that is currently NULL,
+    # reproducing both independent gates (quantity IS NULL / bottle_size_dl
+    # IS NULL) in one pass; when dl is None (no size hint, only a count),
+    # COALESCE(bottle_size_dl, NULL) is a no-op, so it's never cleared.
     conn.executemany(
-        "UPDATE lots SET quantity=?, bottle_size_dl=? WHERE id=?"
-        " AND quantity IS NULL", qty_updates)
+        "UPDATE lots SET quantity=COALESCE(quantity, ?),"
+        " bottle_size_dl=COALESCE(bottle_size_dl, ?) WHERE id=?",
+        qty_dl_updates)
+
+
+def _assume_default_bottle_size(conn):
+    """0.4's Default-Regel (docs/price-prediction-plan.md): a lot with no
+    recognised format hint anywhere (not caught by _parse_bottle_formats
+    above, nor by a loader's own dedicated size field) is assumed to be a
+    standard 750ml bottle -- but flagged ``size_assumed=1`` so a real
+    confirmed size is never confused with a guess downstream (0.7's
+    forecast_input can report on or exclude assumed sizes separately).
+    Must run after _parse_bottle_formats so an actual hint always wins
+    over this default.
+
+    Confirmed real bug, fixed here: a MIXED lot (several distinct
+    wines/sizes sharing one lot number -- sylvies' multi-sub-lot groups
+    being the most common case) must not get a single fabricated
+    "confirmed-looking" ``bottle_size_dl``. Review fix (first version):
+    runs after ``_classify_lots`` (moved earlier in ``run()``, which does
+    not read ``bottle_size_dl``/``quantity`` at all, so the reorder is
+    safe) and guards on the final ``lot_kind`` rather than the raw
+    provider ``mixed_lot`` flag -- the original version ran *before*
+    ``_classify_lots`` and only checked ``mixed_lot``, so the 28,125 lots
+    ``_classify_lots`` itself classifies MIXED via keyword/group evidence
+    (not a provider-set ``mixed_lot=1``) still got the fake 7.5dl default
+    written here, even though ``_fill_price_per_bottle`` (0.5,
+    build_db.py) correctly excluded them from the price computation via
+    ``lot_kind`` -- the fabricated size was left sitting on the row for
+    any *other* consumer (GUI, exports) that reads ``bottle_size_dl``
+    without also filtering ``lot_kind``."""
+    conn.execute(
+        "UPDATE lots SET bottle_size_dl = 7.5, size_assumed = 1"
+        " WHERE bottle_size_dl IS NULL AND lot_kind <> 'MIXED'")
 
 
 # --------------------------------------------------------------------------- #
