@@ -185,6 +185,7 @@ CREATE TABLE lots (
   fx_rate             REAL,
   fx_target_currency  TEXT,
   fx_rate_date        TEXT,
+  fx_status           TEXT,
   sold                INTEGER,
   condition_text      TEXT,
   description         TEXT,
@@ -199,7 +200,8 @@ CREATE TABLE lots (
   CHECK (vintage_status IS NULL OR vintage_status IN (
     'STRUCTURED', 'EXTRACTED', 'NV', 'MV', 'MISSING',
     'AMBIGUOUS', 'CONFLICT', 'INVALID'
-  ))
+  )),
+  CHECK (fx_status IS NULL OR fx_status IN ('MISSING'))
 );
 
 CREATE TABLE wine_alias_observations (
@@ -3737,8 +3739,29 @@ def _apply_fx_rates(conn):
     would be a guess, not a lookup. Only currencies already in _FX_FIX
     (fixed legal rates, not market-quoted) are excluded; NLG is not in
     ``fx_rates`` at all, so the WHERE clause already leaves it alone.
-    Must run after ``_fill_lot_date`` so the auction-date fallback is
-    already applied.
+    Must run after ``_fill_lot_date`` (so the auction-date fallback is
+    already applied) and after ``_annotate_fx`` (so EUR/NLG already have
+    their fixed ``fx_rate`` and are correctly excluded from the
+    ``fx_status`` flagging below by the ``fx_rate IS NULL`` condition).
+
+    D18 (2026-11-05, confirmed real): the 99% coverage AC in
+    docs/price-prediction-plan.md §5/0.3 is not reachable -- live
+    measurement came to 96.04%, almost entirely AUD lots dated before
+    EODHD's AUD series starts (2006-03-01; langtons has AUD lots from the
+    1990s) plus a few pre-1999-12-31 HKD ones and any currency
+    ``fetch_fx.CURRENCIES`` doesn't cover yet (e.g. TWD until its cache is
+    fetched). None of these are a lookup bug -- there is no rate to find.
+    Rather than leave them silently NULL (guardrail G3: no silent
+    unflagged gap), every remaining ``fx_rate IS NULL`` row with a known
+    currency *and a* ``lot_date`` is marked ``fx_status='MISSING'``
+    below, for ``forecast_input`` (0.7) to exclude or report on
+    explicitly. Rows with a known currency but no ``lot_date`` at all
+    (e.g. some zacky/dobiaschofsky/wermuth-sa/franzwermuth lots, where
+    even the auction-date fallback in ``_fill_lot_date`` has nothing to
+    fall back to) are a separate, pre-existing date gap -- there is no
+    date to look a rate up against, so they are intentionally out of
+    scope here, same as the AC in docs/price-prediction-plan.md §5/0.3
+    ("jede Zeile mit `lot_date` und bekannter Währung").
     """
     by_currency = {}
     for currency, date, per_eur in conn.execute(
@@ -3759,6 +3782,10 @@ def _apply_fx_rates(conn):
         conn.executemany(
             "UPDATE lots SET fx_rate = ?, fx_target_currency = 'EUR',"
             " fx_rate_date = ? WHERE id = ?", updates)
+
+    conn.execute(
+        "UPDATE lots SET fx_status = 'MISSING' WHERE lot_date IS NOT NULL"
+        " AND fx_rate IS NULL AND currency IS NOT NULL")
 
 
 # Buyer's premium policy per house. ``rate`` = flat premium fraction of the

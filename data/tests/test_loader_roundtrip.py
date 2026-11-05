@@ -129,7 +129,11 @@ class TestLoaderRoundtrip(unittest.TestCase):
 
     def test_apply_fx_rates_no_rate_before_coverage_starts(self):
         """A lot dated before the currency's earliest cached rate gets no
-        rate -- extrapolating backwards would be a guess, not a lookup."""
+        rate -- extrapolating backwards would be a guess, not a lookup.
+        D18: flagged fx_status='MISSING' instead of a silent NULL, since
+        this gap (confirmed structural -- EODHD simply has no AUD history
+        before 2006-03-01) is exactly what D18 says must not pass through
+        unflagged."""
         conn = sqlite3.connect(":memory:")
         conn.executescript(build_db.SCHEMA)
         builder = build_db.Builder(conn)
@@ -142,9 +146,46 @@ class TestLoaderRoundtrip(unittest.TestCase):
             " VALUES ('AUD', '2006-03-01', 1.6, 'EODHD')")
         build_db._apply_fx_rates(conn)
         row = conn.execute(
-            "SELECT fx_rate, fx_target_currency, fx_rate_date FROM lots"
-        ).fetchone()
-        self.assertEqual(row, (None, None, None))
+            "SELECT fx_rate, fx_target_currency, fx_rate_date, fx_status"
+            " FROM lots").fetchone()
+        self.assertEqual(row, (None, None, None, "MISSING"))
+        conn.close()
+
+    def test_apply_fx_rates_flags_currency_with_no_cache_at_all(self):
+        """D18: a currency fetch_fx.py doesn't cover yet (e.g. TWD before
+        its cache is fetched, 0.2b) has no row in fx_rates at all -- must
+        still be flagged, not silently skipped just because the
+        per-currency loop in _apply_fx_rates never iterates it."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("idealwine", "1", "x", None, "TWD",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x", "currency": "TWD",
+                               "lot_date": "2020-01-01"})
+        build_db._apply_fx_rates(conn)
+        row = conn.execute(
+            "SELECT fx_rate, fx_status FROM lots").fetchone()
+        self.assertEqual(row, (None, "MISSING"))
+        conn.close()
+
+    def test_apply_fx_rates_does_not_flag_unknown_currency(self):
+        """D18's fx_status is specifically about a known currency with no
+        market rate -- a lot with no currency at all is a separate,
+        pre-existing data gap (e.g. winebarrel's static dump never records
+        one), not an FX lookup failure, and must not be conflated with it
+        by getting the same flag."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("winebarrel", "all", "x", None, None,
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "x",
+                               "lot_date": "2020-01-01"})
+        build_db._apply_fx_rates(conn)
+        row = conn.execute(
+            "SELECT fx_rate, fx_status FROM lots").fetchone()
+        self.assertEqual(row, (None, None))
         conn.close()
 
     def test_sylvies_premium_is_20_percent_with_no_tax(self):
