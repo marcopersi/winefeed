@@ -59,11 +59,11 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
 | Stufe/Schritt | Status |
 |---|---|
 | 0.1 Datumsbereinigung | ✅ erledigt, in Master-DB verifiziert |
-| 0.1b / D17 Winebarrel-Epoch-Artefakt (680 Zeilen) | 🟡 entschieden (NULL setzen) — Code-Fix ausstehend |
+| 0.1b / D17 Winebarrel-Epoch-Artefakt (680 Zeilen) | ✅ erledigt (Code + Test + DB-Rebuild verifiziert) |
 | 0.2 Historische FX-Tabelle (EODHD) | ✅ erledigt |
-| 0.2b TWD fehlt in FX-Fetch | 🟡 offen — kleiner Nachtrag |
-| D16 `fx_rate` für EUR | 🟡 entschieden (1.0 setzen) — Code-Fix ausstehend |
-| 0.3 `_annotate_fx`/`_apply_fx_rates` | 🟡 Code fertig, Abdeckungs-AC nicht nachgerechnet |
+| 0.2b TWD fehlt in FX-Fetch | 🟡 Code erledigt — Datenabruf braucht `EODHD_API_TOKEN` (fehlt hier) |
+| D16 `fx_rate` für EUR | ✅ erledigt (Code + Test + DB-Rebuild verifiziert) |
+| 0.3 `_annotate_fx`/`_apply_fx_rates` | 🟡 Code fertig, AC nachgerechnet: **96,04 % (Ziel 99 %, nicht erreicht)** — D18 offen |
 | 0.4 Flaschengrösse klären | ⬅️ **NÄCHSTER SCHRITT** — nicht begonnen |
 | 0.5 `price_per_bottle_eur` befüllen | ⬜ nicht begonnen (blockiert durch 0.4) |
 | 0.6 Outlier-/Dubletten-Bereinigung | ⬜ nicht begonnen |
@@ -78,23 +78,20 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
 **Todo-Liste, in Reihenfolge:**
 
 1. ~~D-Entscheide nachholen~~ — **erledigt 2026-11-05**, D12/D15/D16/D17
-   entschieden (§6). Code-Umsetzung von D16/D17 steht noch aus, siehe 2./3.
-2. **D16/D17 umsetzen** (S, < 1 h zusammen): `fx_rate = 1.0` für
-   `currency = 'EUR'` in `_annotate_fx` ergänzen (gleiches Muster wie
-   `_FX_FIX`); `lot_date = NULL` für winebarrel-Zeilen mit
-   `auction_end` beginnend `"1970-01-01"` in `load_winebarrel` oder einer
-   neuen Bereinigungsstelle in `build_db.py` (nicht im Fetcher — das sind
-   bereits archivierte Rohdaten, der Fix gehört in den Loader). Je ein
-   kleiner Test (`data/tests/test_fx_rates.py` erweitern;
-   `test_loader_roundtrip.py` für winebarrel).
-3. **0.2b — TWD zu `fetch_fx.py` ergänzen** (S, < 1 h): `CURRENCIES`-Liste
-   erweitern, einmalig `EODHD_API_TOKEN=... python3 data/fetch_fx.py
-   --currencies TWD` laufen lassen, Build erneut prüfen (568 Zeilen sollten
-   dann `fx_rate` haben). Kein Review-Gate nötig, trivialer Nachtrag.
-5. **0.3 — Abdeckungs-AC nachrechnen** (S): echten Nenner (`lot_date IS NOT
-   NULL`) rechnen (jetzt mit D16/D17/0.2b sollte die Lücke fast nur noch
-   "vor 1998"/AUD-USD-Restlücken sein), AC offiziell grün/rot vermerken.
-6. **0.4 — Flaschengrösse klären** (M) — **eigentlicher nächster grosser
+   entschieden (§6).
+2. ~~D16/D17 umsetzen~~ — **erledigt 2026-11-05**, committed + gepusht auf
+   `feat/price-forecast-stage0` (PR #105), Senior-Review clean.
+3. ~~0.2b — TWD zu `fetch_fx.py` ergänzen~~ — **Code erledigt 2026-11-05**,
+   committed. **Blockiert auf einen manuellen Schritt:** jemand mit
+   `EODHD_API_TOKEN` muss `python3 data/fetch_fx.py --currencies TWD`
+   einmal laufen lassen (nicht in dieser Umgebung möglich), danach Build
+   erneut.
+4. ~~0.3 — Abdeckungs-AC nachrechnen~~ — **erledigt 2026-11-05: 96,04 %,
+   AC (≥ 99 %) nicht erreicht.** Rest-Lücke ist zu 95 % strukturell (AUD
+   vor EODHD-Cache-Start 2006-03-01) — **D18 neu, offen, siehe §6: muss
+   vor Gate G0 entschieden werden** (AC-Zahl senken + Zeilen flaggen, oder
+   zweite FX-Quelle für die Vor-Cache-Spanne suchen).
+5. **0.4 — Flaschengrösse klären** (M) — **eigentlicher nächster grosser
    Arbeitsschritt.** Untersuchung je Haus (welche liefern `bottle_size_dl`
    nativ, wo steht es nur im Freitext), Parser-Erweiterung in
    `data/wine_resolution/bottle.py`, Klärung der verdächtigen `1,0 dl`
@@ -266,18 +263,30 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 **0.3 `_annotate_fx` erweitern** (M)
 - `fx_rate` (Einheiten je 1 EUR) und `fx_target_currency='EUR'` für *alle* Währungen via Lotdatum-Monat; Zeilen ohne Kurs: `fx_rate` NULL + `fx_status='MISSING'`.
 - AC: `fx_rate`-Abdeckung ≥ 99 % der Zeilen mit Datum; NLG-Bestand unverändert (Regression: Hash der 4 854 NLG-Zeilen vor/nach identisch).
-- **Status: Code erledigt, Abdeckungs-AC noch nicht nachgerechnet (Stand
-  2026-11-05).** `_apply_fx_rates` existiert und läuft bei jedem Build.
-  Live-Zahlen: `fx_rate` gesetzt bei 3 466 935 / 4 297 347 Zeilen. Die AC
-  „≥ 99 % der Zeilen **mit Datum**" ist noch nicht gegen den richtigen
-  Nenner (`lot_date IS NOT NULL`, nicht alle Zeilen) nachgerechnet.
-  Ausstehende Lücken ohne `fx_rate`: EUR 569 131 — **entschieden 2026-11-05
-  (D16): `fx_rate` auf 1.0 setzen, Code-Fix in `_annotate_fx`/
-  `_apply_fx_rates` noch ausstehend** —, AUD 158 920, USD 84 491,
-  HKD 6 519, CHF 3 372, TWD 568 (→ 0.2b). Vermutlich grösstenteils Daten
-  ausserhalb der EODHD-Cache-Spanne (vor 1998) oder `lot_date IS
-  NULL`-Zeilen — noch nicht aufgeschlüsselt. NLG-Regressionstest (4 854
-  Zeilen unverändert) nicht erneut verifiziert seit dem ackerwines-Fix.
+- **Status: Code erledigt, AC nachgerechnet 2026-11-05 — NICHT erreicht
+  (96,04 % < 99 %).** Nach D16 (EUR-Fix) + D17 (winebarrel-NULL) + 0.2b
+  (Code, TWD-Cache-Daten noch nicht abgerufen) neu gebaut und mit dem
+  richtigen Nenner (`lot_date IS NOT NULL` = 4 202 346 Zeilen) gerechnet:
+  **4 035 866 mit `fx_rate` = 96,04 %.** Rest-Lücke (166 480 Zeilen),
+  vollständig aufgeschlüsselt:
+  - **AUD 158 920 (95 % der Lücke)** — alle vor dem Start der EODHD-AUD-
+    Reihe (2006-03-01); langtons hat AUD-Lose seit den 1990ern (bereits
+    in §2.8 als Risiko vermerkt). **Strukturelle Lücke, nicht durch
+    Nachfetchen lösbar** — EODHD hat schlicht keine Historie davor.
+    → **neue Entscheidung D18 nötig, siehe unten.**
+  - **TWD 568** — reiner Daten-Nachtrag, Code ist fertig (0.2b), fehlt nur
+    der API-Call (kein `EODHD_API_TOKEN` in dieser Umgebung).
+  - **HKD 261** — alle 1999, vor Start der EODHD-HKD-Reihe (1999-12-31).
+    Trivial, fällt unter dieselbe D18-Entscheidung wie AUD (nur 0,16 %
+    von AUDs Volumen).
+  - **Währung NULL 6 731** — kein FX-Problem, sondern eine Vorstufe:
+    winebarrel's statischer Dump setzt `currency` überhaupt nicht (6 695
+    Zeilen, Loader-Lücke seit jeher, nicht Teil dieser Session); christies
+    36 Einzelfälle. Separat zu klären, nicht Teil von 0.3.
+  - USD/GBP/CHF/SGD/CNY: **0 Lücken** — vollständig abgedeckt seit
+    Cache-Start 1998.
+  NLG-Regressionstest (4 854 Zeilen unverändert) nicht erneut verifiziert
+  seit dem ackerwines-Fix — ausstehend.
 
 **0.4 Flaschengrösse klären** (M)
 - Untersuchung: Welche Häuser liefern `bottle_size_dl`? Wo steht Info in `description`/`raw_wine` („Magnum", „1.5L", „75cl", „Jeroboam")? Einheit `1.0` (21 k Zeilen) prüfen: vermutlich Liter statt dl.
@@ -407,6 +416,7 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 | D15 | Fokus auf Produktabdeckung: nur Bestandsweine mit Aktivität ≤ 36 M? | Verhindert Prognosen für „tote" Weine |
 | D16 | `fx_rate` für EUR-Zeilen (569 131 Zeilen, 13 %): NULL oder 1.0? | Beeinflusst 0.5-Formel (Sonderfall nötig oder nicht) |
 | D17 | winebarrel-Epoch-Artefakt (`lot_date='1970-01-01'`, 680 Zeilen, Rohdaten selbst korrupt, kein Backfill möglich) | 0.1b/0.7 |
+| D18 | 0.3-AC (≥ 99 %) nicht erreichbar (96,04 %) wegen struktureller EODHD-Lücke vor Cache-Start (AUD vor 2006-03-01, 158 920 Zeilen; HKD vor 1999-12-31, 261 Zeilen) — AC-Zahl senken, Zeilen explizit als `fx_status='MISSING'` dokumentieren und aus `forecast_input` ausschliessen, oder eine zweite FX-Quelle für die Vor-Cache-Spanne suchen? | 0.3/0.7, AC-Formulierung |
 
 **Entschieden am 2026-10-29:**
 D10 Grossformate = **eigene Reihen** (Schlüssel `wine_ref_id · vintage · size_class`, kein Äquivalent-Faktor) ·
@@ -420,7 +430,10 @@ D15 Produktabdeckung = **nur aktive Weine** (letzte Beobachtung ≤ 36 M, wie in
 D16 `fx_rate` für EUR = **1.0 setzen** (nicht NULL) — einheitliche Formel in 0.5 (`preis_eur = preis_ccy / fx_rate`), kein Sonderfall nötig, kein Risiko dass EUR-Zeilen bei einem vergessenen Sonderfall stillschweigend NULL werden ·
 D17 winebarrel-1970-Epoch = **`lot_date` auf NULL setzen** — einzig technisch mögliche Option (Rohdaten enthalten buchstäblich `"auction_end": "1970-01-01 01:00:00"`, kein zweites Datumsfeld im Lot, `auction_date` der virtuellen "all"-Auktion ist selbst NULL); betrifft `forecast_input` ohnehin nicht, da alle 680 Zeilen `sold IS NULL` haben (→ D14).
 
-Alle D-Entscheide (D10–D17) sind damit getroffen.
+D10–D17 sind damit getroffen. **D18 ist neu und offen** (siehe oben) —
+blockiert den offiziellen AC-Abschluss von 0.3, nicht aber 0.4/0.5 (die
+hängen nicht an der exakten AC-Zahl, nur an der Existenz der Lücke, die
+bereits bekannt/dokumentiert ist).
 
 ---
 
