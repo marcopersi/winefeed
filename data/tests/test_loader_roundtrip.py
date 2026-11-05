@@ -1131,5 +1131,19 @@ class TestLoaderRoundtrip(unittest.TestCase):
         conn.close()
 
 
+class ParseDlTest(unittest.TestCase):
+    def test_double_magnum_is_not_shadowed_by_plain_magnum_check(self):
+        """Confirmed real bug: "double magnum" (3L) contains the
+        substring "magnum", so checking for a plain magnum first always
+        matched before jeroboam/double-magnum could, silently resolving
+        every Double Magnum to 15.0 (1.5L) instead of 30.0 -- a 2x
+        price-per-bottle error wherever this text appears (e.g.
+        load_ackerwines' raw bottleSize field)."""
+        self.assertEqual(build_db.parse_dl("double magnum"), 30.0)
+        self.assertEqual(build_db.parse_dl("Double Magnum"), 30.0)
+        self.assertEqual(build_db.parse_dl("magnum"), 15.0)
+        self.assertEqual(build_db.parse_dl("jeroboam"), 30.0)
+
+
 if __name__ == "__main__":
     unittest.main()

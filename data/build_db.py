@@ -412,10 +412,16 @@ def parse_dl(v):
     if m:
         n = float(m.group(1))
         return n / 100 if m.group(2) == "ml" else n * 10
+    # Confirmed real bug: "double magnum" (3L) contains the substring
+    # "magnum", so the plain-magnum check below must not run first or
+    # every Double Magnum silently resolves to 15.0 (1.5L) instead of
+    # 30.0 -- a silent 2x error. Checked before the generic check, not
+    # instead of it, since a bare "jeroboam"/"3l" still needs its own
+    # branch for text that doesn't also say "magnum".
+    if "double magnum" in s or "jeroboam" in s or "3l" in s or "3000ml" in s:
+        return 30.0
     if "magnum" in s or "1.5" in s or "1500" in s:
         return 15.0
-    if "jeroboam" in s or "3l" in s or "3000ml" in s:
-        return 30.0
     if "half" in s or "375" in s or "3.75" in s:
         return 3.75
     f = to_float(v)
@@ -456,6 +462,8 @@ PROVIDER_LOCATIONS = {
     "winebarrel": "Zürich",
     "winefields": "Amsterdam",
     "zacky": "New York",
+    "bestwineauctions": "Belgien",
+    "ackerwines": "New York",
 }
 
 
@@ -710,6 +718,94 @@ def load_baghera(b, limit):
                 "realised_price": row["realised_price"],
                 "price_basis": "HAMMER_PLUS_BUYERS_PREMIUM",
                 "currency": cur, "sold": row["sold"],
+            })
+        n += 1
+        if limit and n >= limit:
+            return
+
+
+def load_bestwineauctions(b, limit):
+    # One JSON file per lot (the live site has no per-auction listing
+    # endpoint, only per-lot detail pages, see
+    # ingest/fetchers/bestwineauctions.py) -- add_auction is idempotent
+    # (INSERT OR IGNORE), so many files sharing the same parent auction id
+    # correctly collapse into one auctions row.
+    n = 0
+    for f in _json_files("BestWineAuctions"):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        aid = str(a.get("id"))
+        a_id = b.add_auction(
+            "bestwineauctions", aid, a.get("name"), a.get("date"),
+            "EUR", "HAMMER")
+        for lot in d.get("lots", []):
+            b.add_lot(a_id, {
+                "lot_no": lot.get("lot_no"),
+                "wine": lot.get("wine"),
+                "description": lot.get("description"),
+                "producer": lot.get("producer"),
+                "appellation": lot.get("appellation"),
+                "bottle_size_dl": lot.get("bottle_size_dl"),
+                "condition_text": lot.get("condition_text"),
+                "note": lot.get("note"),
+                "estimate_low": lot.get("estimate_low"),
+                "estimate_high": lot.get("estimate_high"),
+                "hammer_price": lot.get("hammer_price"),
+                "buyer_premium": lot.get("buyer_premium"),
+                "tax_amount": lot.get("tax_amount"),
+                "total_price": lot.get("total_price"),
+                "realised_price": lot.get("realised_price"),
+                "price_basis": lot.get("price_basis") or "HAMMER",
+                "currency": lot.get("currency") or "EUR",
+                "sold": lot.get("sold"),
+                "source_url": lot.get("source_url"),
+            })
+        n += 1
+        if limit and n >= limit:
+            return
+
+
+_ACKER_BOTTLE_HINT = {"bottle": "750ml"}
+
+
+def load_ackerwines(b, limit):
+    n = 0
+    for f in _json_files("Ackerwines"):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        aid = str(a.get("id"))
+        a_id = b.add_auction(
+            "ackerwines", aid, a.get("name"), a.get("date"), None, "HAMMER")
+        for lot in d.get("lots", []):
+            raw_size = lot.get("bottle_size_raw")
+            hinted = (_ACKER_BOTTLE_HINT.get(str(raw_size).strip().lower(),
+                                             raw_size)
+                      if raw_size else None)
+            b.add_lot(a_id, {
+                "lot_no": lot.get("lot_no"),
+                "source_lot_key": lot.get("source_lot_key"),
+                "wine": lot.get("wine"),
+                "producer": lot.get("producer"),
+                "vintage": lot.get("vintage"),
+                "region": lot.get("region"),
+                "appellation": lot.get("appellation"),
+                "condition_text": lot.get("condition_text"),
+                "note": lot.get("note"),
+                "quantity": lot.get("quantity"),
+                "bottle_size_dl": parse_dl(hinted),
+                "estimate_low": lot.get("estimate_low"),
+                "estimate_high": lot.get("estimate_high"),
+                "hammer_price": lot.get("hammer_price"),
+                "buyer_premium": lot.get("buyer_premium"),
+                "realised_price": lot.get("realised_price"),
+                "total_price": lot.get("total_price"),
+                "price_basis": lot.get("price_basis") or "HAMMER",
+                "currency": lot.get("currency"),
+                "sold": lot.get("sold"),
+                "mixed_lot": lot.get("mixed_lot"),
+                "source_url": lot.get("source_url"),
             })
         n += 1
         if limit and n >= limit:
@@ -2300,6 +2396,14 @@ def _sylvies_parse_txt_block(block):
 
 
 def load_idealwine(b, limit):
+    # Defensive dedup: run_idealwine_delta.py's checkpoint is date-only for
+    # one pre-existing manifest value (full ISO precision from its first
+    # real run on), so the very first run after that migration can
+    # re-archive an adjudication already inserted (via the retired direct-
+    # DB-insert path) under a second delta file -- code() is the
+    # adjudication's own globally unique id (also used as lot_no below),
+    # so skip a repeat regardless of which file/path produced it.
+    seen_codes = set()
     n = 0
     for f in _json_files("IDealwine_normalized"):
         d = load_json(f)
@@ -2309,9 +2413,22 @@ def load_idealwine(b, limit):
             "idealwine", aid, f"iDealwine Cote {d.get('region')}",
             None, "EUR", None)
         for a in d.get("adjudications", []):
+            code = a.get("code")
+            # Normalize to str before the set check: the new delta archiver
+            # always writes code as str(id), but an older/legacy archive
+            # file can hold it as a bare JSON int -- without normalizing,
+            # the same adjudication's two representations (int vs str)
+            # would both pass the "not in seen_codes" check and insert as
+            # two separate rows, double-counting that sale.
+            code = str(code) if code is not None else None
+            if code is not None:
+                if code in seen_codes:
+                    continue
+                seen_codes.add(code)
             basis = a.get("price_basis")
             b.add_lot(a_id, {
-                "lot_no": a.get("code"),
+                "lot_no": code,
+                "source_lot_key": f"idealwine:{code}" if code else None,
                 "lot_date": parse_date(a.get("sold_at")),
                 "wine": d.get("wine"), "producer": d.get("estate"),
                 "vintage": to_int(d.get("vintage")),
@@ -2321,8 +2438,13 @@ def load_idealwine(b, limit):
                 "color": d.get("color") or None,
                 "quantity": to_int(a.get("number_of_bottles")),
                 "bottle_size_dl": parse_dl(a.get("format")),
-                "hammer_price": a.get("hammer_per_bottle_eur")
-                or a.get("hammer_per_bottle_eur_derived"),
+                # `or` would treat a genuine 0.0 hammer price (a donated/
+                # no-reserve lot) as falsy and silently substitute the
+                # date-based derived estimate instead of the real value --
+                # explicit None-check so an observed 0.0 is kept as-is.
+                "hammer_price": (a.get("hammer_per_bottle_eur")
+                                 if a.get("hammer_per_bottle_eur") is not None
+                                 else a.get("hammer_per_bottle_eur_derived")),
                 "realised_price": a.get("total_per_bottle_eur"),
                 "price_basis": basis, "currency": "EUR",
             })
@@ -3397,6 +3519,8 @@ def load_franzwermuth(b, limit):
 
 HOUSES = [
     ("baghera", load_baghera),
+    ("bestwineauctions", load_bestwineauctions),
+    ("ackerwines", load_ackerwines),
     ("hdh", load_hdh),
     ("winefields", load_winefields),
     ("besch-cannes", load_beschcannes),

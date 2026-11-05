@@ -1,0 +1,28 @@
+row,lot_id,provider,field,note
+9,436587,besch-cannes,producer/wine,Korrigiert: La Fleur-Pétrus (Moueix) ist ein anderes Château als Lafleur
+11,434156,besch-cannes,producer/wine,"Korrigiert: Vieux Château Certan (nicht ""Certain""), ohne zusätzliches ""Château"" davor"
+14,486508,besch-cannes,wine,"Lot nennt nur ""IGP Pays d'Hérault Rouge""; als Hauptwein ""Les Creisses"" angenommen"
+30,2317680,christies,producer,"Madeira ""JCS Estreito …"" – Produzent unklar, leer gelassen"
+32,2340193,christies,vintage,"Champagner-Mix, alle Cuvées ohne Jahrgang → NV"
+69,2681953,dobiaschofsky,producer/wine,"Mouton Baronne Philippe 1971 = heutiges Château d'Armailhac (historischer Name, im Alias)"
+105,2657500,finarte,wine,"Ruinart ""Etichetta Anni 90"" – Cuvée unbekannt, wine leer; Magnum → dl 15 (vorher 7.5)"
+111,2663608,finarte,producer,"""Selezione di Brunello … Granducato"": Granducato als Produzent, SINGLE angenommen"
+146,266354,hdh,producer,"""La Chave"" ist hier Cuvée von Rouchier, nicht Jean-Louis Chave"
+170,2703680,idealwine,wine,"Roulot ""Bourgogne"" – Farbe nicht angegeben"
+180,2680414,koppe,producer,"Koppe ""Mixed-Lot"": nur ein Wein sichtbar, Produzent Allendorf angenommen, wine=MIXED"
+181,2680029,koppe,producer,wie Zeile 178
+214,1271449,langtons,wine,"Kilikanoon ""Mulga Riesling"" – Weinname unverändert übernommen, nicht verifiziert"
+217,1433803,langtons,wine,"Ponsot ""Cuvée Vieilles Vignes"" ohne Appellation (vermutlich Clos de la Roche)"
+301,1852140,sothebys,qty/dl,"""1 PCE"" = 1 Fass (Pièce, 228 l) → qty 1, dl leer"
+315,2784283,steinfels,wine,"Abreu ""…M"" abgeschnitten → Madrona Ranch (vom User bestätigt)"
+319,2781655,steinfels,producer,Mead Ranch Zinfandel – Produzentenname abgeschnitten
+329,2728894,wermuth-sa,producer,"""Château Bellevue"" – mehrere Châteaux dieses Namens"
+391,372614,winefields,producer,"Cuvée Fouquerand = Hospices-de-Beaune-Cuvée, abgefüllt von Négociant"
+399,365557,winefields,producer,Clos de la Maréchale 2016 → J.-F. Mugnier (Monopol seit 2004)
+429,415550,winefields,producer,"Cerequio-Vertikale – mehrere Produzenten möglich (Voerzio, Chiarlo …), leer"
+447,340463,winefields,qty,"Eurocave-Weinkühlschrank: NON_WINE, ignorieren; qty/dl leer (100 BT = Kapazität)"
+449,340459,winefields,qty,wie 445
+453,341242,winefields,qty,wie 445
+464,1938916,christies,producer,"""Cantenac, 4me cru"" = Prieuré-Lichine oder Pouget → leer"
+490,1539586,langtons,wine,"""R Schlossberg GG"" → Hecklinger Schlossberg R; Referenzliste hatte Alias auf Wildenstein R (korrigiert)"
+493,1684556,langtons,wine,wie 488
