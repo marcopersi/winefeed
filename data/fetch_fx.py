@@ -126,7 +126,8 @@ def write_cache(cache_dir, currency, rows, date_from, date_to, now=None,
 
 
 def main(argv=None, opener=urllib.request.urlopen):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap = argparse.ArgumentParser(
+        description=__doc__.split("\n", maxsplit=1)[0])
     ap.add_argument("--currencies", default=",".join(CURRENCIES))
     ap.add_argument("--from", dest="date_from", default=DEFAULT_FROM)
     # Default to yesterday (UTC): today's close is provisional until the day ends.

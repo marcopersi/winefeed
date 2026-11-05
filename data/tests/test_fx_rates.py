@@ -1,4 +1,10 @@
 """FX rates: EODHD fetch (mocked, no network) and offline cache -> fx_rates."""
+# pylint: disable=protected-access,unused-argument
+# -- protected-access: exercising build_db's internal _load_fx_rates/
+# _build/_fill_price_per_bottle directly is the point of these tests;
+# unused-argument: the fake opener/timeout signatures match the real
+# urllib.request.urlopen call shape even when a given test only cares
+# about one argument.
 import contextlib
 import io
 import json
@@ -90,11 +96,11 @@ class FetchTest(unittest.TestCase):
             with self.assertRaises(fetch_fx.FxFetchError):
                 fetch_fx.write_cache(d, "USD", big[10:], "2020-01-01",
                                      "2020-01-31")
-            with open(os.path.join(d, "EURUSD.json")) as fh:
+            with open(os.path.join(d, "EURUSD.json"), encoding="utf-8") as fh:
                 self.assertEqual(len(json.load(fh)["rows"]), 20)
             fetch_fx.write_cache(d, "USD", big[10:], "2020-01-01",
                                  "2020-01-31", force=True)
-            with open(os.path.join(d, "EURUSD.json")) as fh:
+            with open(os.path.join(d, "EURUSD.json"), encoding="utf-8") as fh:
                 self.assertEqual(len(json.load(fh)["rows"]), 10)
             self.assertEqual([f for f in os.listdir(d) if ".tmp" in f], [])
 
@@ -119,7 +125,7 @@ class FetchTest(unittest.TestCase):
                          "--from", "2020-01-01", "--to", "2020-01-31"],
                         _opener(_eod(("2020-01-02", 1.6))))
                 self.assertEqual(rc, 0)
-                with open(os.path.join(d, "EURAUD.json")) as fh:
+                with open(os.path.join(d, "EURAUD.json"), encoding="utf-8") as fh:
                     doc = json.load(fh)
                 self.assertEqual(doc["rows"], [["2020-01-02", 1.6]])
                 self.assertNotIn(TOKEN, json.dumps(doc))
@@ -136,7 +142,8 @@ class FetchTest(unittest.TestCase):
 
 def _cache(d, ccy, rows, fname=None, doc_ccy=None):
     doc = {"source": "EODHD", "currency": doc_ccy or ccy, "rows": rows}
-    with open(os.path.join(d, fname or f"EUR{ccy}.json"), "w") as fh:
+    with open(os.path.join(d, fname or f"EUR{ccy}.json"), "w",
+              encoding="utf-8") as fh:
         json.dump(doc, fh)
 
 
@@ -190,18 +197,21 @@ class LoaderTest(unittest.TestCase):
 
     def test_nan_and_corrupt_json_abort(self):
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "EURUSD.json"), "w") as fh:
+            with open(os.path.join(d, "EURUSD.json"), "w",
+                      encoding="utf-8") as fh:
                 fh.write('{"currency": "USD", "rows": [["2020-01-02", NaN]]}')
             with self.assertRaises(ValueError):
                 build_db._load_fx_rates(_conn(), d)
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "EURUSD.json"), "w") as fh:
+            with open(os.path.join(d, "EURUSD.json"), "w",
+                      encoding="utf-8") as fh:
                 fh.write("{not json")
             with self.assertRaises(ValueError) as cm:
                 build_db._load_fx_rates(_conn(), d)
             self.assertIn("EURUSD.json", str(cm.exception))
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "EURUSD.json"), "w") as fh:
+            with open(os.path.join(d, "EURUSD.json"), "w",
+                      encoding="utf-8") as fh:
                 json.dump({"currency": "USD"}, fh)  # no "rows"
             with self.assertRaises(ValueError):
                 build_db._load_fx_rates(_conn(), d)
@@ -223,8 +233,8 @@ class LoaderTest(unittest.TestCase):
             old_cache, old_arch = build_db.FX_CACHE, build_db.ARCHIVE
             build_db.FX_CACHE, build_db.ARCHIVE = d, d
             try:
-                args = type("A", (), dict(limit=None, only="none",
-                                          skip_resolution=True))()
+                args = type("A", (), {"limit": None, "only": "none",
+                                      "skip_resolution": True})()
                 conn = sqlite3.connect(":memory:")
                 with contextlib.redirect_stdout(io.StringIO()):
                     build_db._build(conn, args)
@@ -243,15 +253,15 @@ class LoaderTest(unittest.TestCase):
         and never excluding MIXED lots since lot_kind stayed NULL)."""
         calls = []
         orig = build_db._fill_price_per_bottle
-        build_db._fill_price_per_bottle = lambda conn: calls.append(conn)
+        build_db._fill_price_per_bottle = calls.append
         try:
             with tempfile.TemporaryDirectory() as d:
                 _cache(d, "USD", [["2020-01-02", 1.1]])
                 old_cache, old_arch = build_db.FX_CACHE, build_db.ARCHIVE
                 build_db.FX_CACHE, build_db.ARCHIVE = d, d
                 try:
-                    args = type("A", (), dict(limit=None, only="none",
-                                              skip_resolution=True))()
+                    args = type("A", (), {"limit": None, "only": "none",
+                                          "skip_resolution": True})()
                     conn = sqlite3.connect(":memory:")
                     with contextlib.redirect_stdout(io.StringIO()):
                         build_db._build(conn, args)

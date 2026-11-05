@@ -505,9 +505,9 @@ def _resolve(conn, observations, overrides, idealwine_ref):
 
 
 def _backfill_wine_ref(conn):
-    resolved = [r for r in conn.execute(
+    resolved = list(conn.execute(
         "SELECT alias_key, discriminator_key, wine_id"
-        " FROM wine_alias_resolutions WHERE wine_id IS NOT NULL").fetchall()]
+        " FROM wine_alias_resolutions WHERE wine_id IS NOT NULL").fetchall())
     key_to_wine = {(alias_key, disc): wid for alias_key, disc, wid in resolved}
     # Mirror of the absorption rule in _resolve(): an alias_key with
     # exactly one resolved wine (regardless of its discriminator) is the

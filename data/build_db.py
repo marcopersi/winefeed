@@ -3905,7 +3905,7 @@ def _fill_price_per_bottle(conn):
     ``NO_FX_RATE`` instead, but only when ``fx_status`` doesn't already
     cover it, so a D18 ``'MISSING'`` row isn't double-flagged."""
     updates = []
-    for (lot_id, realised_price, hammer_price, buyer_premium, quantity,
+    for (lot_id, realised_price, _hammer_price, buyer_premium, quantity,
          bottle_size_dl, fx_rate, fx_status, lot_kind) in conn.execute(
             "SELECT id, realised_price, hammer_price, buyer_premium,"
             " quantity, bottle_size_dl, fx_rate, fx_status, lot_kind"
