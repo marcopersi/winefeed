@@ -1820,6 +1820,18 @@ def load_munich_wine_company(b, limit):
             break
 
 
+def _winebarrel_date(raw):
+    """``parse_date`` wrapper for winebarrel's ``auction_end`` (D17):
+    confirmed real -- 680 lots carry a literal ``"1970-01-01 01:00:00"``
+    placeholder in the archived raw data itself (not a parsing bug here),
+    with no second date field on the lot and no usable ``auction_date``
+    fallback (winebarrel's single virtual "all" auction has none either).
+    Treated as missing rather than parsed into a real-looking ISO date."""
+    if isinstance(raw, str) and raw.startswith("1970-01-01"):
+        return None
+    return parse_date(raw)
+
+
 def load_winebarrel(b, limit):
     # Not a classic multi-lot batch-sale house: each numbered "auction" on
     # the live site (and in the CI fetcher's output below) is a single
@@ -1851,7 +1863,7 @@ def load_winebarrel(b, limit):
             seen_lot_nos.add(lot_no)
             b.add_lot(a_id, {
                 "lot_no": lot_no,
-                "lot_date": parse_date(lot.get("auction_end")),
+                "lot_date": _winebarrel_date(lot.get("auction_end")),
                 "wine": lot.get("name"), "producer": lot.get("winery"),
                 "vintage": to_int(lot.get("vintage")),
                 "quantity": to_int(lot.get("bottles")),
@@ -1878,7 +1890,7 @@ def load_winebarrel(b, limit):
             sold = bool(lot.get("sold"))
             b.add_lot(a_id, {
                 "lot_no": lot_no,
-                "lot_date": parse_date(lot.get("auction_end")),
+                "lot_date": _winebarrel_date(lot.get("auction_end")),
                 "wine": lot.get("wine"), "producer": lot.get("producer"),
                 "quantity": to_int(lot.get("quantity")),
                 "bottle_size_dl": to_float(lot.get("bottle_size_dl")),
@@ -3683,8 +3695,13 @@ def _load_fx_rates(conn, cache_dir=None):
 
 
 # Legal euro fix rates for pre-euro currencies (D3): 1 EUR = rate units.
+# EUR itself (D16) belongs here too, not in the market-rate path below: it
+# needs no lookup, and fixing it at 1.0 (rather than leaving it NULL) means
+# stage 0.5's price_eur = price_ccy / fx_rate formula works uniformly for
+# every currency with no EUR special case to forget.
 _FX_FIX = {
     "NLG": 2.20371,
+    "EUR": 1.0,
 }
 
 

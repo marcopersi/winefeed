@@ -80,6 +80,29 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (10.0, 5.0, 1.9, 116.9, "DERIVED"))
         conn.close()
 
+    def test_annotate_fx_fixes_eur_and_nlg(self):
+        """D16: EUR gets a fixed fx_rate=1.0 (not NULL), same mechanism as
+        NLG's legal pre-euro fix rate -- so stage 0.5's price_eur =
+        price_ccy / fx_rate formula needs no EUR special case."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "Koppe 1", None, "EUR",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "eur-lot",
+                               "currency": "EUR"})
+        builder.add_lot(a_id, {"lot_no": "2", "wine": "nlg-lot",
+                               "currency": "NLG"})
+        builder.add_lot(a_id, {"lot_no": "3", "wine": "usd-lot",
+                               "currency": "USD"})
+        build_db._annotate_fx(conn)
+        rows = dict(conn.execute(
+            "SELECT wine, fx_rate FROM lots ORDER BY wine"))
+        self.assertEqual(rows["eur-lot"], 1.0)
+        self.assertEqual(rows["nlg-lot"], 2.20371)
+        self.assertIsNone(rows["usd-lot"])
+        conn.close()
+
     def test_apply_fx_rates_uses_nearest_prior_trading_day(self):
         """fx_rates only has one row per *trading* day; a lot dated on a
         weekend/holiday must fall back to the nearest earlier rate, never
@@ -766,6 +789,43 @@ class TestLoaderRoundtrip(unittest.TestCase):
             conn.close()
         self.assertEqual(rows, [("267", "Old Static Lot"),
                                 ("4183", "New Fetched Lot")])
+
+    def test_winebarrel_1970_epoch_placeholder_becomes_null_date(self):
+        """D17: confirmed real -- 680 archived lots carry a literal
+        "1970-01-01 01:00:00" auction_end placeholder with no other date
+        field on the lot and no usable auction_date fallback (winebarrel's
+        one virtual "all" auction has none). Must become lot_date=NULL,
+        not a parsed-looking-real 1970-01-01, in both the static-dump and
+        live-fetcher-output code paths."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "winebarrel"), exist_ok=True)
+            with open(os.path.join(d, "winebarrel", "winebarrel_lots.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump([{"auction_id": 69, "name": "Static Epoch Lot",
+                           "winery": "X", "bottles": 6, "hammer_price": 2290.0,
+                           "auction_end": "1970-01-01 01:00:00"}], fh)
+            with open(os.path.join(d, "winebarrel", "4184.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({
+                    "auction": {"id": "4184", "name": None, "date": None},
+                    "lots": [{"lot_no": "4184", "wine": "Fetched Epoch Lot",
+                             "hammer_price": 100.0, "sold": 1,
+                             "auction_end": "1970-01-01 01:00:00",
+                             "currency": "CHF"}],
+                }, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_winebarrel(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            rows = conn.execute(
+                "SELECT lot_no, lot_date FROM lots ORDER BY lot_no").fetchall()
+            conn.close()
+        self.assertEqual(rows, [("4184", None), ("69", None)])
 
     def test_sylvies_fetched_json_parses_mixed_lot(self):
         """Live fetcher output (ingest/fetchers/sylvies.py): a mixed lot
