@@ -7,10 +7,15 @@
 # new auctions are added to it, and the combined archive is re-uploaded. This
 # keeps the process workflow able to rebuild the full DB from scratch.
 #
-# Sothebys, sylvies and idealwine are deliberately not covered here:
-# - sothebys and sylvies both need camoufox (heavy browser automation) to
-#   solve a bot challenge once at login; not installed in CI, run locally;
-# - idealwine runs via run_idealwine_delta.py (direct DB append).
+# Sothebys and sylvies are deliberately not covered here: both need
+# camoufox (heavy browser automation) to solve a bot challenge once at
+# login; not installed in CI, run locally. idealwine IS covered, via its
+# own step below (run_idealwine_delta.py) rather than run_ingest.py's
+# standard per-id manifest dedup: its "auctions" are price-history pages
+# that keep gaining new adjudications over time, so it checkpoints by
+# date (ingest_manifest.json's idealwine.last_sold_at) instead, archiving
+# new adjudications as JSON rather than appending to the live DB (which
+# only exists on the local Samsung disk, unreachable from here).
 name: Ingest
 
 on:
@@ -41,7 +46,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r data/requirements.txt
 
+      - name: Install Playwright Chromium
+        run: python -m playwright install --with-deps chromium
+
       - name: Download previous archive
+        id: download_archive
         uses: dawidd6/action-download-artifact@v27
         with:
           workflow: ingest.yml
@@ -57,9 +66,74 @@ jobs:
           PANDOLFINI_PWD: ${{ secrets.PANDOLFINI_PWD }}
           FINARTE_USER: ${{ secrets.FINARTE_USER }}
           FINARTE_PWD: ${{ secrets.FINARTE_PWD }}
-        run: python data/run_ingest.py --only steinfels,weinboerse,weinauktionator,hdh,koppe,langtons,winefields,dorotheum,pandolfini,finarte,besch-cannes,dobiaschofsky,winebarrel,denzauktionen,munich-wine-company,franzwermuth,baghera,christies
+        run: python data/run_ingest.py --only steinfels,weinboerse,weinauktionator,hdh,koppe,langtons,winefields,dorotheum,pandolfini,finarte,besch-cannes,dobiaschofsky,winebarrel,denzauktionen,munich-wine-company,franzwermuth,baghera,bestwineauctions,ackerwines,christies
+
+      - name: Fetch iDealwine cote delta
+        # if: always() -- see "Upload archive"/"Commit manifest" below.
+        # idealwine is a separate provider/manifest key with no dependency
+        # on the other providers' own success, so there's no reason for
+        # one of THEM failing to also skip this one.
+        #
+        # Gated on download_archive's own outcome too (not just always()):
+        # confirmed real risk -- "Download previous archive" only WARNS
+        # (doesn't fail the step) for the one failure mode it explicitly
+        # handles (no artifact yet, if_no_artifact_found: warn). Any OTHER
+        # failure (network/API error) would still fail that step, and an
+        # unconditional always() here would then run this against a
+        # now-empty/partial $RUNNER_TEMP/archive, and "Upload archive"
+        # below would have a few idealwine delta files to upload instead
+        # of being suppressed by if-no-files-found -- silently replacing
+        # the full multi-month cumulative archive for every OTHER house
+        # with just that one run's idealwine delta.
+        if: always() && steps.download_archive.outcome != 'failure'
+        env:
+          ARCHIVE_PATH: ${{ runner.temp }}/archive
+          MANIFEST_PATH: ${{ github.workspace }}/data/ingest_manifest.json
+        run: python data/run_idealwine_delta.py
+
+      - name: Upload archive
+        id: upload_archive
+        # Confirmed real risk: run_ingest.py's main() returns exit code 1
+        # if ANY single provider in the --only list failed (data/run_ingest.py),
+        # even though every other provider's run_provider() call already
+        # completed and saved its own manifest entries/archive files
+        # beforehand. Without if: always(), GitHub Actions' default
+        # behavior skips every remaining step once one step fails -- so
+        # one flaky provider (this list now includes two documented as
+        # occasionally so: ackerwines, bestwineauctions) would silently
+        # discard that month's successfully-fetched data for every OTHER
+        # provider too, instead of just that one provider being retried
+        # next run.
+        #
+        # Also gated on download_archive's own outcome, for the same
+        # reason as "Fetch iDealwine cote delta" above -- never upload
+        # (and so never let "Commit manifest" advance checkpoints on) an
+        # archive built on top of a download that itself genuinely failed.
+        if: always() && steps.download_archive.outcome != 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: auction-archive
+          path: ${{ runner.temp }}/archive
+          if-no-files-found: ignore
 
       - name: Commit manifest
+        # Runs after the archive upload, not before: the manifest commit
+        # advances checkpoints (idealwine's date, every other provider's
+        # per-id dedup) that make this run's fetched data unreachable on
+        # the next run. Committing first and uploading second would mean
+        # a failed/timed-out upload loses this run's data forever while
+        # the checkpoint already claims it's accounted for.
+        #
+        # if: always() alone (an earlier version of this comment/fix) is
+        # NOT the same invariant: "Upload archive" also has if: always(),
+        # so it still runs after an upstream failure -- but if the upload
+        # action itself then fails (network/API error, not just "nothing
+        # to upload"), an unconditional always() here would still commit
+        # the advanced checkpoint, permanently losing this run's data
+        # with no copy anywhere. Gating on upload's own outcome closes
+        # that: commit only if upload succeeded (or was never going to
+        # produce anything, which it reports as "skipped").
+        if: always() && (steps.upload_archive.outcome == 'success' || steps.upload_archive.outcome == 'skipped')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -70,10 +144,3 @@ jobs:
             git commit -m "chore(ingest): update ingest manifest"
             git push
           fi
-
-      - name: Upload archive
-        uses: actions/upload-artifact@v7
-        with:
-          name: auction-archive
-          path: ${{ runner.temp }}/archive
-          if-no-files-found: ignore

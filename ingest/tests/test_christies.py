@@ -145,6 +145,22 @@ class TestChristies(unittest.TestCase):
         self.assertEqual(lot["currency"], "HKD")
         self.assertEqual(lot["description"], "1 Magnum (150cl) per lot")
 
+    def test_fetch_raises_meta_invalid_on_sale_id_mismatch(self):
+        """Confirmed real (2026-11-03): a backfill run archived an
+        unrelated non-wine sale's lots under a wine sale_id's filename
+        because ref.url's landing page served a different sale's content
+        than discover_backfill() had seen -- fetch() must catch this via
+        the embedded sale_id rather than trust ref.auction_id blindly."""
+        f = ChristiesFetcher()
+        from ingest.models import AuctionRef
+        ref = AuctionRef("christies", "99999",
+                         url="https://www.christies.com/en/auction/auction-31122")
+        session = FakeSession(
+            auction=AUCTION_HTML,
+            lotsearch_pages=[{"lots": [LOT], "total_hits_filtered": 1}])
+        with self.assertRaises(MetaInvalid):
+            f.fetch(session, ref)
+
     def test_fetch_paginates_all_lots(self):
         f = ChristiesFetcher()
         from ingest.models import AuctionRef

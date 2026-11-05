@@ -174,6 +174,39 @@ class ChristiesFetcher:
     def fetch(self, session, ref):
         html = session.get(ref.url).text
         meta = _auction_meta(html, ref)
+        if str(meta.get("sale_id")) != str(ref.auction_id):
+            # Confirmed real (2026-11-03): a backfill run archived lots
+            # for an unrelated non-wine sale (e.g. a furniture auction)
+            # under a wine sale_id's filename, because ref.url's landing
+            # page briefly served a different sale's content than what
+            # discover_backfill() saw when the candidates list was built
+            # -- observed both as a one-off (re-fetching the same url
+            # immediately after gave the expected sale back) and as a
+            # reproducibly stale url->sale mapping for another sale_id.
+            # Either way, trusting the fetched page's own embedded
+            # sale_id over the caller's ref.auction_id would silently
+            # archive the wrong auction's data under the right filename
+            # -- raise instead so the backfill records it as a skip
+            # (retried next run) rather than archiving it.
+            #
+            # Known residual gap: _auction_meta() defaults meta["sale_id"]
+            # to ref.auction_id itself (by design -- the "online" sale
+            # template never embeds sale_id via plain GET at all, and
+            # ref.auction_id is already the only source for it then, see
+            # the module docstring), so this check is a no-op whenever
+            # the regex finds no sale_id on the page. Both real incidents
+            # observed happened on the regular template, where the regex
+            # does fire and this caught them. A title cross-check would
+            # close that gap for discover_backfill() refs (whose title
+            # comes from this same _auction_meta extraction) but was
+            # rejected here: discover()'s own live refs carry a
+            # differently-formatted title ("Wine & Spirits (Hong Kong)",
+            # not the sale's real title), so applying it unconditionally
+            # would misfire on every live fetch, not just backfill ones.
+            raise MetaInvalid(
+                f"christies/{ref.auction_id}: landing page returned "
+                f"sale_id={meta.get('sale_id')!r} "
+                f"(title={meta.get('title')!r}) instead")
         lots = self._all_lots(session, meta)
         return FetchResult(
             provider=self.provider,
