@@ -41,6 +41,11 @@ def _run_loader(house_dir, filename, data, loader_name):
         return count, hammer, wine
 
 
+# pylint: disable=protected-access,too-many-public-methods
+# -- protected-access: exercising build_db's internal _apply_* /_load_*
+# helpers directly is the point of these round-trip tests; a test class
+# naturally accumulates one test_ method per case, past any general
+# public-method budget.
 class TestLoaderRoundtrip(unittest.TestCase):
     def test_apply_premium_policy(self):
         conn = sqlite3.connect(":memory:")

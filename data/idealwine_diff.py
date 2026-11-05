@@ -112,5 +112,3 @@ def new_adjudications(cote_list, last_sold_at):
             })
             out.append(rec)
     return out
-
-

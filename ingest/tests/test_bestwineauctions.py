@@ -1,3 +1,8 @@
+# pylint: disable=protected-access,unused-argument
+# -- protected-access: testing _render/_iter_category_cards directly is the
+# whole point of these tests; unused-argument: the fake _render() replacement
+# matches the real one's full signature even when a given test only cares
+# about one argument.
 import datetime
 import re
 import unittest

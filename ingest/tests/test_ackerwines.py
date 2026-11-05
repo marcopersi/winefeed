@@ -1,3 +1,8 @@
+# pylint: disable=protected-access,unused-argument
+# -- protected-access: swapping in fakes via _new_session/_mod is the whole
+# point of these tests; unused-argument: fakes' post()/etc. match the real
+# session API's full signature even when a given test only cares about one
+# argument.
 import datetime
 import unittest
 import zoneinfo
@@ -140,7 +145,7 @@ class DiscoverTest(unittest.TestCase):
         old_stop = mod.STOP_STREAK
         old_new_session = mod._new_session
         mod.STOP_STREAK = 5
-        mod._new_session = lambda: FakeSession()  # each call gets a fresh one
+        mod._new_session = FakeSession  # each call gets a fresh one
         try:
             refs = f.discover(FakeSession())  # session arg is unused, see fetcher
         finally:
@@ -183,7 +188,7 @@ class DiscoverTest(unittest.TestCase):
         mod.STOP_STREAK = 3
         mod.CONCURRENCY = 8
         mod.START_ID = 1
-        mod._new_session = lambda: FakeSession()
+        mod._new_session = FakeSession
         try:
             refs = f.discover(FakeSession())
         finally:
@@ -221,7 +226,7 @@ class DiscoverTest(unittest.TestCase):
         old_new_session = mod._new_session
         old_sleep = mod.time.sleep
         mod.STOP_STREAK = 5
-        mod._new_session = lambda: FakeSession()
+        mod._new_session = FakeSession
         mod.time.sleep = lambda _s: None  # keep retry backoff fast
         try:
             refs = f.discover(FakeSession())
@@ -283,7 +288,7 @@ class FetchPaginationTest(unittest.TestCase):
                 cursor = json["previousInitialLotId"]
                 return FakeResp(pages_by_cursor[cursor])
 
-        self._mod._new_session = lambda: FakeSession()
+        self._mod._new_session = FakeSession
         f = AckerwinesFetcher()
         ref = AuctionRef(provider="ackerwines", auction_id=str(auction_id),
                          url="http://x")
@@ -328,7 +333,7 @@ class FetchPaginationTest(unittest.TestCase):
             def post(self, url, json, headers, timeout):
                 return FakeResp()
 
-        self._mod._new_session = lambda: FakeSession()
+        self._mod._new_session = FakeSession
         f = AckerwinesFetcher()
         ref = AuctionRef(provider="ackerwines", auction_id=str(auction_id),
                          url="http://x")
@@ -365,7 +370,7 @@ class FetchPaginationTest(unittest.TestCase):
             def post(self, url, json, headers, timeout):
                 return FakeResp()
 
-        self._mod._new_session = lambda: FakeSession()
+        self._mod._new_session = FakeSession
         f = AckerwinesFetcher()
         ref = AuctionRef(provider="ackerwines", auction_id=str(auction_id),
                          url="http://x")
@@ -386,7 +391,6 @@ class ParallelPostTest(unittest.TestCase):
         self._mod.time.sleep = self._sleep
 
     def test_preserves_input_order_despite_varying_latency(self):
-        import threading
         import time
 
         from ingest.fetchers.ackerwines import _parallel_post
@@ -402,7 +406,7 @@ class ParallelPostTest(unittest.TestCase):
                     time.sleep(0.2)  # first request resolves last
                 return FakeResp(json["n"])
 
-        self._mod._new_session = lambda: SlowFirstSession()
+        self._mod._new_session = SlowFirstSession
         requests_list = [("http://x", {"n": i}) for i in range(5)]
         results = _parallel_post(requests_list, concurrency=5)
         self.assertEqual([r.n for r in results], [0, 1, 2, 3, 4])
@@ -419,7 +423,7 @@ class ParallelPostTest(unittest.TestCase):
         class _Resp:
             status_code = 200
 
-        self._mod._new_session = lambda: FailsOnOddSession()
+        self._mod._new_session = FailsOnOddSession
         requests_list = [("http://x", {"n": i}) for i in range(4)]
         # _post_with_retry wraps its last_exc in a RuntimeError (the
         # orchestrate.py fetcher contract -- see its own comment), so
@@ -443,7 +447,7 @@ class ParallelPostTest(unittest.TestCase):
         class _Resp:
             status_code = 200
 
-        self._mod._new_session = lambda: FailsOnOddSession()
+        self._mod._new_session = FailsOnOddSession
         requests_list = [("http://x", {"n": i}) for i in range(4)]
         results = _parallel_post(requests_list, concurrency=4,
                                  tolerant=True)
@@ -483,7 +487,7 @@ class PostWithRetryTest(unittest.TestCase):
                     raise TimeoutError("stalled")
                 return FakeResp()
 
-        self._mod._new_session = lambda: FlakySession()
+        self._mod._new_session = FlakySession
         resp = _post_with_retry("http://x", {}, attempts=3)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(calls["n"], 3)
@@ -508,7 +512,7 @@ class PostWithRetryTest(unittest.TestCase):
                     return FakeResp(503)
                 return FakeResp(200)
 
-        self._mod._new_session = lambda: FlakyHttpSession()
+        self._mod._new_session = FlakyHttpSession
         resp = _post_with_retry("http://x", {}, attempts=3)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(calls["n"], 3)
@@ -525,7 +529,7 @@ class PostWithRetryTest(unittest.TestCase):
             def post(self, url, json, headers, timeout):
                 raise TimeoutError("stalled")
 
-        self._mod._new_session = lambda: AlwaysFailsSession()
+        self._mod._new_session = AlwaysFailsSession
         with self.assertRaises(RuntimeError) as ctx:
             _post_with_retry("http://x", {}, attempts=3)
         self.assertIsInstance(ctx.exception.__cause__, TimeoutError)
@@ -545,7 +549,7 @@ class PostWithRetryTest(unittest.TestCase):
             def post(self, url, json, headers, timeout):
                 threading.Event().wait()  # blocks forever, like the stuck curl call
 
-        self._mod._new_session = lambda: NeverReturnsSession()
+        self._mod._new_session = NeverReturnsSession
         with self.assertRaises(RuntimeError):
             _post_with_retry("http://x", {}, attempts=2)
 
