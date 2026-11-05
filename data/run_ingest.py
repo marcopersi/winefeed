@@ -33,6 +33,16 @@ PROVIDERS = [
     "langtons", "winefields", "dorotheum", "pandolfini",
     "finarte", "besch-cannes", "dobiaschofsky", "winebarrel",
     "denzauktionen", "munich-wine-company", "franzwermuth", "baghera",
+    # bestwineauctions: no bot protection at all -- needs a browser only
+    # because the site is Blazor Server (SignalR DOM pushes, no REST/JSON
+    # backing the listings). Plain Playwright + headless Chromium, no
+    # camoufox. CI needs `playwright install chromium --with-deps` (see
+    # ingest.yml) since this isn't in data/requirements.txt by default.
+    "bestwineauctions",
+    # ackerwines: api.ackerwines.com has no bot protection of its own at
+    # all (the Cloudflare block only guards the WordPress front-end, not
+    # the API) -- plain curl_cffi, no camoufox, no login.
+    "ackerwines",
     # christies: plain curl_cffi scrape, no login, no WAF -- discover() was
     # rebuilt Nov 2026 (christies.com moved to the Next.js App Router,
     # breaking the old regex) to read /en/calendar, which already dedupes
@@ -53,8 +63,13 @@ PROVIDERS = [
 # christies IS in PROVIDERS now (Nov 2026) -- see the comment on its entry
 # above. run_christies_backfill.py remains for occasional re-backfills; it
 # shares the same manifest so the two never double-fetch.
-# idealwine is deliberately not listed: it runs via run_idealwine_delta.py
-# (Algolia -> normalize -> diff -> direct DB append), not the build_db chain.
+# idealwine is deliberately not listed: it runs via its own CI step
+# (run_idealwine_delta.py: Algolia -> normalize -> diff -> archive new
+# adjudications as JSON under IDealwine_normalized/_delta/), checkpointed
+# by date in the manifest instead of this module's per-id dedup -- see
+# AGENTS.md. load_idealwine (build_db.py) picks up that archive on the next
+# full rebuild, same as every other house; the direct-DB-append path this
+# used to describe was retired.
 
 
 def _env():
