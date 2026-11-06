@@ -303,6 +303,66 @@ FROM lots
 WHERE lot_kind = 'SINGLE'
   AND wine_ref_id IS NOT NULL
   AND vintage_status IN ('STRUCTURED', 'EXTRACTED');
+
+-- 0.7: per-series input for Stufe 1-5's forecasting models. Builds on
+-- single_wine_prices (already SINGLE/resolved/clean-vintage) rather than
+-- lots directly, so a lot with an unreliable vintage (NV/MV/MISSING/
+-- AMBIGUOUS/CONFLICT/INVALID -- see vintage_status's CHECK) never lands
+-- in a (wine_ref_id, vintage, size_class) series under some fallback
+-- vintage value.
+--
+-- D14: sold = 1 only (not "IS NOT 0" -- that would also admit
+-- sold IS NULL, since NULL IS NOT 0 is true in SQL's three-valued
+-- logic; the ~62% sold-unknown rows are deliberately excluded, D14).
+-- D11: price_kind='COTE' (idealwine's own valuation, not a competitive
+-- sale) excluded -- NOT implied by price_per_bottle_eur IS NOT NULL,
+-- since _fill_price_per_bottle computes it for COTE rows too.
+-- OUTLIER/QTY_SUSPECT/DUP_CANDIDATE (0.6) excluded via substring match
+-- on ppb_flags, not LIKE -- '_' is a single-char wildcard in SQLite
+-- LIKE and both flag names contain one (see _report_06_flags's own
+-- fix for the same pitfall). fx_status='MISSING' is NOT repeated here:
+-- confirmed empirically (0 rows in the live DB) that it can't coexist
+-- with a non-NULL price_per_bottle_eur, since both are driven by the
+-- same fx_rate IS NULL condition in _apply_fx_rates/_fill_price_per_bottle.
+-- lot_date IS NOT NULL: a price observation with no date has no place
+-- on a time axis, so it's useless to every Stufe 1-5 model regardless
+-- of the 36-month check below.
+--
+-- D15: a whole series (wine_ref_id, vintage, size_class) is included
+-- only while its most recent observation is <= 36 months old. This is
+-- evaluated against date('now') (query time), not the DB's own build
+-- date or latest lot_date -- intentional: as real time passes without
+-- a new sale, a series should fall out of "active" on its own, the
+-- same way it would gain new rows on the next monthly ingest, without
+-- needing a rebuild to notice the series has gone quiet.
+CREATE VIEW forecast_input AS
+SELECT lot_id, wine_ref_id, vintage, size_class, lot_date, auction_id,
+       provider_id, price_per_bottle_eur
+FROM (
+    SELECT
+        s.id AS lot_id,
+        s.wine_ref_id,
+        s.vintage_final AS vintage,
+        s.bottle_size_dl AS size_class,
+        s.lot_date,
+        s.auction_id,
+        a.provider_id,
+        s.price_per_bottle_eur,
+        MAX(s.lot_date) OVER (
+            PARTITION BY s.wine_ref_id, s.vintage_final, s.bottle_size_dl
+        ) AS series_last_obs
+    FROM single_wine_prices s
+    JOIN auctions a ON s.auction_id = a.id
+    WHERE s.sold = 1
+      AND s.lot_date IS NOT NULL
+      AND s.price_per_bottle_eur IS NOT NULL
+      AND s.price_kind IS NULL
+      AND (s.ppb_flags IS NULL
+           OR (instr(s.ppb_flags, 'OUTLIER') = 0
+               AND instr(s.ppb_flags, 'QTY_SUSPECT') = 0
+               AND instr(s.ppb_flags, 'DUP_CANDIDATE') = 0))
+)
+WHERE series_last_obs >= date('now', '-36 months');
 """
 
 # --------------------------------------------------------------------------- #
@@ -4304,6 +4364,7 @@ def _validate_gates(conn):
               f"distinct sub-lots under one lot number. Not gated; needs "
               f"a per-house review, not a build failure.")
     _report_06_flags(conn)
+    _report_07_forecast_input(conn)
     if problems:
         raise RuntimeError("validation gates failed: " + "; ".join(problems))
 
@@ -4335,6 +4396,47 @@ def _report_06_flags(conn):
         "SELECT COUNT(*) FROM lots WHERE price_kind = 'COTE'").fetchone()[0]
     if cote:
         print(f"0.6/D11: price_kind='COTE' {cote} row(s) (idealwine)")
+
+
+def _report_07_forecast_input(conn):
+    """0.7 AC: row balance from raw ``lots`` down to ``forecast_input``,
+    loss broken down by cause -- each stage's WHERE clause mirrors one
+    of the view's own filters, applied in the same order the view
+    applies them, so the final stage's count must equal a direct
+    ``SELECT COUNT(*) FROM forecast_input`` (the "Summen stimmen" check:
+    a mismatch here would mean this report drifted from the view's
+    actual definition, not that the data is wrong)."""
+    total_lots = conn.execute("SELECT COUNT(*) FROM lots").fetchone()[0]
+    stages = [
+        ("single_wine_prices (SINGLE, wine_ref_id aufgeloest, "
+         "vintage_status sauber)", "1=1"),
+        ("sold = 1 (D14)", "sold = 1"),
+        ("lot_date vorhanden", "lot_date IS NOT NULL"),
+        ("price_per_bottle_eur vorhanden (0.5)",
+         "price_per_bottle_eur IS NOT NULL"),
+        ("price_kind IS NULL, nicht 'COTE' (D11)", "price_kind IS NULL"),
+        ("ohne OUTLIER/QTY_SUSPECT/DUP_CANDIDATE (0.6)",
+         "(ppb_flags IS NULL OR (instr(ppb_flags, 'OUTLIER') = 0"
+         " AND instr(ppb_flags, 'QTY_SUSPECT') = 0"
+         " AND instr(ppb_flags, 'DUP_CANDIDATE') = 0))"),
+    ]
+    print(f"0.7: Zeilenbilanz forecast_input (Rohdaten {total_lots} Zeilen)")
+    cond = []
+    prev = total_lots
+    for label, clause in stages:
+        cond.append(clause)
+        where = " AND ".join(cond)
+        n = conn.execute(
+            f"SELECT COUNT(*) FROM single_wine_prices WHERE {where}"
+        ).fetchone()[0]
+        print(f"  -> {label}: {n} ({prev - n} verloren)")
+        prev = n
+    n_final = conn.execute("SELECT COUNT(*) FROM forecast_input").fetchone()[0]
+    print(f"  -> Serie aktiv, letzte Beobachtung <= 36 Monate (D15): "
+          f"{n_final} ({prev - n_final} verloren, inaktive Serie)")
+    print(f"0.7: forecast_input total {n_final} Zeilen "
+          f"({total_lots - n_final} verloren von {total_lots} Rohdaten-"
+          f"Zeilen)")
 
 
 def _check_duplicate_lot_numbers(conn):

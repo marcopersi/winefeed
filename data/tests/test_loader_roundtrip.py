@@ -4,6 +4,7 @@ Feeds the canonical ``{auction, lots}`` shape that each fetcher emits into its
 matching ``load_*`` function and asserts the loader actually reads the fields
 (no silent NULLs). This guards the fetcher<->loader field-name contract.
 """
+import datetime
 import json
 import os
 import sqlite3
@@ -1794,6 +1795,156 @@ class ZackyBottleSizeDlTest(unittest.TestCase):
     def test_empty_and_none_stay_none(self):
         self.assertIsNone(build_db.zacky_bottle_size_dl(""))
         self.assertIsNone(build_db.zacky_bottle_size_dl(None))
+
+
+class ForecastInputViewTest(unittest.TestCase):
+    """0.7: the forecast_input view -- builds on single_wine_prices
+    (lot_kind='SINGLE', wine_ref_id resolved, vintage_status clean),
+    applies D14 (sold=1), D11 (no price_kind='COTE'), the 0.6 flags
+    (OUTLIER/QTY_SUSPECT/DUP_CANDIDATE excluded), and D15 (series' most
+    recent lot_date within 36 months of today)."""
+
+    RECENT = (datetime.date.today() - datetime.timedelta(days=30)
+              ).isoformat()
+    STALE = (datetime.date.today() - datetime.timedelta(days=40 * 30)
+             ).isoformat()
+
+    def setUp(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.executescript(build_db.SCHEMA)
+        self.builder = build_db.Builder(self.conn)
+        self.a_id = self.builder.add_auction(
+            "koppe", "1", "x", None, "EUR", "HAMMER")
+        self._lot_no = 0
+
+    def _add_eligible_lot(self, wine_ref_id=1, vintage_final=2015,
+                           bottle_size_dl=7.5, lot_date=None, sold=1,
+                           price_kind=None, ppb_flags=None,
+                           vintage_status="STRUCTURED", lot_kind="SINGLE"):
+        lot_date = lot_date or self.RECENT
+        self._lot_no += 1
+        lot_id = self.builder.add_lot(self.a_id, {
+            "lot_no": str(self._lot_no), "wine": "test-wine",
+            "wine_ref_id": wine_ref_id, "bottle_size_dl": bottle_size_dl,
+            "lot_date": lot_date, "sold": sold, "hammer_price": 100.0})
+        self.conn.execute(
+            "UPDATE lots SET lot_kind=?, vintage_status=?, vintage_final=?,"
+            " price_per_bottle_eur=100.0, price_kind=?, ppb_flags=?"
+            " WHERE id=?",
+            (lot_kind, vintage_status, vintage_final, price_kind, ppb_flags,
+             lot_id))
+        return lot_id
+
+    def _forecast_wine_refs(self):
+        return [r[0] for r in self.conn.execute(
+            "SELECT wine_ref_id FROM forecast_input")]
+
+    def test_includes_eligible_row(self):
+        self._add_eligible_lot(wine_ref_id=1)
+        self.assertEqual(self._forecast_wine_refs(), [1])
+
+    def test_excludes_sold_null(self):
+        """D14: sold IS NULL (unknown, ~62% of all lots) must not be
+        treated as sold -- confirmed real gap in the plan doc's own
+        earlier spec text ("sold IS NOT 0"), which is true for NULL too
+        under SQL's three-valued logic and would have silently included
+        these rows."""
+        self._add_eligible_lot(wine_ref_id=1, sold=None)
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_excludes_sold_zero(self):
+        self._add_eligible_lot(wine_ref_id=1, sold=0)
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_excludes_cote_price_kind(self):
+        """D11: idealwine's cote/valuation price, even though
+        _fill_price_per_bottle computes a price_per_bottle_eur for it
+        same as a real sale."""
+        self._add_eligible_lot(wine_ref_id=1, price_kind="COTE")
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_excludes_outlier_flag(self):
+        self._add_eligible_lot(wine_ref_id=1, ppb_flags="OUTLIER")
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_excludes_qty_suspect_flag(self):
+        self._add_eligible_lot(wine_ref_id=1, ppb_flags="QTY_SUSPECT")
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_excludes_dup_candidate_flag(self):
+        self._add_eligible_lot(wine_ref_id=1, ppb_flags="DUP_CANDIDATE")
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_keeps_row_with_unrelated_flag(self):
+        """A flag from a different concern (e.g. QTY_ASSUMED, a non-
+        blocking 0.5 flag) must not be mistaken for one of the three
+        excluding flags via a careless substring match."""
+        self._add_eligible_lot(wine_ref_id=1, ppb_flags="QTY_ASSUMED")
+        self.assertEqual(self._forecast_wine_refs(), [1])
+
+    def test_excludes_lot_date_null(self):
+        lot_id = self.builder.add_lot(self.a_id, {
+            "lot_no": "1", "wine": "test-wine", "wine_ref_id": 1,
+            "bottle_size_dl": 7.5, "lot_date": None, "sold": 1,
+            "hammer_price": 100.0})
+        self.conn.execute(
+            "UPDATE lots SET lot_kind='SINGLE', vintage_status='STRUCTURED',"
+            " vintage_final=2015, price_per_bottle_eur=100.0 WHERE id=?",
+            (lot_id,))
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_excludes_non_structured_vintage_status(self):
+        """Inherited from single_wine_prices: an NV/MV/MISSING/AMBIGUOUS/
+        CONFLICT/INVALID vintage_status means vintage_final isn't a
+        trustworthy series key -- must not land in forecast_input."""
+        self._add_eligible_lot(wine_ref_id=1, vintage_status="NV")
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_excludes_mixed_lot_kind(self):
+        """Inherited from single_wine_prices: lot_kind='MIXED' lots have
+        wine_ref_id forced NULL by the schema's own CHECK constraint, so
+        they can never reach forecast_input regardless of any flag."""
+        lot_id = self.builder.add_lot(self.a_id, {
+            "lot_no": "1", "wine": "test-wine", "wine_ref_id": None,
+            "bottle_size_dl": 7.5, "lot_date": self.RECENT, "sold": 1,
+            "hammer_price": 100.0})
+        self.conn.execute(
+            "UPDATE lots SET lot_kind='MIXED', vintage_status='STRUCTURED',"
+            " vintage_final=2015, price_per_bottle_eur=100.0 WHERE id=?",
+            (lot_id,))
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_excludes_stale_series_entirely(self):
+        """D15: a series (wine_ref_id, vintage, size_class) whose most
+        recent observation is older than 36 months is dropped entirely
+        -- including this one row, which IS the stale series' only (and
+        therefore most recent) observation."""
+        self._add_eligible_lot(wine_ref_id=1, lot_date=self.STALE)
+        self.assertEqual(self._forecast_wine_refs(), [])
+
+    def test_keeps_old_row_when_series_has_a_recent_observation(self):
+        """D15 is evaluated per SERIES, not per row: an old observation
+        stays in forecast_input as long as the same (wine_ref_id,
+        vintage, size_class) series has at least one recent one too."""
+        self._add_eligible_lot(wine_ref_id=1, lot_date=self.STALE)
+        self._add_eligible_lot(wine_ref_id=1, lot_date=self.RECENT)
+        self.assertEqual(sorted(self._forecast_wine_refs()), [1, 1])
+
+    def test_different_size_class_is_a_separate_series(self):
+        """D10: no cross-size equivalence factor -- a stale 7.5dl series
+        and a recent 15.0dl (magnum) series for the same wine_ref_id/
+        vintage are independent; the magnum's recency doesn't rescue the
+        standard bottle's stale series, and vice versa."""
+        self._add_eligible_lot(wine_ref_id=1, bottle_size_dl=7.5,
+                               lot_date=self.STALE)
+        self._add_eligible_lot(wine_ref_id=1, bottle_size_dl=15.0,
+                               lot_date=self.RECENT)
+        rows = self.conn.execute(
+            "SELECT size_class FROM forecast_input").fetchall()
+        self.assertEqual(rows, [(15.0,)])
+
+    def tearDown(self):
+        self.conn.close()
 
 
 if __name__ == "__main__":

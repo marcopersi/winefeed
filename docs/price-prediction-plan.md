@@ -67,8 +67,8 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
 | 0.4 / D19 Flaschengrösse klären | ✅ erledigt — `bottle_size_dl` NULL 46,5 %→2,15 % (Rest = echte Mischlose, bewusst nicht defaultet); zacky-Bug (D19) + `_parse_bottle_formats`-Gate-Lücke behoben |
 | 0.5 `price_per_bottle_eur` befüllen | ✅ erledigt — AC revidiert (D18-Prinzip); 91,74 % der Zeilen *mit echtem Preis* haben den Wert, Rest erklärt/geflaggt (inkl. neu gefundenem `ZERO_PRICE`) |
 | 0.6 / D20 Outlier-/Dubletten-Bereinigung | ✅ erledigt — `DUP_CANDIDATE` 23 636, `OUTLIER` 73 604, `price_kind='COTE'` 33 963 (alle idealwine), nur geflaggt, nichts gelöscht |
-| 0.7 View `forecast_input` | ⬅️ **NÄCHSTER SCHRITT** — nicht begonnen |
-| **Gate G0** (Review Stufe 0) | ⬜ noch nicht fällig |
+| 0.7 View `forecast_input` | ✅ erledigt — 966 347 Zeilen / 118 681 Serien, Zeilenbilanz im Build-Report |
+| **Gate G0** (Review Stufe 0) | ⬅️ **NÄCHSTER SCHRITT** — noch nicht fällig |
 | Stufe 1 – Baselines & Eval-Harness | ⬜ nicht begonnen, kein `data/forecast/`-Paket im Repo |
 | Stufe 2 – Local-Level-Modell (Kalman) | ⬜ nicht begonnen |
 | Stufe 3 – Gruppenindex/Fallback | ⬜ nicht begonnen |
@@ -130,10 +130,30 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
    `1,0 dl`-Zeilen (0.4) und die 20 965-/23 709-Dichtezahlen aus §2.10
    wurden **nicht** im Rahmen von 0.6 neu bewertet — noch offen, siehe
    Punkt 9.
-8. **0.7 — View `forecast_input`** (S) — **nächster Schritt.** Baut
-   D11/D14/D15 ein (idealwine-cote ausschliessen, `sold IS NULL` nicht
-   werten, nur aktive Weine ≤ 36 M) sowie die 0.6-Flags (`OUTLIER`/
-   `DUP_CANDIDATE`/`QTY_SUSPECT`/`fx_status='MISSING'` ausschliessen).
+8. ~~0.7 — View `forecast_input`~~ — **erledigt 2026-11-06.** Baut auf
+   `single_wine_prices` auf (SINGLE, `wine_ref_id` aufgelöst,
+   `vintage_status` sauber), dazu D14 (`sold = 1`, **nicht** die alte
+   Spec-Formulierung `sold IS NOT 0` — die hätte `sold IS NULL` fälschlich
+   miteingeschlossen, da `NULL IS NOT 0` in SQL wahr ist), `lot_date
+   IS NOT NULL`, D11 (`price_kind IS NULL`, aktuell deckungsgleich mit
+   `sold=1` — alle 33 963 COTE-Zeilen haben `sold≠1` — aber bewusst
+   explizit gehalten, da das eine Zufallskorrelation der Daten ist,
+   keine Schema-Garantie), die 0.6-Flags (`OUTLIER`/`QTY_SUSPECT`/
+   `DUP_CANDIDATE`, `instr()`-Substring-Suche statt `LIKE`, gleiche
+   `_`-Falle wie bei `_report_06_flags`) und D15 (pro Serie
+   `wine_ref_id·vintage·size_class` per Fenster-Funktion `MAX(lot_date)
+   OVER (PARTITION BY ...)`, ausgewertet gegen `date('now', '-36
+   months')` zur Abfragezeit, nicht zum Build-Zeitpunkt — eine Serie
+   fällt mit der Zeit von selbst aus `forecast_input`, ohne Rebuild).
+   `size_class` = `bottle_size_dl` direkt (D10: eigene Serien pro
+   Grösse, kein Äquivalenzfaktor). 14 neue Tests. AC (`_report_07_
+   forecast_input`, im Build-Report): Zeilenbilanz **4 297 347 → 966 347**
+   Zeilen (118 681 Serien) — `single_wine_prices` 3 234 301 (-1 063 046),
+   `sold=1` 1 413 114 (-1 821 187), `lot_date` 1 411 526 (-1 588),
+   `price_per_bottle_eur` 1 348 709 (-62 817), `price_kind` 1 348 709
+   (-0, s. o.), 0.6-Flags 1 268 474 (-80 235), D15-Serie-aktiv 966 347
+   (-302 127). Summen stimmen (letzte Stufe = direkte
+   `SELECT COUNT(*) FROM forecast_input`).
 9. **Gate G0** — Senior-Review aller Stufe-0-Schritte, inkl. aller in
    dieser Session gefundenen Lücken (0.1b/D17, 0.2b, 0.3-AC, 0.4/0.5/0.6
    fehlende formale Stichproben, 127 restliche `1,0 dl`-Zeilen, §2.10-
@@ -512,8 +532,32 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
   offenen Stichproben aus 0.4/0.5.
 
 **0.7 View `forecast_input`** (S)
-- `select wine_ref_id, vintage, size_class, lot_date, auction_id, provider_id, y=ln(price_per_bottle_eur), …` mit `sold IS NOT 0`, ohne `OUTLIER`/`QTY_SUSPECT`/`DUP_CANDIDATE`/`fx_status='MISSING'`, ohne `price_kind='COTE'` (D11).
+- `select lot_id, wine_ref_id, vintage, size_class, lot_date, auction_id, provider_id, price_per_bottle_eur` mit `sold = 1` (D14), `lot_date IS NOT NULL`, `price_per_bottle_eur IS NOT NULL`, ohne `price_kind='COTE'` (D11), ohne `OUTLIER`/`QTY_SUSPECT`/`DUP_CANDIDATE` (0.6), nur Serien (`wine_ref_id`/`vintage`/`size_class`) mit letzter Beobachtung ≤ 36 Monate (D15). `y=ln(price_per_bottle_eur)` bewusst **nicht** in der View berechnet (SQLite-Mathefunktionen sind nicht überall aktiviert; gehört ohnehin in den Modell-Code, nicht in die Datenauswahl).
 - AC: Zeilenbilanz Rohdaten → Input mit Verlust je Ursache (Tabelle), Summen stimmen.
+- **Status: erledigt 2026-11-06** (final gegen die Master-DB nachgebaut
+  und verifiziert). Baut auf `single_wine_prices` auf statt auf `lots`
+  direkt, damit eine Zeile mit unzuverlässigem `vintage_status` (NV/MV/
+  MISSING/AMBIGUOUS/CONFLICT/INVALID) nie unter einem falschen
+  Serienschlüssel landet. `size_class` = `bottle_size_dl` direkt (D10).
+  D15 per Fenster-Funktion `MAX(lot_date) OVER (PARTITION BY
+  wine_ref_id, vintage_final, bottle_size_dl)`, verglichen gegen
+  `date('now', '-36 months')` zur Abfragezeit (nicht zum Build-
+  Zeitpunkt) -- eine Serie wird "inaktiv" allein durch verstreichende
+  Zeit, ohne dass ein neuer Build nötig ist, genau wie sie durch den
+  nächsten monatlichen Ingest wieder "aktiv" werden kann. 14 Tests
+  (Builder-Setup + direktes `UPDATE` für die derived-only-Spalten,
+  gleiche Konvention wie 0.5/0.6). AC-Report (`_report_07_
+  forecast_input`, in `_validate_gates`) druckt die Zeilenbilanz bei
+  jedem Build. **Live-Ergebnis:** 4 297 347 Rohdaten-Zeilen ->
+  `single_wine_prices` 3 234 301 (-1 063 046) -> `sold=1` 1 413 114
+  (-1 821 187) -> `lot_date` 1 411 526 (-1 588) -> `price_per_bottle_eur`
+  1 348 709 (-62 817) -> `price_kind IS NULL` 1 348 709 (-0: alle 33 963
+  COTE-Zeilen haben bereits `sold≠1`, der Filter ist aktuell
+  deckungsgleich damit, aber bewusst explizit gehalten, da es eine
+  Zufallskorrelation der Daten ist, keine Schema-Garantie) -> ohne
+  0.6-Flags 1 268 474 (-80 235) -> Serie aktiv (D15) **966 347**
+  (-302 127), verteilt über 118 681 Serien. Summen stimmen (letzte
+  Stufe = direkte `SELECT COUNT(*) FROM forecast_input`).
 
 **Gate G0:** Review aller Stufe-0-Schritte (§7). Ohne Freigabe kein Start von Stufe 1.
 
