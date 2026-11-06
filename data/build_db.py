@@ -16,10 +16,12 @@ import csv
 import datetime
 import glob
 import json
+import math
 import os
 import re
 import hashlib
 import sqlite3
+import statistics
 import subprocess
 import sys
 import zipfile
@@ -197,6 +199,7 @@ CREATE TABLE lots (
   size_assumed        INTEGER,
   price_per_bottle_eur REAL,
   ppb_flags           TEXT,
+  price_kind          TEXT,
   CHECK (vintage_final IS NULL OR vintage_final BETWEEN 1700 AND 2100),
   CHECK (lot_kind IS NULL OR lot_kind IN ('SINGLE', 'MIXED', 'UNKNOWN')),
   CHECK (lot_kind <> 'MIXED' OR wine_ref_id IS NULL),
@@ -205,7 +208,8 @@ CREATE TABLE lots (
     'AMBIGUOUS', 'CONFLICT', 'INVALID'
   )),
   CHECK (fx_status IS NULL OR fx_status IN ('MISSING')),
-  CHECK (size_assumed IS NULL OR size_assumed = 1)
+  CHECK (size_assumed IS NULL OR size_assumed = 1),
+  CHECK (price_kind IS NULL OR price_kind IN ('COTE'))
 );
 
 CREATE TABLE wine_alias_observations (
@@ -3673,17 +3677,39 @@ def _build(conn, args):
     _fill_lot_date(conn)
     _apply_fx_rates(conn)
 
+    # _flag_cote_prices only joins auctions/providers on provider name, so
+    # it doesn't need resolve_wines()'s output and can run unconditionally.
+    _flag_cote_prices(conn)
+
     if not args.skip_resolution:
         from build_wines import run as resolve_wines
         resolve_wines(conn)
-        # Review fix: must stay inside this guard -- _fill_price_per_bottle
-        # depends on resolve_wines() having finalized lot_kind (MIXED
-        # exclusion) and bottle_size_dl/quantity (0.4's
+        # _fill_price_per_bottle depends on resolve_wines() having finalized
+        # lot_kind (MIXED exclusion) and bottle_size_dl/quantity (0.4's
         # _parse_bottle_formats/_assume_default_bottle_size); with
         # --skip-resolution those never run, so lot_kind stays NULL
         # (MIXED lots would never be excluded) and bottle_size_dl/quantity
         # stay at their raw, un-resolved loader values.
         _fill_price_per_bottle(conn)
+        # _flag_duplicate_lots must run AFTER _fill_price_per_bottle, not
+        # before: _fill_price_per_bottle's own UPDATE writes ppb_flags
+        # with a plain ``=``, replacing the column outright for every row
+        # it touches (any row with a price). Confirmed by rebuilding with
+        # it the other way round: DUP_CANDIDATE came out at 14395 total
+        # (sylvies=1985) instead of the correct 23636 (sylvies=10994,
+        # matching _check_duplicate_lot_numbers's own count on the same
+        # final table state) -- _fill_price_per_bottle had silently wiped
+        # out most of the DUP_CANDIDATE flags _flag_duplicate_lots had just
+        # set, for every duplicate row that also carries a price. Running
+        # it after means _append_ppb_flag's CASE-WHEN appends onto
+        # whatever _fill_price_per_bottle already wrote instead of the
+        # other way round. Also needs resolve_wines()'s cleaned fields
+        # (wine/quantity/vintage_final) to match _check_duplicate_lot_
+        # numbers's own result -- confirmed real gap on raw pre-resolution
+        # columns for sylvies, see git history for the full writeup.
+        _flag_duplicate_lots(conn)
+        # _flag_price_outliers needs price_per_bottle_eur from this step.
+        _flag_price_outliers(conn)
 
     _record_build_metadata(conn)
 
@@ -3961,6 +3987,129 @@ def _fill_price_per_bottle(conn):
         updates)
 
 
+def _append_ppb_flag(conn, flag, lot_ids):
+    """Shared helper for 0.6's two flagging passes below: appends ``flag``
+    to each row's ``ppb_flags`` instead of overwriting it (a row may
+    already carry a flag from ``_fill_price_per_bottle``), since nothing
+    in 0.6 ever deletes or merges rows -- only marks them for
+    ``forecast_input`` (0.7) to decide on."""
+    conn.executemany(
+        "UPDATE lots SET ppb_flags = CASE WHEN ppb_flags IS NULL THEN ?"
+        " ELSE ppb_flags || ',' || ? END WHERE id = ?",
+        [(flag, flag, lot_id) for lot_id in lot_ids])
+
+
+def _flag_cote_prices(conn):
+    """0.6/D11: idealwine's recorded price is a cote/valuation (the
+    house's own market estimate read off its price-history page), not a
+    competitive auction hammer price -- see ``PREMIUM_POLICY``'s own note
+    just above, "are a cote/valuation price rather than an auction
+    (idealwine)". Flagged ``price_kind='COTE'`` (a separate column, not
+    ``ppb_flags`` -- this is a statement about what KIND of price it is,
+    true regardless of whether a price_per_bottle_eur could be computed,
+    not a reason a computation failed) so ``forecast_input`` (0.7) can
+    exclude it from the auction-price series without confusing it with
+    any other missing-data case."""
+    conn.execute(
+        "UPDATE lots SET price_kind = 'COTE' WHERE auction_id IN"
+        " (SELECT a.id FROM auctions a JOIN providers p"
+        " ON a.provider_id = p.id WHERE p.name = 'idealwine')")
+
+
+def _flag_duplicate_lots(conn):
+    """0.6 Dubletten: confirmed real risk live -- a wine-identity-based
+    heuristic (same wine_ref_id/vintage/lot_date/price/provider) was
+    tried first and produced false positives even tightened to an exact
+    field match plus "loaded from a different source_file": a paginated
+    auction (e.g. steinfels' per-auction ResultfileN.json pages) makes
+    every lot's row look like it came from "a different source" than
+    every other lot in the same sale, and two genuinely different lots
+    (e.g. two single-bottle consignments of the same obscure wine,
+    sold back-to-back for the same hammer in a thin market -- observed
+    live, repeatedly, for langtons) are indistinguishable from a true
+    duplicate under that key.
+
+    Reuses the definition ``_check_duplicate_lot_numbers`` already
+    validates instead: the SAME ``(auction_id, lot_no)`` with the SAME
+    full content tuple appearing more than once. ``(auction_id, lot_no)``
+    is already close to unique by itself (it's the house's own lot
+    numbering within one sale); requiring the full content to match too
+    makes a false positive practically impossible -- two independently
+    real lots sharing a lot number AND wine AND vintage AND quantity AND
+    region AND condition_text AND is_ohk AND hammer_price would be an
+    extraordinary coincidence, not a believable alternative explanation.
+
+    Keeps exactly one row per duplicate group untouched (the first by
+    ``id``, an arbitrary but stable tie-break since the rows are
+    content-identical anyway) and flags every other one
+    ``ppb_flags += 'DUP_CANDIDATE'`` -- never deletes or merges rows."""
+    seen = {}
+    dup_lot_ids = []
+    for (lot_id, auction_id, lot_no, wine, vintage, quantity, region, cond,
+         ohk, hammer) in conn.execute(
+            "SELECT id, auction_id, lot_no, wine,"
+            " COALESCE(vintage_final, vintage), quantity, region,"
+            " condition_text, is_ohk, hammer_price FROM lots"
+            " WHERE lot_no IS NOT NULL ORDER BY id"):
+        key = (auction_id, lot_no)
+        content = (wine, vintage, quantity, region, cond, ohk, hammer)
+        bucket = seen.setdefault(key, set())
+        if content in bucket:
+            dup_lot_ids.append(lot_id)
+        else:
+            bucket.add(content)
+    _append_ppb_flag(conn, "DUP_CANDIDATE", dup_lot_ids)
+
+
+def _flag_price_outliers(conn):
+    """0.6 Ausreisser: robust z-score on ln(price_per_bottle_eur) within
+    each (wine_ref_id, vintage) group -- the natural "same wine, should
+    be in the same ballpark" comparison set. Uses the median and MAD
+    (median absolute deviation, scaled by 0.6745 so it estimates a normal
+    distribution's std dev) rather than mean/stddev specifically because
+    those are themselves dragged around by the very outliers being
+    looked for; |z| > 5 is flagged ``ppb_flags += 'OUTLIER'``.
+
+    A group needs >= 5 observations before this is attempted at all --
+    median/MAD on fewer points is noise, not a measurement, and with a
+    MAD of exactly 0 (every price in the group identical) there is
+    nothing to measure against (and dividing by it would crash), so that
+    case is skipped too, not forced to a vacuous "everything is an
+    outlier" result. Never deletes or merges rows -- the model (stage
+    2+) decides what to do with a flagged row, not this step.
+
+    Review fix: excludes ``price_kind='COTE'`` rows (``_flag_cote_prices``,
+    D11, runs before this) from the comparison group entirely -- idealwine's
+    cote/valuation price is not a competitive sale, so mixing it into the
+    same (wine_ref_id, vintage) group as real hammer prices would pull the
+    group's median/MAD toward the valuation level, either masking a genuine
+    auction-price outlier or wrongly flagging a normal auction price purely
+    because the comparison set was contaminated with a different kind of
+    price that 0.7 is separately excluding from the series anyway."""
+    groups = {}
+    for lot_id, wine_ref_id, vintage, price in conn.execute(
+            "SELECT id, wine_ref_id, COALESCE(vintage_final, vintage),"
+            " price_per_bottle_eur FROM lots"
+            " WHERE price_per_bottle_eur IS NOT NULL"
+            " AND wine_ref_id IS NOT NULL"
+            " AND price_kind IS NULL"):
+        groups.setdefault((wine_ref_id, vintage), []).append((lot_id, price))
+
+    flagged = []
+    for rows in groups.values():
+        if len(rows) < 5:
+            continue
+        logs = [math.log(price) for _, price in rows]
+        med = statistics.median(logs)
+        mad = statistics.median([abs(x - med) for x in logs])
+        if mad == 0:
+            continue
+        for (lot_id, _), lx in zip(rows, logs):
+            if abs(0.6745 * (lx - med) / mad) > 5:
+                flagged.append(lot_id)
+    _append_ppb_flag(conn, "OUTLIER", flagged)
+
+
 # Buyer's premium policy per house. ``rate`` = flat premium fraction of the
 # hammer; ``fees`` = flat per-lot fee in the house currency.
 #
@@ -4154,8 +4303,38 @@ def _validate_gates(conn):
               f"for langtons, that house's convention of grouping several "
               f"distinct sub-lots under one lot number. Not gated; needs "
               f"a per-house review, not a build failure.")
+    _report_06_flags(conn)
     if problems:
         raise RuntimeError("validation gates failed: " + "; ".join(problems))
+
+
+def _report_06_flags(conn):
+    """0.6 AC: "Anzahl markierter Zeilen pro Haus im Report" for
+    DUP_CANDIDATE/OUTLIER (``_flag_duplicate_lots``/
+    ``_flag_price_outliers``) and COTE (``_flag_cote_prices``, D11).
+
+    Review fix: uses ``instr()`` on the comma-delimited string rather than
+    ``LIKE '%,' || ? || ',%'`` -- a bare ``LIKE`` pattern treats ``_`` as a
+    single-character wildcard, and ``DUP_CANDIDATE`` contains one, so the
+    old pattern would silently match any other same-length flag that
+    happened to differ only in that position (e.g. a future
+    ``DUPXCANDIDATE``). ``instr`` does a plain substring search, not
+    pattern matching, so flag names are compared literally."""
+    for flag in ("DUP_CANDIDATE", "OUTLIER"):
+        rows = conn.execute(
+            "SELECT p.name, COUNT(*) FROM lots l"
+            " JOIN auctions a ON l.auction_id = a.id"
+            " JOIN providers p ON a.provider_id = p.id"
+            " WHERE instr(',' || l.ppb_flags || ',', ',' || ? || ',') > 0"
+            " GROUP BY p.name ORDER BY 2 DESC", (flag,)).fetchall()
+        total = sum(c for _, c in rows)
+        if total:
+            per_house = ", ".join(f"{name}={c}" for name, c in rows)
+            print(f"0.6: {flag} {total} row(s) -- {per_house}")
+    cote = conn.execute(
+        "SELECT COUNT(*) FROM lots WHERE price_kind = 'COTE'").fetchone()[0]
+    if cote:
+        print(f"0.6/D11: price_kind='COTE' {cote} row(s) (idealwine)")
 
 
 def _check_duplicate_lot_numbers(conn):

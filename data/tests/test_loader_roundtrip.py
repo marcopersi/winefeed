@@ -409,6 +409,179 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (None, "ZERO_PRICE"))
         conn.close()
 
+    def test_flag_cote_prices_marks_only_idealwine(self):
+        """D11: idealwine's recorded price is a cote/valuation, not an
+        auction hammer price -- flagged price_kind='COTE'. A different
+        house's lot must stay untouched."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("idealwine", "1", "x", None, "EUR",
+                                   "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "cote-wine"})
+        b_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        builder.add_lot(b_id, {"lot_no": "1", "wine": "auction-wine"})
+        build_db._flag_cote_prices(conn)
+        rows = dict(conn.execute("SELECT wine, price_kind FROM lots"))
+        self.assertEqual(rows["cote-wine"], "COTE")
+        self.assertIsNone(rows["auction-wine"])
+        conn.close()
+
+    def test_flag_duplicate_lots_keeps_one_flags_the_rest(self):
+        """0.6 Dubletten: reuses _check_duplicate_lot_numbers's own
+        definition (same auction_id+lot_no+full content more than once)
+        instead of a wine-identity heuristic -- confirmed live that the
+        latter false-positives on paginated auctions and genuine same-
+        price twin lots (see module docstring). The first occurrence (by
+        id) is left alone; later ones get DUP_CANDIDATE appended (not
+        overwriting an existing flag). A near-identical row that differs
+        in just one field (hammer_price) is a different real lot, not a
+        duplicate, and must stay unflagged."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "dup-original",
+                               "vintage": 2020, "quantity": 1,
+                               "hammer_price": 100.0})
+        dup_id = builder.add_lot(a_id, {"lot_no": "1", "wine": "dup-original",
+                                        "vintage": 2020, "quantity": 1,
+                                        "hammer_price": 100.0})
+        # ppb_flags is derived-only (never set via add_lot) -- set it
+        # directly to simulate a row _fill_price_per_bottle already
+        # flagged, to check DUP_CANDIDATE appends rather than overwrites.
+        conn.execute("UPDATE lots SET ppb_flags='QTY_SUSPECT' WHERE id=?",
+                     (dup_id,))
+        builder.add_lot(a_id, {"lot_no": "2", "wine": "not-a-dup",
+                               "vintage": 2020, "quantity": 1,
+                               "hammer_price": 999.0})
+        build_db._flag_duplicate_lots(conn)
+        rows = conn.execute(
+            "SELECT wine, ppb_flags FROM lots ORDER BY id").fetchall()
+        self.assertEqual(rows, [
+            ("dup-original", None),
+            ("dup-original", "QTY_SUSPECT,DUP_CANDIDATE"),
+            ("not-a-dup", None),
+        ])
+        conn.close()
+
+    def test_flag_duplicate_lots_after_fill_price_per_bottle_does_not_clobber(
+            self):
+        """Regression: confirmed live that running _flag_duplicate_lots
+        BEFORE _fill_price_per_bottle loses the DUP_CANDIDATE flag again
+        -- _fill_price_per_bottle's own UPDATE writes ppb_flags with a
+        plain ``=``, replacing the column outright for every row it
+        touches (any row with a price), not just appending to it like
+        _append_ppb_flag does. main() must call _fill_price_per_bottle
+        first, then _flag_duplicate_lots, for every row with both a
+        price and a duplicate lot_no to end up correctly flagged with
+        both pieces of information."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "dup-priced",
+                               "vintage": 2020, "quantity": 1,
+                               "hammer_price": 100.0, "realised_price": 100.0,
+                               "bottle_size_dl": 7.5, "fx_rate": 1.0,
+                               "sold": 1})
+        builder.add_lot(a_id, {"lot_no": "1", "wine": "dup-priced",
+                               "vintage": 2020, "quantity": 1,
+                               "hammer_price": 100.0, "realised_price": 100.0,
+                               "bottle_size_dl": 7.5, "fx_rate": 1.0,
+                               "sold": 1})
+        build_db._fill_price_per_bottle(conn)
+        build_db._flag_duplicate_lots(conn)
+        rows = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots"
+            " ORDER BY id").fetchall()
+        self.assertEqual(rows[0], (100.0, None))
+        self.assertEqual(rows[1], (100.0, "DUP_CANDIDATE"))
+        conn.close()
+
+    def test_flag_price_outliers_needs_five_obs_and_nonzero_mad(self):
+        """0.6 Ausreisser: a group needs >= 5 observations before a
+        median/MAD z-score means anything, and a MAD of exactly 0 (every
+        price identical) has nothing to measure against -- both skipped
+        rather than forced into a result. One clear outlier (10x the
+        group's price) among 5 otherwise-identical prices gets flagged;
+        the 5 normal ones don't."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+
+        # price_per_bottle_eur is derived-only (never set via add_lot) --
+        # add the lot, then set it directly to simulate
+        # _fill_price_per_bottle's own output.
+        def _lot(lot_no, wine, vintage, wine_ref_id, price):
+            lot_id = builder.add_lot(a_id, {"lot_no": lot_no, "wine": wine,
+                                            "vintage": vintage,
+                                            "wine_ref_id": wine_ref_id})
+            conn.execute(
+                "UPDATE lots SET price_per_bottle_eur=? WHERE id=?",
+                (price, lot_id))
+
+        # Too-small group (4 obs): never flagged even with an extreme value.
+        for i in range(3):
+            _lot(str(i), "small-group", 2019, 1, 50.0)
+        _lot("99", "small-group", 2019, 1, 5000.0)
+        # Zero-MAD group: 5 identical prices, nothing to measure against.
+        for i in range(5):
+            _lot(f"z{i}", "zero-mad", 2018, 2, 30.0)
+        # Real outlier group: 5 normal prices + 1 extreme.
+        for i in range(5):
+            _lot(f"o{i}", "outlier-group", 2017, 3, 40.0 + i)
+        _lot("o99", "outlier-group", 2017, 3, 9000.0)
+        build_db._flag_price_outliers(conn)
+        flagged = {w for w, f in conn.execute(
+            "SELECT wine, ppb_flags FROM lots WHERE ppb_flags IS NOT NULL")}
+        self.assertEqual(flagged, {"outlier-group"})
+        outlier_rows = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots"
+            " WHERE wine='outlier-group'").fetchall()
+        self.assertEqual(sum(1 for _, f in outlier_rows if f == "OUTLIER"), 1)
+        conn.close()
+
+    def test_flag_price_outliers_excludes_cote_rows_from_the_group(self):
+        """Review fix: a price_kind='COTE' row (idealwine's valuation, not
+        a competitive sale -- flagged by _flag_cote_prices, which runs
+        before this) must not be counted as one of the group's
+        observations, and must never itself be flagged OUTLIER: it isn't
+        an auction hammer price to begin with, so it has no place in a
+        comparison meant to catch unusual auction prices."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        iw_id = builder.add_auction("idealwine", "cote", "x", None, "EUR",
+                                     None)
+
+        def _lot(auction_id, lot_no, wine, vintage, wine_ref_id, price):
+            lot_id = builder.add_lot(auction_id, {
+                "lot_no": lot_no, "wine": wine, "vintage": vintage,
+                "wine_ref_id": wine_ref_id})
+            conn.execute(
+                "UPDATE lots SET price_per_bottle_eur=? WHERE id=?",
+                (price, lot_id))
+
+        # 5 normal auction prices, same wine_ref_id/vintage as a cote row
+        # priced far outside that range -- without the price_kind filter,
+        # the cote row alone would still not be >= 5 obs by itself, but it
+        # WOULD join the auction group's 5 obs as a 6th, which is enough to
+        # risk distorting the group's median/MAD or getting itself flagged.
+        for i in range(5):
+            _lot(a_id, f"o{i}", "same-wine", 2017, 3, 40.0 + i)
+        _lot(iw_id, "cote-1", "same-wine", 2017, 3, 9000.0)
+        build_db._flag_cote_prices(conn)
+        build_db._flag_price_outliers(conn)
+        rows = dict(conn.execute(
+            "SELECT lot_no, ppb_flags FROM lots WHERE wine='same-wine'"))
+        self.assertIsNone(rows["cote-1"])
+        self.assertTrue(all(f is None for lot_no, f in rows.items()
+                             if lot_no != "cote-1"))
+        conn.close()
+
     def test_sylvies_premium_is_20_percent_with_no_tax(self):
         """sylvies.be Conditions of Sale: 20% buyer's premium excl. VAT, no
         per-lot fee, VAT is destination-dependent (no single numeric rate) --

@@ -66,8 +66,8 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
 | 0.3 `_annotate_fx`/`_apply_fx_rates` | ✅ erledigt — AC revidiert (D18), `fx_status='MISSING'` flaggt 159 749 der 166 480 Lücken-Zeilen explizit (Rest: 6 731 Währung-NULL, bewusst nicht geflaggt, siehe §5) |
 | 0.4 / D19 Flaschengrösse klären | ✅ erledigt — `bottle_size_dl` NULL 46,5 %→2,15 % (Rest = echte Mischlose, bewusst nicht defaultet); zacky-Bug (D19) + `_parse_bottle_formats`-Gate-Lücke behoben |
 | 0.5 `price_per_bottle_eur` befüllen | ✅ erledigt — AC revidiert (D18-Prinzip); 91,74 % der Zeilen *mit echtem Preis* haben den Wert, Rest erklärt/geflaggt (inkl. neu gefundenem `ZERO_PRICE`) |
-| 0.6 Outlier-/Dubletten-Bereinigung | ⬅️ **NÄCHSTER SCHRITT** — nicht begonnen |
-| 0.7 View `forecast_input` | ⬜ nicht begonnen |
+| 0.6 / D20 Outlier-/Dubletten-Bereinigung | ✅ erledigt — `DUP_CANDIDATE` 23 636, `OUTLIER` 73 604, `price_kind='COTE'` 33 963 (alle idealwine), nur geflaggt, nichts gelöscht |
+| 0.7 View `forecast_input` | ⬅️ **NÄCHSTER SCHRITT** — nicht begonnen |
 | **Gate G0** (Review Stufe 0) | ⬜ noch nicht fällig |
 | Stufe 1 – Baselines & Eval-Harness | ⬜ nicht begonnen, kein `data/forecast/`-Paket im Repo |
 | Stufe 2 – Local-Level-Modell (Kalman) | ⬜ nicht begonnen |
@@ -109,19 +109,35 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
    Datenfehler). Verifiziert: 0 Zeilen mit Preis ≤ 0 in der ganzen DB.
    Formale Los-Konstellationen-Tabelle aus der ursprünglichen AC **noch
    nicht geschrieben** — vor Gate G0 nachholen.
-7. **0.6 — Outlier/Dubletten-Bereinigung** (M) — **nächster Schritt.**
-   Dubletten (gleiche wine_ref_id/Jahrgang/Datum/Preis±1%/Haus),
-   idealwine-`cote` als `price_kind='COTE'` ausschliessen (D11), robuste
-   z-Score-Ausreisser-Markierung (`ppb_flags += 'OUTLIER'`, nicht
-   löschen). Guter Ort, um die 127 restlichen `1,0 dl`-Zeilen (0.4,
-   ackerwines/wermuth-sa/sylvies/bestwineauctions, nicht untersucht) und
-   die 20 965-/23 709-Dichtezahlen aus §2.10 neu zu bewerten.
-8. **0.7 — View `forecast_input`** (S), erst nach 7. Baut D11/D14/D15
-   ein (idealwine-cote ausschliessen, `sold IS NULL` nicht werten, nur
-   aktive Weine ≤ 36 M).
+7. ~~0.6 — Outlier/Dubletten-Bereinigung~~ — **erledigt 2026-11-06.** D20
+   (Dubletten-Regel geändert, siehe §6), `price_kind='COTE'` für
+   idealwine (D11), robuste z-Score-Ausreisser-Markierung. Alles nur
+   geflaggt (`ppb_flags`), nichts gelöscht/zusammengeführt. Zwei
+   Review-Runden fanden je einen echten Bug: Runde 1 — `OUTLIER`-Gruppen
+   mussten `price_kind='COTE'`-Zeilen ausschliessen (idealwines Cote
+   hätte sonst echte Auktionspreise verzerrt); Runde 2 führte selbst
+   einen Bug ein (`_flag_cote_prices`/`_flag_duplicate_lots` vor
+   `resolve_wines()` verschoben) und behauptete fälschlich, das sei
+   gleichwertig — beim Nachbau-Verifizieren selbst entdeckt: die
+   verschobene Reihenfolge liess `_fill_price_per_bottle`s eigenes
+   (nicht-additives) `UPDATE ... ppb_flags=?` die gerade gesetzten
+   `DUP_CANDIDATE`-Flags wieder überschreiben (23 636→14 395 Zeilen,
+   grösstenteils sylvies betroffen). Fix: `_flag_duplicate_lots` läuft
+   jetzt nach `_fill_price_per_bottle`, mit eigenem Regressionstest.
+   Finale, am Rebuild verifizierte Zahlen: `DUP_CANDIDATE` 23 636
+   (identisch mit der `_check_duplicate_lot_numbers`-Gate-Prüfung),
+   `OUTLIER` 73 604, `price_kind='COTE'` 33 963. Die 127 restlichen
+   `1,0 dl`-Zeilen (0.4) und die 20 965-/23 709-Dichtezahlen aus §2.10
+   wurden **nicht** im Rahmen von 0.6 neu bewertet — noch offen, siehe
+   Punkt 9.
+8. **0.7 — View `forecast_input`** (S) — **nächster Schritt.** Baut
+   D11/D14/D15 ein (idealwine-cote ausschliessen, `sold IS NULL` nicht
+   werten, nur aktive Weine ≤ 36 M) sowie die 0.6-Flags (`OUTLIER`/
+   `DUP_CANDIDATE`/`QTY_SUSPECT`/`fx_status='MISSING'` ausschliessen).
 9. **Gate G0** — Senior-Review aller Stufe-0-Schritte, inkl. aller in
-   dieser Session gefundenen Lücken (0.1b/D17, 0.2b, 0.3-AC, 0.4/0.5
-   fehlende Stichproben). **Ohne G0 kein Start von Stufe 1.**
+   dieser Session gefundenen Lücken (0.1b/D17, 0.2b, 0.3-AC, 0.4/0.5/0.6
+   fehlende formale Stichproben, 127 restliche `1,0 dl`-Zeilen, §2.10-
+   Dichtezahlen neu messen). **Ohne G0 kein Start von Stufe 1.**
 10. Erst danach Stufe 1 (Paket-Gerüst `data/forecast/`, `statsmodels` in
     `requirements.txt`, Baselines, Rolling-Origin-Evaluator) — siehe §5,
     unverändert seit 2026-10-29, noch nichts davon existiert im Repo.
@@ -431,9 +447,72 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 - Dubletten: gleiche (wine_ref_id, Jahrgang, Datum, Preis ±1 %, Haus) → eine Zeile; idealwine („cote") als eigene Preisart `price_kind='COTE'` ausschliessen oder getrennt führen (Entscheid in Review).
 - Ausreisser: robuste z-Score (MAD) im Log-Preis je Gruppe, |z|>5 → `ppb_flags += 'OUTLIER'` (**nicht löschen**, nur markieren; Modell entscheidet).
 - AC: Anzahl markierter/entfernter Zeilen pro Haus im Report; Stichprobe 50 markierte Zeilen manuell geprüft.
+- **D20 (entschieden 2026-11-06): Dubletten-Regel geändert.** Die
+  oben spezifizierte Wein-Identitäts-Regel (wine_ref_id/Jahrgang/Datum/
+  Preis±1%/Haus, ohne lot_no) wurde live geprüft und erzeugt
+  nachweisbare False Positives: (a) langtons verkauft wiederholt zwei
+  einzelne Flaschen desselben Weins als separate, aufeinanderfolgende
+  Lose zum selben Preis (dünner Markt, echte Marktdaten, keine Dublette
+  — verifiziert an mehreren konkreten Beispielen); (b) ackerwines hat
+  echte Zwillings-Konsignationen (zwei fast identische Lose, je eigene
+  `lotId`); (c) selbst eine verschärfte Variante (exakter Match + "aus
+  unterschiedlicher `source_file`") schlägt fehl, weil Häuser wie
+  steinfels eine Auktion über mehrere `ResultfileN.json`-Seiten
+  paginieren — jede Seite ist technisch eine "andere Quelldatei",
+  obwohl es dieselbe Auktion ist (verifiziert: keine Lot-Überlappung
+  zwischen den Seiten). **Entschieden: stattdessen die bereits
+  bestehende, bewährte `_check_duplicate_lot_numbers`-Definition
+  wiederverwenden** (gleiche `auction_id`+`lot_no`+voller Inhalt mehr
+  als einmal) — `(auction_id, lot_no)` ist je Haus praktisch schon
+  eindeutig, der volle Inhalt obendrauf macht einen False Positive
+  praktisch ausgeschlossen. Markiert (niemals gelöscht), wie geplant.
+- **Status: erledigt 2026-11-06** (final gegen die Master-DB
+  nachgebaut und verifiziert). Drei neue Funktionen in `build_db.py`:
+  `_flag_cote_prices` (D11: `price_kind='COTE'` für alle idealwine-
+  Zeilen, eigene Spalte statt `ppb_flags`, da es eine Aussage über die
+  Preis*art* ist, nicht über einen Berechnungsfehler), `_flag_duplicate_lots`
+  (D20, s.o.; behält die erste Zeile pro Gruppe unverändert, flaggt den
+  Rest `DUP_CANDIDATE`), `_flag_price_outliers` (robuster z-Score auf
+  `ln(price_per_bottle_eur)` je `(wine_ref_id, vintage)`-Gruppe, Median/MAD
+  statt Mittelwert/Stdabw. — genau die Grössen, die Ausreisser selbst
+  verzerren würden; Gruppe braucht ≥ 5 Beobachtungen, MAD=0 wird
+  übersprungen, nicht erzwungen). Alle drei hängen an `ppb_flags`
+  (Komma-getrennt angehängt, nie überschrieben — ein Los kann schon ein
+  Flag von `_fill_price_per_bottle` tragen, z. B. `QTY_SUSPECT,OUTLIER`
+  oder `MIXED_LOT,DUP_CANDIDATE`, beide live verifiziert). AC-Report
+  (`_report_06_flags`, läuft in `_validate_gates`) druckt Anzahl je
+  Haus bei jedem Build.
+  **Zwei Review-Runden, zwei echte Bugs gefunden und behoben:**
+  Runde 1 fand, dass `_flag_price_outliers`s Vergleichsgruppen
+  `price_kind='COTE'`-Zeilen (idealwine) mit echten Auktionspreisen
+  mischten — Fix: `AND price_kind IS NULL` in der Gruppierung. Runde 2
+  verschob `_flag_cote_prices`/`_flag_duplicate_lots` fälschlich vor
+  `resolve_wines()` (mit der — beim Nachbau widerlegten — Begründung,
+  das sei äquivalent zu `_check_duplicate_lot_numbers`); beim
+  Verifizieren des Rebuilds selbst entdeckt: `_fill_price_per_bottle`
+  schreibt `ppb_flags` nicht additiv, sondern mit einem schlichten
+  `UPDATE ... ppb_flags=?`, das für jede Zeile mit Preis den gerade
+  gesetzten `DUP_CANDIDATE`-Flag sofort wieder überschrieb (sichtbar als
+  23 636→14 395 Zeilen, v. a. sylvies). Fix: `_flag_duplicate_lots` läuft
+  jetzt nach `_fill_price_per_bottle` (beide weiterhin nach
+  `resolve_wines()`, wegen bereinigter `wine`/`quantity`/`vintage_final`-
+  Felder), mit eigenem Regressionstest, der genau diese Interaktion prüft.
+  **Finale, am dritten Rebuild verifizierte Zahlen:** `DUP_CANDIDATE`
+  23 636 Zeilen (deckt sich exakt mit dem unabhängig berechneten
+  `_check_duplicate_lot_numbers`-Gate-Wert), Verteilung: ackerwines
+  12 568, sylvies 10 994, winefields 34, franzwermuth 32, langtons 7,
+  besch-cannes 1. `OUTLIER` 73 604 Zeilen über alle Häuser (langtons
+  32 629, christies 19 909, ackerwines 8 679, Rest kleiner pro Haus).
+  `price_kind='COTE'` 33 963 Zeilen (= alle idealwine-Lots, exakt wie
+  erwartet). Stichprobe (5 Zufalls-OUTLIER) manuell plausibilisiert
+  (u. a. ein DOMAINE LEROY Grand Cru 1996 bei 18 656 EUR/Flasche —
+  plausibel extrem für diesen Produzenten, nicht offensichtlich falsch).
+  Die formale 50-Lose-Stichprobe aus der ursprünglichen AC ist noch
+  **nicht** durchgeführt — vor Gate G0 nachholen, zusammen mit den noch
+  offenen Stichproben aus 0.4/0.5.
 
 **0.7 View `forecast_input`** (S)
-- `select wine_ref_id, vintage, size_class, lot_date, auction_id, provider_id, y=ln(price_per_bottle_eur), …` mit `sold IS NOT 0`, ohne `OUTLIER`/`QTY_SUSPECT`/`fx_missing`.
+- `select wine_ref_id, vintage, size_class, lot_date, auction_id, provider_id, y=ln(price_per_bottle_eur), …` mit `sold IS NOT 0`, ohne `OUTLIER`/`QTY_SUSPECT`/`DUP_CANDIDATE`/`fx_status='MISSING'`, ohne `price_kind='COTE'` (D11).
 - AC: Zeilenbilanz Rohdaten → Input mit Verlust je Ursache (Tabelle), Summen stimmen.
 
 **Gate G0:** Review aller Stufe-0-Schritte (§7). Ohne Freigabe kein Start von Stufe 1.
@@ -531,6 +610,7 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 | D17 | winebarrel-Epoch-Artefakt (`lot_date='1970-01-01'`, 680 Zeilen, Rohdaten selbst korrupt, kein Backfill möglich) | 0.1b/0.7 |
 | D18 | 0.3-AC (≥ 99 %) nicht erreichbar (96,04 %) wegen struktureller EODHD-Lücke vor Cache-Start (AUD vor 2006-03-01, 158 920 Zeilen; HKD vor 1999-12-31, 261 Zeilen) — AC-Zahl senken, Zeilen explizit als `fx_status='MISSING'` dokumentieren und aus `forecast_input` ausschliessen, oder eine zweite FX-Quelle für die Vor-Cache-Spanne suchen? | 0.3/0.7, AC-Formulierung |
 | D19 | zacky's `bottle_size_dl=1.0`-Bug (24 129 Zeilen): `parse_dl` bekam das `quantity`-Feld (Flaschenzähler, z. B. "6") statt eines Size-Felds übergeben und las die blanke Zahl über seinen Zahlen-Fallback fälschlich als dl-Wert. Keine echte Alternative abzuwägen — reiner Bug, nur eine sinnvolle Behebung (Guard vor `parse_dl`, siehe 0.4). | 0.4 |
+| D20 | 0.6-Dubletten-Regel: wine-Identitäts-Heuristik (wine_ref_id/Jahrgang/Datum/Preis±1%/Haus) erzeugt live bestätigte False Positives (echte Zwillings-Lose bei langtons/ackerwines, Pagination bei steinfels) — stattdessen `_check_duplicate_lot_numbers`s bestehende (auction_id, lot_no, voller Inhalt)-Definition wiederverwenden? | 0.6 |
 
 **Entschieden am 2026-10-29:**
 D10 Grossformate = **eigene Reihen** (Schlüssel `wine_ref_id · vintage · size_class`, kein Äquivalent-Faktor) ·
@@ -546,7 +626,10 @@ D17 winebarrel-1970-Epoch = **`lot_date` auf NULL setzen** — einzig technisch 
 D18 FX-AC-Lücke = **AC senken + Zeilen flaggen** (nicht: zweite FX-Quelle suchen) — `fx_status='MISSING'` (neue Spalte + CHECK-Constraint) für jede Zeile mit bekannter Währung und `lot_date`, aber ohne `fx_rate`; die AC-Formulierung in 0.3 wechselt von einer festen Prozentzahl zu „jede Lücke ist erklärt und geflaggt, keine stille NULL" (Guardrail G3) ·
 D19 zacky-Bug = **behoben** (`zacky_bottle_size_dl`-Guard, siehe 0.4) — kein Entscheid im eigentlichen Sinn, hier nur zur Nachvollziehbarkeit mitgeführt. Die 0.5-AC folgt demselben D18-Prinzip (AC-Formulierung statt Prozentzahl, siehe 0.5) — bekommt bewusst keine eigene D-Nummer, da es dieselbe bereits getroffene Entscheidung ist, nur ein zweites Mal angewendet.
 
-D10–D19 sind damit getroffen.
+**Entschieden am 2026-11-06:**
+D20 Dubletten-Regel = **`_check_duplicate_lot_numbers`-Definition wiederverwenden** (nicht: Wein-Identitäts-Heuristik, auch nicht deren verschärfte Variante) — siehe 0.6 für die live-verifizierte Begründung (beide Heuristiken erzeugten nachweisbare False Positives, (auction_id, lot_no) + voller Inhalt praktisch nicht).
+
+D10–D20 sind damit getroffen.
 
 ---
 
