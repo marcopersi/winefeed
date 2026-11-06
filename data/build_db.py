@@ -296,6 +296,11 @@ CREATE INDEX idx_lots_hammer ON lots(hammer_price);
 CREATE INDEX idx_lots_wine_ref ON lots(wine_ref_id);
 CREATE INDEX idx_lots_lot_kind ON lots(lot_kind);
 CREATE INDEX idx_lots_source_lot_key ON lots(source_lot_key);
+-- Backs forecast_input's series-recency window function (PARTITION BY
+-- wine_ref_id, vintage_final, bottle_size_dl) -- Gate-G0 review finding:
+-- without it, every query of that view re-sorts the whole table.
+CREATE INDEX idx_lots_wine_ref_vintage_size
+    ON lots(wine_ref_id, vintage_final, bottle_size_dl);
 
 CREATE VIEW single_wine_prices AS
 SELECT *
@@ -335,10 +340,29 @@ WHERE lot_kind = 'SINGLE'
 -- a new sale, a series should fall out of "active" on its own, the
 -- same way it would gain new rows on the next monthly ingest, without
 -- needing a rebuild to notice the series has gone quiet.
+--
+-- Gate-G0 review fix: "most recent observation" must be computed over
+-- ALL real sales (sold=1/lot_date/price/price_kind -- NOT also the
+-- OUTLIER/QTY_SUSPECT/DUP_CANDIDATE flags). The original version
+-- computed MAX(lot_date) OVER (...) inside the very same subquery
+-- whose WHERE clause already excluded flagged rows; per SQL's standard
+-- evaluation order (WHERE before window functions), that MAX() only
+-- ever saw rows that had already survived every 0.6 flag filter. A
+-- wine whose only recent sale happened to be flagged OUTLIER (still a
+-- genuine, if price-anomalous, auction result) or QTY_SUSPECT (a case
+-- lot) would then have its recency judged only by its older, unflagged
+-- sales -- silently dropping the ENTIRE series, including otherwise-
+-- clean older rows that should still qualify, even though the wine is
+-- demonstrably still being actively traded.
+--
+-- Fixed via a `WITH eligible AS (...)` CTE: the window function is
+-- computed ONCE, over rows filtered only by sold/lot_date/price/
+-- price_kind (not ppb_flags) -- a single pass, no second join/subquery
+-- re-scanning single_wine_prices. The ppb_flags exclusion and the
+-- 36-month recency check are then both applied together in the outer
+-- SELECT, against that one already-computed `series_last_obs`.
 CREATE VIEW forecast_input AS
-SELECT lot_id, wine_ref_id, vintage, size_class, lot_date, auction_id,
-       provider_id, price_per_bottle_eur
-FROM (
+WITH eligible AS (
     SELECT
         s.id AS lot_id,
         s.wine_ref_id,
@@ -348,6 +372,7 @@ FROM (
         s.auction_id,
         a.provider_id,
         s.price_per_bottle_eur,
+        s.ppb_flags,
         MAX(s.lot_date) OVER (
             PARTITION BY s.wine_ref_id, s.vintage_final, s.bottle_size_dl
         ) AS series_last_obs
@@ -357,12 +382,15 @@ FROM (
       AND s.lot_date IS NOT NULL
       AND s.price_per_bottle_eur IS NOT NULL
       AND s.price_kind IS NULL
-      AND (s.ppb_flags IS NULL
-           OR (instr(s.ppb_flags, 'OUTLIER') = 0
-               AND instr(s.ppb_flags, 'QTY_SUSPECT') = 0
-               AND instr(s.ppb_flags, 'DUP_CANDIDATE') = 0))
 )
-WHERE series_last_obs >= date('now', '-36 months');
+SELECT lot_id, wine_ref_id, vintage, size_class, lot_date, auction_id,
+       provider_id, price_per_bottle_eur
+FROM eligible
+WHERE series_last_obs >= date('now', '-36 months')
+  AND (ppb_flags IS NULL
+       OR (instr(ppb_flags, 'OUTLIER') = 0
+           AND instr(ppb_flags, 'QTY_SUSPECT') = 0
+           AND instr(ppb_flags, 'DUP_CANDIDATE') = 0));
 """
 
 # --------------------------------------------------------------------------- #
@@ -2938,7 +2966,7 @@ def load_wermuth_validated(b, limit):
     base = os.path.join(REPO, "VinoImporter", "validatedOutput")
     files = sorted(glob.glob(os.path.join(base, "output_WermuthSA_*.csv")))
     xlsx_dates = _wermuth_xlsx_dates(b.conn)
-    n = skipped = 0
+    n = skipped = unexpected_width = 0
     for f in files:
         m = re.search(r"(\d{2})(\d{2})(\d{4})", os.path.basename(f))
         date = f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
@@ -2954,16 +2982,47 @@ def load_wermuth_validated(b, limit):
         b.set_source(f)
         a_id = b.add_auction("wermuth-sa", event, event, date, "CHF", "HAMMER")
         for row in rows:
+            # A trailing empty field ("...;340;") is a CSV artifact, not
+            # a real 11th/12th column -- confirmed real case: two rows
+            # (e.g. "Hermitage;Chave;2009;11;7.5;false;220;330;340;")
+            # have exactly 10 meaningful fields plus one blank one, and
+            # counting the blank toward the column count misread them as
+            # an 11-column row (off=1), corrupting vintage/quantity/size/
+            # hammer_price exactly like the bug below, just for a
+            # different input shape. Strip trailing blanks before
+            # counting; a genuinely-blank *leading/interior* field (e.g.
+            # ``classification`` itself being "") is untouched, since
+            # only the row's own length determines `off` either way.
+            while row and row[-1] == "":
+                row = row[:-1]
             if len(row) < 10:
                 continue
-            has_origin = len(row) >= 11 and str(row[2]).strip() not in (
-                "", "null", "None")
-            off = 1 if has_origin else 0
+            # The offset depends only on column COUNT, not on whether
+            # column 2 happens to be filled: an 11-column row always
+            # carries a column-2 value (origin, producer, or "null" with
+            # the 3rd field holding region text instead -- all three
+            # shapes seen live, see 0.4/Gate-G0 sample verification), so
+            # vintage is always at index 4 for 11+ columns. The earlier
+            # content-based check (`row[2]` non-empty) misdetected every
+            # "column 2 empty, region in column 3" row as 10-column,
+            # shifting vintage/quantity/bottle_size_dl AND the realized
+            # price itself by one column (confirmed: 215 wermuth-sa rows,
+            # e.g. hammer_price silently read from the estimate_high field).
+            if len(row) not in (10, 11):
+                # Only 10 and 11 (post-trim) have ever been observed live
+                # -- a new width would silently reuse the off=0/off=1
+                # mapping for a shape nobody has checked, reproducing
+                # this same bug class for data this function has never
+                # seen. Not fatal (an unseen house-export quirk
+                # shouldn't abort the whole build), but loud, so it gets
+                # noticed and verified against the real file.
+                unexpected_width += 1
+            off = 1 if len(row) >= 11 else 0
             rp = to_float(row[9 + off])
             b.add_lot(a_id, {
                 "lot_no": str(row[0]),
                 "wine": row[1],
-                "classification": _clean(row[2]) if has_origin else None,
+                "classification": _clean(row[2]) if off else None,
                 "vintage": to_int(row[3 + off]),
                 "quantity": to_int(row[4 + off]),
                 "bottle_size_dl": to_float(row[5 + off]),
@@ -2981,6 +3040,11 @@ def load_wermuth_validated(b, limit):
     if skipped:
         print(f"  wermuth-validated: skipped {skipped} file(s) already"
               f" covered by the xlsx import")
+    if unexpected_width:
+        print(f"WARN: wermuth-validated: {unexpected_width} row(s) with a"
+              f" column count other than 10/11 (post-trim) -- verify the"
+              f" off=0/off=1 mapping against the real file, see"
+              f" load_wermuth_validated")
 
 
 # --- Denz archive (Wermuth PDF/HTML catalogs+results, 2003-2026) ----------- #
@@ -3961,6 +4025,17 @@ def _fill_price_per_bottle(conn):
     fabricated, meaningless "per bottle" figure indistinguishable from a
     real single-wine price.
 
+    Gate-G0 review fix: ``lot_kind='UNKNOWN'`` (a spirit mislabeled as
+    wine, or a lot with no wine name at all -- never resolved to any
+    ``wine_ref_id``, see ``_classify_lots``) is excluded the same way,
+    flag ``UNKNOWN_LOT``. The original check (``lot_kind == 'MIXED'``)
+    let UNKNOWN lots fall through into the normal computation below --
+    306,722 rows in the live DB got a confident-looking, unflagged
+    ``price_per_bottle_eur`` for a lot that was never even identified as
+    a specific wine. ``forecast_input`` itself was never exposed to this
+    (built on ``single_wine_prices``, which requires ``lot_kind=
+    'SINGLE'``), but any other direct reader of ``lots`` was.
+
     ``bottle_size_dl <= 0`` (never produced by ``parse_dl``, which floors
     at 1, but several loaders pass a raw archive field straight through
     with no validation) is flagged ``SIZE_SUSPECT`` rather than divided
@@ -3982,8 +4057,9 @@ def _fill_price_per_bottle(conn):
     ``lot_date IS NOT NULL`` (D18, ``_apply_fx_rates`` -- a row with no
     ``lot_date`` at all is a separate date gap, deliberately out of scope
     for that flag). A priced lot with a known currency but no ``lot_date``
-    (confirmed real: 3,129 wermuth-sa/franzwermuth lots in the live DB)
-    therefore has ``fx_rate IS NULL`` *and* ``fx_status IS NULL`` -- the
+    (confirmed real, single_wine_prices scope: 3,060 wermuth-sa/
+    franzwermuth lots in the live DB) therefore has ``fx_rate IS NULL``
+    *and* ``fx_status IS NULL`` -- the
     "fx_status already explains those" assumption above does not hold for
     this case, and without a flag of its own here the row silently ends
     up with no ``price_per_bottle_eur`` and no explanation at all, a G3
@@ -3999,6 +4075,9 @@ def _fill_price_per_bottle(conn):
             " WHERE realised_price IS NOT NULL OR hammer_price IS NOT NULL"):
         if lot_kind == "MIXED":
             updates.append((None, "MIXED_LOT", lot_id))
+            continue
+        if lot_kind == "UNKNOWN":
+            updates.append((None, "UNKNOWN_LOT", lot_id))
             continue
 
         if realised_price is None:
@@ -4020,8 +4099,10 @@ def _fill_price_per_bottle(conn):
         if bottle_size_dl is not None and bottle_size_dl <= 0:
             flags.append("SIZE_SUSPECT")
 
-        # Confirmed real (ackerwines 58,347 of 70,825 total): a lot can be
-        # marked sold=1 with hammer_price/realised_price literally 0.0 --
+        # Confirmed real (single_wine_prices scope, re-verified after this
+        # session's wermuth-sa/bottle-format fixes: ackerwines 56,600 of
+        # 66,726 total): a lot can be marked sold=1 with hammer_price/
+        # realised_price literally 0.0 --
         # not a donated/no-reserve lot (those are a genuine >0 price), but
         # a zero-value "sale" that would otherwise divide through to a
         # price_per_bottle_eur of exactly 0, violating this step's own
@@ -4145,14 +4226,28 @@ def _flag_price_outliers(conn):
     group's median/MAD toward the valuation level, either masking a genuine
     auction-price outlier or wrongly flagging a normal auction price purely
     because the comparison set was contaminated with a different kind of
-    price that 0.7 is separately excluding from the series anyway."""
+    price that 0.7 is separately excluding from the series anyway.
+
+    Gate-G0 review fix: reads from ``single_wine_prices`` (lot_kind=
+    'SINGLE', ``vintage_status IN ('STRUCTURED','EXTRACTED')``) instead of
+    raw ``lots``, and groups on ``vintage_final`` directly instead of
+    ``COALESCE(vintage_final, vintage)``. The COALESCE fallback meant a row
+    with an unreliable vintage (NV/MV/MISSING/AMBIGUOUS/CONFLICT/INVALID --
+    ``vintage_final`` is NULL for exactly those, see
+    ``wine_resolution/vintage.py``) still joined a comparison group keyed
+    by its raw, unvetted ``vintage`` column, contaminating the very group
+    ``forecast_input``'s own rows (all STRUCTURED/EXTRACTED) are judged
+    against. Also excludes ``QTY_SUSPECT`` rows (quantity<=0 or >12, likely
+    a case/mixed lot still priced as a single bottle) from the group the
+    same way COTE already was: a bulk-lot price is a different economics,
+    not a comparable single-bottle sale."""
     groups = {}
     for lot_id, wine_ref_id, vintage, price in conn.execute(
-            "SELECT id, wine_ref_id, COALESCE(vintage_final, vintage),"
-            " price_per_bottle_eur FROM lots"
+            "SELECT id, wine_ref_id, vintage_final,"
+            " price_per_bottle_eur FROM single_wine_prices"
             " WHERE price_per_bottle_eur IS NOT NULL"
-            " AND wine_ref_id IS NOT NULL"
-            " AND price_kind IS NULL"):
+            " AND price_kind IS NULL"
+            " AND (ppb_flags IS NULL OR instr(ppb_flags, 'QTY_SUSPECT') = 0)"):
         groups.setdefault((wine_ref_id, vintage), []).append((lot_id, price))
 
     flagged = []
@@ -4431,12 +4526,34 @@ def _report_07_forecast_input(conn):
         ).fetchone()[0]
         print(f"  -> {label}: {n} ({prev - n} verloren)")
         prev = n
-    n_final = conn.execute("SELECT COUNT(*) FROM forecast_input").fetchone()[0]
+    # Gate-G0 review fix: one query instead of two -- forecast_input's
+    # own definition (window function + two filter stages) is not free
+    # to re-evaluate, so n_final and n_assumed are read off the same
+    # pass rather than running the whole view twice back-to-back.
+    #
+    # _assume_default_bottle_size's own docstring promises 0.7 "can
+    # report on or exclude assumed sizes separately" -- n_assumed is the
+    # "report on" half. NOT excluded here: size_assumed=1 means "no size
+    # hint found anywhere", not "size is wrong" -- 750ml is the
+    # overwhelmingly dominant real bottle size, so defaulting to it is a
+    # well-justified guess for most of these rows, and excluding all of
+    # them would drop a large share of otherwise-good data for no
+    # demonstrated benefit. Open decision (D21, see docs/
+    # price-prediction-plan.md) if this ever needs to become an
+    # exclusion/flag instead of an informational count.
+    n_final, n_assumed = conn.execute(
+        "SELECT COUNT(*), SUM(l.size_assumed = 1) FROM forecast_input fi"
+        " JOIN lots l ON l.id = fi.lot_id").fetchone()
+    n_assumed = n_assumed or 0
     print(f"  -> Serie aktiv, letzte Beobachtung <= 36 Monate (D15): "
           f"{n_final} ({prev - n_final} verloren, inaktive Serie)")
     print(f"0.7: forecast_input total {n_final} Zeilen "
           f"({total_lots - n_final} verloren von {total_lots} Rohdaten-"
           f"Zeilen)")
+    if n_assumed:
+        print(f"  -> davon size_assumed=1 (kein Groessen-Hinweis in den "
+              f"Rohdaten, 7,5 dl angenommen, D21 offen): {n_assumed} "
+              f"({n_assumed / n_final:.1%})")
 
 
 def _check_duplicate_lot_numbers(conn):

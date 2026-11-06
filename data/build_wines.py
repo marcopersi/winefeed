@@ -157,14 +157,21 @@ def _parse_bottle_formats(conn):
             if stripped != wine:
                 wine_updates.append((stripped, lot_id))
         qty, dl = parse_bottle_format(raw_wine, description)
-        if qty is not None:
+        # Gate-G0 review fix: qty and dl are independent hints -- the
+        # bare-word fallback in parse_bottle_format (e.g. a trailing
+        # "... Magnum" with no leading count) returns qty=None precisely
+        # because no real count was found, so this must not require
+        # qty to be set before recording the dl hint, or that fallback's
+        # whole point (still catch the SIZE even with no count) would be
+        # silently discarded here.
+        if qty is not None or dl is not None:
             qty_dl_updates.append((qty, dl, lot_id))
     conn.executemany(
         "UPDATE lots SET wine=? WHERE id=?", wine_updates)
     # COALESCE(column, ?) only overwrites a column that is currently NULL,
     # reproducing both independent gates (quantity IS NULL / bottle_size_dl
-    # IS NULL) in one pass; when dl is None (no size hint, only a count),
-    # COALESCE(bottle_size_dl, NULL) is a no-op, so it's never cleared.
+    # IS NULL) in one pass; when dl or qty is None, that COALESCE(x, NULL)
+    # is a no-op, so it's never cleared/fabricated.
     conn.executemany(
         "UPDATE lots SET quantity=COALESCE(quantity, ?),"
         " bottle_size_dl=COALESCE(bottle_size_dl, ?) WHERE id=?",
@@ -196,10 +203,19 @@ def _assume_default_bottle_size(conn):
     build_db.py) correctly excluded them from the price computation via
     ``lot_kind`` -- the fabricated size was left sitting on the row for
     any *other* consumer (GUI, exports) that reads ``bottle_size_dl``
-    without also filtering ``lot_kind``."""
+    without also filtering ``lot_kind``.
+
+    Gate-G0 review fix (second version): guards on ``lot_kind = 'SINGLE'``
+    (allow-list) rather than ``<> 'MIXED'`` (deny-list) -- the deny-list
+    let a ``lot_kind='UNKNOWN'`` row (a spirit mislabeled as wine, or a
+    lot with no wine name at all, never resolved to any ``wine_ref_id`` --
+    see ``_classify_lots``) through the same gap this fix already closed
+    for MIXED: a fabricated 7.5dl size with no basis whatsoever, since an
+    UNKNOWN lot was never even identified as one single wine, let alone
+    sized."""
     conn.execute(
         "UPDATE lots SET bottle_size_dl = 7.5, size_assumed = 1"
-        " WHERE bottle_size_dl IS NULL AND lot_kind <> 'MIXED'")
+        " WHERE bottle_size_dl IS NULL AND lot_kind = 'SINGLE'")
 
 
 # --------------------------------------------------------------------------- #

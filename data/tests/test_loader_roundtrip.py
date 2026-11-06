@@ -292,8 +292,9 @@ class TestLoaderRoundtrip(unittest.TestCase):
         """Review fix: confirmed real gap -- fx_status is only ever set to
         'MISSING' when lot_date IS NOT NULL (D18, _apply_fx_rates); a
         priced lot with a known currency but no lot_date at all (confirmed
-        real: 3,129 wermuth-sa/franzwermuth lots in the live DB) has
-        fx_rate IS NULL *and* fx_status IS NULL, so the D18 fx_status flag
+        real, single_wine_prices scope: 3,060 wermuth-sa/franzwermuth lots
+        in the live DB) has fx_rate IS NULL *and* fx_status IS NULL, so the
+        D18 fx_status flag
         does not explain it. Without its own flag this would silently end
         up with no price_per_bottle_eur and no explanation at all -- a G3
         violation. Must get NO_FX_RATE instead."""
@@ -364,6 +365,26 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (None, "MIXED_LOT"))
         conn.close()
 
+    def test_fill_price_per_bottle_excludes_unknown_lots(self):
+        """Gate-G0 review fix: a lot_kind='UNKNOWN' lot (a spirit
+        mislabeled as wine, or no wine name at all -- never resolved to
+        any wine_ref_id) must not get a price_per_bottle_eur computed
+        either, same reasoning as MIXED: it was never even identified as
+        one specific wine, so a "per bottle" figure for it is meaningless.
+        Before this fix, the guard only checked lot_kind=='MIXED', so
+        UNKNOWN fell through into the normal computation below."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, lot_kind,"
+            " realised_price, quantity, bottle_size_dl, fx_rate)"
+            " VALUES (1, '1', 'Armagnac Lot', 'UNKNOWN', 300.0, 1, 7.5, 1.0)")
+        build_db._fill_price_per_bottle(conn)
+        row = conn.execute(
+            "SELECT price_per_bottle_eur, ppb_flags FROM lots").fetchone()
+        self.assertEqual(row, (None, "UNKNOWN_LOT"))
+        conn.close()
+
     def test_fill_price_per_bottle_flags_non_positive_bottle_size(self):
         """Review fix: bottle_size_dl <= 0 (never produced by parse_dl, but
         several loaders pass a raw archive field through unvalidated) must
@@ -388,8 +409,10 @@ class TestLoaderRoundtrip(unittest.TestCase):
         conn.close()
 
     def test_fill_price_per_bottle_flags_zero_price(self):
-        """Confirmed real (live DB, 2026-11-05): 70,825 lots, mostly
-        ackerwines, are marked sold=1 with hammer_price/realised_price
+        """Confirmed real (live DB, re-verified 2026-11-06 after this
+        session's wermuth-sa/bottle-format fixes, single_wine_prices
+        scope): 66,726 lots, mostly ackerwines, are marked sold=1 with
+        hammer_price/realised_price
         literally 0.0 -- not a donated/no-reserve lot (genuine >0 price),
         but a zero-value "sale" that would otherwise divide through to a
         price_per_bottle_eur of exactly 0, violating this step's own
@@ -514,14 +537,18 @@ class TestLoaderRoundtrip(unittest.TestCase):
 
         # price_per_bottle_eur is derived-only (never set via add_lot) --
         # add the lot, then set it directly to simulate
-        # _fill_price_per_bottle's own output.
+        # _fill_price_per_bottle's own output. _flag_price_outliers reads
+        # from single_wine_prices (Gate-G0 fix), so lot_kind/vintage_status/
+        # vintage_final must be set too, same convention as 0.7's own
+        # fixture helper.
         def _lot(lot_no, wine, vintage, wine_ref_id, price):
             lot_id = builder.add_lot(a_id, {"lot_no": lot_no, "wine": wine,
                                             "vintage": vintage,
                                             "wine_ref_id": wine_ref_id})
             conn.execute(
-                "UPDATE lots SET price_per_bottle_eur=? WHERE id=?",
-                (price, lot_id))
+                "UPDATE lots SET price_per_bottle_eur=?, lot_kind='SINGLE',"
+                " vintage_status='STRUCTURED', vintage_final=? WHERE id=?",
+                (price, vintage, lot_id))
 
         # Too-small group (4 obs): never flagged even with an extreme value.
         for i in range(3):
@@ -563,8 +590,9 @@ class TestLoaderRoundtrip(unittest.TestCase):
                 "lot_no": lot_no, "wine": wine, "vintage": vintage,
                 "wine_ref_id": wine_ref_id})
             conn.execute(
-                "UPDATE lots SET price_per_bottle_eur=? WHERE id=?",
-                (price, lot_id))
+                "UPDATE lots SET price_per_bottle_eur=?, lot_kind='SINGLE',"
+                " vintage_status='STRUCTURED', vintage_final=? WHERE id=?",
+                (price, vintage, lot_id))
 
         # 5 normal auction prices, same wine_ref_id/vintage as a cote row
         # priced far outside that range -- without the price_kind filter,
@@ -581,6 +609,75 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertIsNone(rows["cote-1"])
         self.assertTrue(all(f is None for lot_no, f in rows.items()
                              if lot_no != "cote-1"))
+        conn.close()
+
+    def test_flag_price_outliers_excludes_qty_suspect_from_the_group(self):
+        """Gate-G0 review fix: a QTY_SUSPECT row (quantity<=0 or >12,
+        likely a case/mixed lot still priced as a single bottle, flagged
+        by _fill_price_per_bottle) must not join the comparison group --
+        a bulk-lot price is different economics, not a comparable
+        single-bottle sale, same reasoning as the COTE exclusion above."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+
+        def _lot(lot_no, wine, vintage, wine_ref_id, price, flags=None):
+            lot_id = builder.add_lot(a_id, {
+                "lot_no": lot_no, "wine": wine, "vintage": vintage,
+                "wine_ref_id": wine_ref_id})
+            conn.execute(
+                "UPDATE lots SET price_per_bottle_eur=?, lot_kind='SINGLE',"
+                " vintage_status='STRUCTURED', vintage_final=?, ppb_flags=?"
+                " WHERE id=?",
+                (price, vintage, flags, lot_id))
+
+        for i in range(5):
+            _lot(f"o{i}", "same-wine", 2017, 3, 40.0 + i)
+        _lot("bulk", "same-wine", 2017, 3, 9000.0, flags="QTY_SUSPECT")
+        build_db._flag_price_outliers(conn)
+        rows = dict(conn.execute(
+            "SELECT lot_no, ppb_flags FROM lots WHERE wine='same-wine'"))
+        self.assertEqual(rows["bulk"], "QTY_SUSPECT")
+        self.assertTrue(all(f is None for lot_no, f in rows.items()
+                             if lot_no != "bulk"))
+        conn.close()
+
+    def test_flag_price_outliers_ignores_rows_with_unreliable_vintage(self):
+        """Gate-G0 review fix: grouping used to fall back to the raw
+        ``vintage`` column via COALESCE(vintage_final, vintage) whenever
+        vintage_final was NULL -- exactly the case for an unreliable
+        vintage_status (NV/MV/MISSING/AMBIGUOUS/CONFLICT/INVALID). Reading
+        from single_wine_prices (vintage_status IN STRUCTURED/EXTRACTED
+        only) means such a row never joins or contaminates a comparison
+        group at all, regardless of what its raw vintage column says."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        a_id = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+
+        def _lot(lot_no, vintage, wine_ref_id, price, vintage_status,
+                 vintage_final):
+            lot_id = builder.add_lot(a_id, {
+                "lot_no": lot_no, "wine": "same-wine", "vintage": vintage,
+                "wine_ref_id": wine_ref_id})
+            conn.execute(
+                "UPDATE lots SET price_per_bottle_eur=?, lot_kind='SINGLE',"
+                " vintage_status=?, vintage_final=? WHERE id=?",
+                (price, vintage_status, vintage_final, lot_id))
+
+        for i in range(5):
+            _lot(f"o{i}", 2017, 3, 40.0 + i, "STRUCTURED", 2017)
+        # Raw vintage column coincidentally also "2017", but vintage_status
+        # is unreliable (vintage_final NULL) -- must not join the group
+        # above even though COALESCE(vintage_final, vintage) would read 2017.
+        _lot("bad-vintage", 2017, 3, 9000.0, "AMBIGUOUS", None)
+        build_db._flag_price_outliers(conn)
+        rows = dict(conn.execute(
+            "SELECT lot_no, ppb_flags FROM lots WHERE wine_ref_id=3"))
+        self.assertIsNone(rows["bad-vintage"])
+        self.assertTrue(all(f is None for lot_no, f in rows.items()
+                             if lot_no != "bad-vintage"))
         conn.close()
 
     def test_sylvies_premium_is_20_percent_with_no_tax(self):
@@ -1654,6 +1751,33 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (1, 15.0))
         conn.close()
 
+    def test_parse_bottle_formats_bare_magnum_does_not_fabricate_quantity(
+            self):
+        """Gate-G0 review fix: parse_bottle_format's bare-word fallback
+        (e.g. a trailing "... Magnum" with no leading count, dorotheum's
+        own pattern) returns qty=None precisely because no real count was
+        found -- quantity must stay NULL (COALESCE no-op), not get
+        fabricated to 1. bottle_size_dl must still fill in from the bare
+        match. Before this fix, the caller's gate (`if qty is not None`)
+        would have silently dropped the dl hint too whenever qty is None,
+        since the original bare-word fallback returned qty=1 to work
+        around exactly that gate -- this test locks in the real fix
+        (decoupled gate) instead of that earlier workaround."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, raw_wine, lot_kind)"
+            " VALUES (1, '1',"
+            " '2007 Morillon Zieregg, Weingut Tement, 95 Parker-Punkte,"
+            " Magnum',"
+            " '2007 Morillon Zieregg, Weingut Tement, 95 Parker-Punkte,"
+            " Magnum', 'SINGLE')")
+        build_wines._parse_bottle_formats(conn)
+        row = conn.execute(
+            "SELECT quantity, bottle_size_dl FROM lots").fetchone()
+        self.assertEqual(row, (None, 15.0))
+        conn.close()
+
     def test_assume_default_bottle_size_flags_the_guess(self):
         """0.4's Default-Regel: a lot with no size hint at all gets a
         standard 750ml bottle assumed -- flagged size_assumed=1 so it's
@@ -1689,6 +1813,23 @@ class TestLoaderRoundtrip(unittest.TestCase):
         conn.execute(
             "INSERT INTO lots(auction_id, lot_no, wine, lot_kind)"
             " VALUES (1, '1', 'Mixed Group', 'MIXED')")
+        build_wines._assume_default_bottle_size(conn)
+        row = conn.execute(
+            "SELECT bottle_size_dl, size_assumed FROM lots").fetchone()
+        self.assertEqual(row, (None, None))
+        conn.close()
+
+    def test_assume_default_bottle_size_skips_unknown_lot(self):
+        """Gate-G0 review fix: the guard used to be ``lot_kind <> 'MIXED'``
+        (deny-list), which let a lot_kind='UNKNOWN' row (a spirit, or no
+        wine name at all -- never identified as one specific wine) through
+        the same gap already closed for MIXED. Switched to an allow-list
+        (``lot_kind = 'SINGLE'``) so UNKNOWN stays NULL/unflagged too."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, lot_kind)"
+            " VALUES (1, '1', 'Armagnac Lot', 'UNKNOWN')")
         build_wines._assume_default_bottle_size(conn)
         row = conn.execute(
             "SELECT bottle_size_dl, size_assumed FROM lots").fetchone()
@@ -1943,8 +2084,120 @@ class ForecastInputViewTest(unittest.TestCase):
             "SELECT size_class FROM forecast_input").fetchall()
         self.assertEqual(rows, [(15.0,)])
 
+    def test_flagged_recent_row_still_keeps_series_active(self):
+        """Gate-G0 review fix: a series' recency must be judged on ALL real
+        sales, not only the ones that also survive the OUTLIER/QTY_SUSPECT/
+        DUP_CANDIDATE filter. Setup: an old (stale) UNFLAGGED row that would
+        otherwise qualify, plus a RECENT row flagged OUTLIER for the same
+        series. The recent row itself must stay excluded (it's flagged),
+        but its existence proves the wine is still actively traded, so the
+        old row must NOT be dropped as part of a wrongly "inactive" series.
+        Before the fix, MAX(lot_date) was computed only over already-
+        flag-filtered rows, so the recent OUTLIER row never counted and the
+        whole series -- including the old, otherwise-clean row -- was
+        silently excluded."""
+        old_id = self._add_eligible_lot(wine_ref_id=1, lot_date=self.STALE)
+        self._add_eligible_lot(wine_ref_id=1, lot_date=self.RECENT,
+                               ppb_flags="OUTLIER")
+        rows = self.conn.execute(
+            "SELECT lot_id FROM forecast_input").fetchall()
+        self.assertEqual(rows, [(old_id,)])
+
     def tearDown(self):
         self.conn.close()
+
+
+class WermuthValidatedCsvColumnShiftTest(unittest.TestCase):
+    """Gate-G0 sample verification (0.4) found this live: 215 wermuth-sa
+    rows across output_WermuthSA_*.csv have 11 columns where column 2
+    (origin/classification) is empty and column 3 holds a region string
+    instead -- the old content-based ``has_origin`` check (row[2]
+    non-empty) misdetected these as 10-column rows, shifting vintage/
+    quantity/bottle_size_dl *and the realized price itself* by one
+    column. The offset must depend only on column count."""
+
+    def setUp(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.executescript(build_db.SCHEMA)
+        self.builder = build_db.Builder(self.conn)
+
+    def _load(self, rows):
+        with tempfile.TemporaryDirectory() as d:
+            out_dir = os.path.join(d, "VinoImporter", "validatedOutput")
+            os.makedirs(out_dir, exist_ok=True)
+            with open(os.path.join(out_dir, "output_WermuthSA_01012020.csv"),
+                      "w", encoding="utf-8") as fh:
+                fh.write("\n".join(";".join(r) for r in rows) + "\n")
+            old_repo = build_db.REPO
+            build_db.REPO = d
+            try:
+                build_db.load_wermuth_validated(self.builder, None)
+            finally:
+                build_db.REPO = old_repo
+        self.conn.commit()
+        return self.conn.execute(
+            "SELECT vintage, quantity, bottle_size_dl, hammer_price"
+            " FROM lots ORDER BY lot_no"
+        ).fetchall()
+
+    def test_10_column_row(self):
+        rows = self._load([[
+            "1", "Chateau A", "null", "2000", "12", "7.5", "true",
+            "780", "960", "800"]])
+        self.assertEqual(rows, [(2000, 12, 7.5, 800.0)])
+
+    def test_11_column_origin_at_index_2(self):
+        rows = self._load([[
+            "1", "Wine B", "Producer B", "null", "2000", "12", "7.5",
+            "true", "1600", "2000", "1300"]])
+        self.assertEqual(rows, [(2000, 12, 7.5, 1300.0)])
+
+    def test_11_column_region_at_index_3_classification_empty(self):
+        """The bug case: confirmed live for 70 rows (e.g. lot 28,
+        09.09.2017: hammer_price was silently read as 3600 -- the
+        estimate_high field -- instead of the real 1700)."""
+        rows = self._load([[
+            "28", "Chateau La Conseillante", "null", "Pomerol", "2009",
+            "12", "7.5", "true", "3000", "3600", "1700"]])
+        self.assertEqual(rows, [(2009, 12, 7.5, 1700.0)])
+
+    def test_11_column_both_index_2_and_3_empty(self):
+        """Confirmed live for 145 rows (e.g. lot 206, 09.09.2017)."""
+        rows = self._load([[
+            "206", "Rosso del Bepi", "null", "null", "1999", "1", "7.5",
+            "false", "80", "150", "80"]])
+        self.assertEqual(rows, [(1999, 1, 7.5, 80.0)])
+
+    def test_11_column_both_index_2_and_3_filled(self):
+        rows = self._load([[
+            "167", "Chardonnay Boars View", "MO Sonoma", "Schrader Cellars",
+            "2014", "6", "7.5", "true", "1620", "1920", "1200"]])
+        self.assertEqual(rows, [(2014, 6, 7.5, 1200.0)])
+
+    def test_10_real_columns_plus_trailing_blank_is_not_11_columns(self):
+        """Gate-G0 review fix (2nd round, caught by an adversarial
+        reviewer re-checking the first fix): a trailing empty field
+        (";...;340;") is a CSV artifact, not a real 11th column --
+        confirmed live for 2 rows (e.g. lot 313, 14.03.2015: 'Hermitage;
+        Chave;2009;11;7.5;false;220;330;340;'). Counting the blank
+        toward the length misread this as an 11-column row (off=1,
+        vintage read as '11' -- the real quantity), corrupting the same
+        fields the first fix was meant to protect. Must strip trailing
+        blanks before counting."""
+        rows = self._load([[
+            "313", "Hermitage", "Chave", "2009", "11", "7.5", "false",
+            "220", "330", "340", ""]])
+        self.assertEqual(rows, [(2009, 11, 7.5, 340.0)])
+
+    def test_11_real_columns_plus_trailing_blank_still_off_by_one(self):
+        """Same trim, opposite direction: a genuinely 11-field row with
+        an extra trailing blank (both origin AND producer filled, e.g.
+        lot 167/13.03.2018) must still resolve with off=1, not be
+        mistaken for a 12-column shape."""
+        rows = self._load([[
+            "167", "Chardonnay Boars View", "MO Sonoma", "Schrader Cellars",
+            "2014", "6", "7.5", "true", "1620", "1920", "1200", ""]])
+        self.assertEqual(rows, [(2014, 6, 7.5, 1200.0)])
 
 
 if __name__ == "__main__":
