@@ -1524,6 +1524,42 @@ class TestLoaderRoundtrip(unittest.TestCase):
                                "Château X, 2015", 2015, 100.0, 180.0,
                                150.0, 1))
 
+    def test_steinfels_resultfile_json_bare_jeroboam_uses_champagne_house(
+            self):
+        """Senior-review finding: the loader must pass the lot's own
+        wine-name text through to ``_weinauktion_parse_qty_size`` so its
+        Champagne-house heuristic can run here too, not just at
+        ``_load_weinauktion_json``."""
+        item = {"id": 1, "auctionCatalogPartId": 1, "number": "1",
+                "shortDescription": "",
+                "description": "Veuve Clicquot 1975<BR>1 Jéroboam",
+                "basePrice": 100, "upperBasePrice": 180,
+                "hammerPrice": 150, "state": "sold"}
+        related = {"auctions": [{"id": 408, "title": "Auktion 408",
+                                 "startDate": "2023-06-09T08:00:00+00:00",
+                                 "currency": "CHF"}],
+                   "catalogs": [{"id": 1, "auctionId": 408}],
+                   "parts": [{"id": 1, "auctionCatalogId": 1}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "Steinfels"), exist_ok=True)
+            with open(os.path.join(d, "Steinfels", "Resultfile1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump({"@related": related, "items": [item]}, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_steinfels_resultfile_json(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT quantity, bottle_size_dl, size_assumed"
+                " FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, (1, 30.0, 1))
+
     def test_steinfels_resultfile_json_zero_is_not_a_real_estimate(self):
         """Confirmed real case: upperBasePrice is exactly 0.0 for 26% of
         a random sample of real items, always paired with
@@ -1778,6 +1814,74 @@ class TestLoaderRoundtrip(unittest.TestCase):
         self.assertEqual(row, (None, 15.0))
         conn.close()
 
+    def test_parse_bottle_formats_skips_mixed_lot_description(self):
+        """Code-review finding: a lot already flagged ``mixed_lot`` (a
+        loader's own MIXED sentinel -- here, a decanter item
+        ``_weinauktion_parse_qty_size`` correctly excluded from normal
+        bottle counting) has no single (quantity, bottle_size_dl) to
+        extract. Before this fix, this regex still ran over its
+        ``description`` and picked up an unrelated number elsewhere in
+        the free text ("1 of 410 bottles" is a numbered-edition count,
+        not the lot's own quantity) and fabricated it via the caller's
+        COALESCE update."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, description,"
+            " mixed_lot, lot_kind)"
+            " VALUES (1, '1', 'Picolit 1999',"
+            " '1 von 410 Flaschen / 1 of 410 bottles<BR>"
+            "1 Muranoglas Dekanter 70cl OHK', 1, 'MIXED')")
+        build_wines._parse_bottle_formats(conn)
+        row = conn.execute(
+            "SELECT quantity, bottle_size_dl FROM lots").fetchone()
+        self.assertEqual(row, (None, None))
+        conn.close()
+
+    def test_parse_bottle_formats_skips_keyword_evidence_mixed_lot(self):
+        """Senior-review finding: the previous guard checked only the
+        loader's own raw ``mixed_lot`` flag, which misses a lot
+        ``_classify_lots`` itself later marks MIXED via keyword evidence
+        (no raw ``mixed_lot=1`` ever set for this path) -- the regex
+        could still match an unrelated number in the free text and
+        fabricate quantity/bottle_size_dl. Fixed by moving this
+        function's qty/dl extraction to run AFTER ``_classify_lots`` and
+        gating on the final ``lot_kind``, not the raw provider flag."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, description,"
+            " lot_kind)"
+            " VALUES (1, '1', 'Assortment Lot',"
+            " '1 of 410 bottles produced, assortment of rare items',"
+            " 'MIXED')")
+        build_wines._parse_bottle_formats(conn)
+        row = conn.execute(
+            "SELECT quantity, bottle_size_dl FROM lots").fetchone()
+        self.assertEqual(row, (None, None))
+        conn.close()
+
+    def test_run_skips_bottle_formats_for_keyword_evidence_mixed_lot(self):
+        """End-to-end regression for the reorder: a lot with no raw
+        ``mixed_lot`` flag at all, classified MIXED purely by
+        ``_classify_lots``' keyword evidence, must come out of the full
+        ``run()`` pipeline with quantity/bottle_size_dl still NULL, not
+        a value fabricated from an unrelated number in its description."""
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        conn.execute(
+            "INSERT INTO lots(auction_id, lot_no, wine, description,"
+            " source_lot_key)"
+            " VALUES (1, '1', 'Assortment Lot',"
+            " '1 of 410 bottles produced, assortment of rare items', 'k1')")
+        build_wines._classify_lots(conn)
+        build_wines._parse_bottle_formats(conn)
+        row = conn.execute(
+            "SELECT lot_kind, quantity, bottle_size_dl FROM lots"
+        ).fetchone()
+        self.assertEqual(row, ("MIXED", None, None))
+        conn.close()
+
     def test_assume_default_bottle_size_flags_the_guess(self):
         """0.4's Default-Regel: a lot with no size hint at all gets a
         standard 750ml bottle assumed -- flagged size_assumed=1 so it's
@@ -1801,6 +1905,71 @@ class TestLoaderRoundtrip(unittest.TestCase):
             ("Confirmed Magnum", 15.0, None),
         ])
         conn.close()
+
+    def test_load_weinauktion_json_bare_jeroboam_sets_size_assumed(self):
+        """Finding 4 (senior review, G0.7b round): a bare "1 Jéroboam"
+        description (no explicit cl/Liter size) resolves via the
+        Bordeaux-convention guess (_WA_FORMAT_DL), not a confirmed size
+        -- the loader must carry that through to size_assumed=1 on the
+        row, and _assume_default_bottle_size (which only ever touches
+        bottle_size_dl IS NULL rows) must leave it untouched."""
+        data = {"auction": {"id": 1, "name": "Auktion", "date": None,
+                            "currency": "CHF"},
+                "lots": [{"lot_no": "1", "wine": "Château Latour 1990",
+                         "description": "1 Jéroboam", "hammer_price": 100,
+                         "sold": True}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "weinboerse"), exist_ok=True)
+            with open(os.path.join(d, "weinboerse", "1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_weinauktion_json(builder, "weinboerse", None)
+            finally:
+                build_db.ARCHIVE = old
+            conn.execute("UPDATE lots SET lot_kind='SINGLE'")
+            build_wines._assume_default_bottle_size(conn)
+            row = conn.execute(
+                "SELECT quantity, bottle_size_dl, size_assumed"
+                " FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, (1, 50.0, 1))
+
+    def test_load_weinauktion_json_bare_jeroboam_uses_champagne_house(self):
+        """Senior-review finding: the loader must pass the lot's own
+        ``wine`` text through to ``_weinauktion_parse_qty_size`` so its
+        Champagne-house heuristic can actually run -- without it, a
+        Champagne producer's bare jeroboam silently got the Bordeaux
+        default instead."""
+        data = {"auction": {"id": 1, "name": "Auktion", "date": None,
+                            "currency": "CHF"},
+                "lots": [{"lot_no": "1", "wine": "Veuve Clicquot 1975",
+                         "description": "1 Jéroboam", "hammer_price": 100,
+                         "sold": True}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "weinboerse"), exist_ok=True)
+            with open(os.path.join(d, "weinboerse", "1.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db._load_weinauktion_json(builder, "weinboerse", None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT quantity, bottle_size_dl, size_assumed"
+                " FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, (1, 30.0, 1))
 
     def test_assume_default_bottle_size_skips_mixed_lot_flag(self):
         """Review fix: a lot_kind='MIXED' row (e.g. sylvies' multi-sub-lot
@@ -1890,7 +2059,48 @@ class ParseDlTest(unittest.TestCase):
         self.assertEqual(build_db.parse_dl("double magnum"), 30.0)
         self.assertEqual(build_db.parse_dl("Double Magnum"), 30.0)
         self.assertEqual(build_db.parse_dl("magnum"), 15.0)
-        self.assertEqual(build_db.parse_dl("jeroboam"), 30.0)
+
+    def test_bare_jeroboam_uses_bordeaux_convention_default(self):
+        """Senior-review finding: a bare "jeroboam" used to resolve
+        unconditionally to the Champagne (3l) convention here -- this
+        function has no producer/title parameter to disambiguate with
+        (unlike christies'/weinauktion's own jeroboam handling), so it
+        must match their DEFAULT (Bordeaux, 5l) instead of silently
+        picking the opposite convention with no signal at all."""
+        self.assertEqual(build_db.parse_dl("jeroboam"), 50.0)
+        self.assertEqual(build_db.parse_dl("1 Jeroboam"), 50.0)
+
+    def test_cl_unit_is_recognised(self):
+        """Confirmed real gap: only "ml"/"l" were recognised as explicit
+        units, so a raw "50cl" hint (ackerwines' bottle_size_raw) fell
+        through to None -- the caller's 7.5 dl default -- instead of
+        5.0."""
+        self.assertEqual(build_db.parse_dl("50cl"), 5.0)
+        self.assertEqual(build_db.parse_dl("75 cl"), 7.5)
+
+    def test_unit_regex_does_not_match_a_word_merely_starting_with_l(self):
+        """Senior-review finding: no trailing word boundary after the
+        unit alternation meant a digit followed by any word starting
+        with "l" matched with zero sanity-checking, bypassing the
+        1-60 range guard entirely."""
+        self.assertIsNone(build_db.parse_dl("15lbs"))
+        self.assertIsNone(build_db.parse_dl("weight 15lbs approx"))
+
+    def test_named_large_formats_beyond_magnum_jeroboam(self):
+        """Confirmed real bug: ackerwines' own bottle_size_raw field
+        states these sizes explicitly (e.g. "imperial" 3,927x,
+        "methuselah" 1,335x live in the archive) but parse_dl had no
+        branch for them at all, so every one silently fell through to
+        None -- the caller's 7.5 dl default -- instead of the size the
+        raw data already gave. Same dl values as
+        wine_resolution/bottle.py's BOTTLE_FORMATS."""
+        self.assertEqual(build_db.parse_dl("imperial"), 60.0)
+        self.assertEqual(build_db.parse_dl("Methuselah"), 60.0)
+        self.assertEqual(build_db.parse_dl("Rehoboam"), 45.0)
+        self.assertEqual(build_db.parse_dl("Salmanazar"), 90.0)
+        self.assertEqual(build_db.parse_dl("Balthazar"), 120.0)
+        self.assertEqual(build_db.parse_dl("Nebuchadnezzar"), 150.0)
+        self.assertEqual(build_db.parse_dl("Melchior"), 180.0)
 
     def test_bare_number_is_a_direct_dl_value_not_a_count(self):
         """parse_dl's own contract (dorotheum/pandolfini's "size" field,

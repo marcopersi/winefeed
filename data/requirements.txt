@@ -5,3 +5,10 @@ pdfplumber>=0.11
 curl_cffi>=0.16
 rapidfuzz>=3.6
 playwright>=1.62
+
+# Stufe 1 (price-prediction-plan.md): forecast package. Pinned exactly
+# (G5 determinism) -- bump deliberately, not via a loose range.
+numpy==2.5.4
+pandas==3.1.1
+scipy==1.18.1
+statsmodels==0.15.0

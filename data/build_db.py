@@ -29,6 +29,8 @@ import zipfile
 import openpyxl
 from bs4 import BeautifulSoup
 
+from wine_resolution.bottle import BOTTLE_FORMATS
+
 # Source of raw auction data. Override via env vars:
 #   ARCHIVE_PATH=/path/to/archive DB_PATH=/path/to/output.sqlite python3 build_db.py
 ARCHIVE = os.environ.get("ARCHIVE_PATH", os.path.expanduser(
@@ -506,22 +508,69 @@ def parse_dl(v):
     if v is None or v == "":
         return None
     s = str(v).lower()
-    m = re.search(r"(\d+(?:\.\d+)?)\s*(ml|l)", s)
-    if m:
-        n = float(m.group(1))
-        return n / 100 if m.group(2) == "ml" else n * 10
     # Confirmed real bug: "double magnum" (3L) contains the substring
     # "magnum", so the plain-magnum check below must not run first or
     # every Double Magnum silently resolves to 15.0 (1.5L) instead of
     # 30.0 -- a silent 2x error. Checked before the generic check, not
-    # instead of it, since a bare "jeroboam"/"3l" still needs its own
-    # branch for text that doesn't also say "magnum".
-    if "double magnum" in s or "jeroboam" in s or "3l" in s or "3000ml" in s:
+    # instead of it, since a bare "3l" still needs its own branch for
+    # text that doesn't also say "magnum".
+    if "double magnum" in s or "3l" in s or "3000ml" in s:
         return 30.0
+    # Senior-review finding: "jeroboam" used to be bundled into the
+    # branch above, unconditionally resolving to the Champagne (3l)
+    # convention -- inconsistent with every OTHER jeroboam-ambiguity
+    # resolution added this session (christies' producer-name
+    # heuristic, weinauktion's bare-name fallback), both of which
+    # default to the Bordeaux (5l) convention when no producer signal
+    # says otherwise. This function has no title/producer parameter at
+    # all (5 unrelated generic loaders -- ackerwines, idealwine, hdh,
+    # winefields, koppe -- share it), so it can never do the full
+    # disambiguation; it can only match those other paths' DEFAULT,
+    # which this now does.
+    if "jeroboam" in s:
+        return 50.0
     if "magnum" in s or "1.5" in s or "1500" in s:
         return 15.0
     if "half" in s or "375" in s or "3.75" in s:
         return 3.75
+    # Named large formats beyond magnum/jeroboam -- unambiguous, same dl
+    # values already established elsewhere (wine_resolution/bottle.py's
+    # BOTTLE_FORMATS). Confirmed real bug: these raw hints (e.g.
+    # ackerwines' own ``bottle_size_raw``: "imperial" 3,927x,
+    # "methuselah" 1,335x, "salmanazar" 386x, "nebuchadnezzar" 113x,
+    # "balthazar" 95x, "melchior" 62x, "rehoboam" 31x) were silently
+    # falling through to None -- i.e. the caller's 7.5 dl default --
+    # even though the raw data states the size explicitly. Checked
+    # before the generic numeric cl/ml/l regex below for the same reason
+    # as double-magnum/magnum above: an unrelated number elsewhere in
+    # the same raw hint (a case count, a typo) must not silently outrank
+    # an unambiguous named-format word.
+    if "rehoboam" in s:
+        return 45.0
+    if "imperial" in s or "impérial" in s or "methuselah" in s:
+        return 60.0
+    if "salmanazar" in s:
+        return 90.0
+    if "balthazar" in s:
+        return 120.0
+    if "nebuchadnezzar" in s:
+        return 150.0
+    if "melchior" in s:
+        return 180.0
+    # Senior-review finding: no trailing \b after the unit alternation
+    # meant a digit immediately followed by any word merely STARTING
+    # with "l" (or "cl"/"ml") matched with zero sanity-checking and
+    # returned immediately, bypassing the 1-60 range guard on the
+    # fallback path below entirely (e.g. "15lbs" -> wrongly 150.0dl).
+    m = re.search(r"(\d+(?:\.\d+)?)\s*(ml|cl|l)\b", s)
+    if m:
+        n = float(m.group(1))
+        unit = m.group(2)
+        if unit == "ml":
+            return n / 100
+        if unit == "cl":
+            return n / 10
+        return n * 10
     f = to_float(v)
     if f is not None and 1 <= f <= 60:
         return f
@@ -666,9 +715,9 @@ class Builder:
             " price_basis, currency, fx_rate, fx_target_currency,"
             " sold, mixed_lot,"
             " condition_text, description, source_url, scraped_at,"
-            " is_ohk, note, price_per_bottle)"
+            " is_ohk, note, price_per_bottle, size_assumed)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"
-            "?,?,?,?,?,?)",
+            "?,?,?,?,?,?,?)",
             (auction_id, row.get("lot_no"), row.get("lot_date"),
              source_file, source_record_locator,
              raw_wine, raw_producer, raw_vintage,
@@ -687,7 +736,7 @@ class Builder:
              row.get("mixed_lot"), row.get("condition_text"),
              row.get("description"), row.get("source_url"),
              row.get("scraped_at"), row.get("is_ohk"), row.get("note"),
-             row.get("price_per_bottle")))
+             row.get("price_per_bottle"), row.get("size_assumed")))
         return cur.lastrowid
 
 
@@ -1217,6 +1266,324 @@ def _resolve_christies_ditto_lots(lots):
     return out
 
 
+_CHRISTIES_WORDNUM = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+}
+
+# dl per bottle, by format name as Christie's own ``secondary`` field spells
+# it -- "jeroboam" is deliberately absent: Bordeaux (5l) and Champagne (3l)
+# jeroboams differ, resolved separately below, not guessed one way. Matches
+# wine_resolution/bottle.py's own documented values (BOTTLE_FORMATS'
+# REHOBOAM=45.0 and the comment on why JEROBOAM is excluded from that
+# table: "3 l Champagne vs. 5 l Bordeaux for Jeroboam").
+# Derived from the canonical BOTTLE_FORMATS (wine_resolution/bottle.py)
+# rather than hand-copied literals -- senior-review finding: this table
+# used to duplicate those values independently, exactly the "two
+# sources of truth drifting apart" anti-pattern already caught and
+# fixed once this session for _WA_FORMAT_DL (jeroboam wrongly given
+# 45.0 instead of 50.0 there). Only the spelling variants are new here;
+# every value itself already existed in BOTTLE_FORMATS.
+_CHRISTIES_FORMAT_DL = {
+    "bottle": BOTTLE_FORMATS["BOTTLE"], "magnum": BOTTLE_FORMATS["MAGNUM"],
+    "double-magnum": BOTTLE_FORMATS["DOUBLEMAGNUM"],
+    "imperial": BOTTLE_FORMATS["IMPERIALE"],
+    "impériale": BOTTLE_FORMATS["IMPERIALE"],
+    "impriale": BOTTLE_FORMATS["IMPERIALE"],
+    "impérial": BOTTLE_FORMATS["IMPERIALE"],
+    "rehoboam": BOTTLE_FORMATS["REHOBOAM"],
+    "methuselah": BOTTLE_FORMATS["METHUSELAH"],
+    "salmanazar": BOTTLE_FORMATS["SALMANAZAR"],
+    "balthazar": BOTTLE_FORMATS["BALTHAZAR"],
+    "nebuchadnezzar": BOTTLE_FORMATS["NEBUCHADNEZZAR"],
+}
+_CHRISTIES_JEROBOAM_DL_BORDEAUX = 50.0
+_CHRISTIES_JEROBOAM_DL_CHAMPAGNE = 30.0
+
+# A finite, named set of Champagne houses -- not a guess: confirmed against
+# the live archive that a jeroboam-format lot's title never contains the
+# word "Champagne" itself in the overwhelming majority of real cases (only
+# 31 of 3,677), so disambiguating Bordeaux- vs Champagne-jeroboam needs the
+# producer name instead. This list matches 351 of those 3,677; the
+# unmatched remainder's titles are unambiguous still wine (Lafite, Mouton,
+# Musigny, Amarone, ...), not a missed Champagne house.
+_CHAMPAGNE_HOUSES = (
+    "champagne", "moet", "moët", "veuve clicquot", "dom pérignon",
+    "dom perignon", "bollinger", "krug", "pol roger", "louis roederer",
+    "cristal", "taittinger", "perrier-jouet", "perrier-jouët", "ruinart",
+    "laurent-perrier", "deutz", "billecart-salmon", "mumm",
+    "piper-heidsieck", "lanson", "heidsieck", "jacquesson", "salon",
+    "delamotte", "philipponnat", "bruno paillard", "henriot", "gosset",
+    "ayala", "drappier", "pommery", "charles heidsieck",
+    "nicolas feuillatte", "de venoge", "canard-duchêne", "canard duchene",
+    "duval-leroy", "mercier",
+)
+# Word-bounded: without it, "mumm" matches as a bare substring inside an
+# unrelated word (confirmed real bug: "Chateau Mummius" matched "Mumm",
+# mis-sizing a Bordeaux jeroboam to the Champagne 3l convention).
+_CHAMPAGNE_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(h) for h in _CHAMPAGNE_HOUSES) + r")\b",
+    re.I)
+
+# Not a "bottles of wine" unit at all -- a cask (a Burgundy "pièce" or a
+# "barrel"), or a cigar lot (Christie's wine sales occasionally include
+# cigars). "Price per bottle" has no meaning for these, so they're
+# excluded like a genuinely mixed-format lot below (MIXED sentinel).
+_CHRISTIES_NOT_BOTTLES_RE = re.compile(r"\b(barrel|pièce|cigars?)\b", re.I)
+
+# A scrape artefact (ditto-glyph leftover -- see
+# _resolve_christies_ditto_lots) rather than real text, e.g. "1 ^,,^^,,^".
+_CHRISTIES_GARBLED_RE = re.compile(r"\^[,^]+\^?")
+
+
+def _christies_secondary_num(tok):
+    tok = tok.lower()
+    if tok in _CHRISTIES_WORDNUM:
+        return _CHRISTIES_WORDNUM[tok]
+    try:
+        return int(tok)
+    except ValueError:
+        return None
+
+
+def _christies_format_dl(unit, title):
+    """Returns ``(bottle_size_dl, size_assumed)``. ``size_assumed`` is
+    ``True`` only for ``jeroboam`` -- the one format word with a real
+    Bordeaux(5l)/Champagne(3l) ambiguity, resolved here by a producer-name
+    heuristic (``_CHAMPAGNE_RE``) rather than anything the ``secondary``
+    text itself states for that specific lot (finding 4, senior review,
+    G0.7b round). Every other format resolves to one single, universally
+    fixed size -- not a guess."""
+    unit = unit.lower().rstrip("s")
+    if unit in ("bouteille", "bottle"):
+        return 7.5, False
+    if "half" in unit and "bottle" in unit:
+        return 3.75, False
+    if "half" in unit and ("litre" in unit or "liter" in unit):
+        return 5.0, False
+    # Senior-review finding: the surrounding regexes capture the unit
+    # word through an accented character class ([a-zàéèêôîû\-]+?), so a
+    # French-spelled "jéroboam" reaches this function -- but this check
+    # only matched the ASCII spelling, silently falling through to
+    # _CHRISTIES_FORMAT_DL.get (also ASCII-only, so also None), reverting
+    # the whole lot to the old 7.5dl QTY_ASSUMED default and defeating
+    # exactly the disambiguation this unit was added for.
+    if unit in ("jeroboam", "jéroboam"):
+        dl = (_CHRISTIES_JEROBOAM_DL_CHAMPAGNE
+              if _CHAMPAGNE_RE.search(title or "")
+              else _CHRISTIES_JEROBOAM_DL_BORDEAUX)
+        return dl, True
+    return _CHRISTIES_FORMAT_DL.get(unit), False
+
+
+def parse_christies_secondary(secondary, title=None):
+    """Extract ``(quantity, bottle_size_dl)`` from Christie's own
+    ``secondary`` field (e.g. ``"12 Bottles (75cl) per lot"``, ``"1
+    impériale per lot"``) -- a structured, templated field Christie's
+    itself fills in per lot, never read before this fix even though the
+    loader already captured ``description`` (whose tail usually repeats
+    this same text, but folded into free narrative alongside condition
+    notes etc., which is NOT a reliable parse target -- confirmed real:
+    "Three dozen consistent notes" is a tasting remark, not a bottle
+    count, docs/price-prediction-plan.md Stufe-1 QTY_ASSUMED
+    investigation).
+
+    On success, returns ``(quantity, bottle_size_dl, size_assumed)`` --
+    ``size_assumed`` is ``True`` only when the unit word is the
+    ambiguous "jeroboam" AND no explicit cl/ml size was given alongside
+    it, so the Bordeaux/Champagne convention was picked by a producer-
+    name heuristic rather than confirmed by the lot's own text (finding
+    4, senior review, G0.7b round) -- see ``_christies_format_dl``.
+
+    Returns ``None`` when there's nothing usable (empty, a ditto-glyph
+    scrape artefact, or a phrasing this function doesn't recognise -- the
+    caller's existing QTY_ASSUMED default then applies unchanged, same as
+    before this fix. Confirmed real residual, ~5% of non-empty secondary
+    values: compound multi-unit lots like "2 dozen bottles and 2
+    half-bottles per lot", exotic units (gallon jars, miniatures), and a
+    handful of scrape typos ("par lat", "er lot").
+
+    Returns ``"MIXED"`` for a lot that isn't "N bottles of ONE thing" at
+    all: a cask/cigar lot (not bottles), or a genuinely mixed-format lot
+    (e.g. "1 magnum and 34 bottles per lot"). The caller sets
+    ``mixed_lot=1`` for this, which ``_classify_lots`` (build_wines.py)
+    already turns into ``lot_kind='MIXED'`` for other providers' own
+    mixed-lot signals, excluding it from per-bottle pricing the same way.
+
+    "Above N ... per lot" (an explicit floor Christie's itself prints,
+    not an exact count) is treated as the point estimate N -- a
+    deliberate choice (confirmed with the user): UNDERSTATES quantity,
+    so OVERSTATES price_per_bottle_eur if the true count is higher, never
+    silently UNDERSTATES the price -- rather than guessing higher or
+    discarding the row outright."""
+    sec = (secondary or "").strip()
+    if not sec:
+        return None
+    if _CHRISTIES_GARBLED_RE.search(sec):
+        return None
+    if _CHRISTIES_NOT_BOTTLES_RE.search(sec):
+        return "MIXED"
+
+    # Scrape-doubled leading count: "24 24 bottles per lot" -- the real
+    # count is the (identically repeated) number, not two separate
+    # tokens. Confirmed real archive artefact.
+    sec = re.sub(r"^(\w+)\s+\1\b", r"\1", sec, flags=re.I)
+    # Decorative qualifier, no quantity meaning of its own: "11 bottles
+    # only per dozen" means exactly 11 bottles (a partial dozen), same
+    # as if "only" were absent -- confirmed real archive phrasing.
+    sec = re.sub(r"\bonly\b\s*", "", sec, flags=re.I)
+    # Some lots omit the "per lot"/"per dozen" tail entirely (e.g. "1
+    # dozen bottles", "6 magnums") -- confirmed real archive forms,
+    # same meaning as the templated ones below, just untemplated.
+    if not re.search(r"\bper\b|\bpar\b", sec, re.I):
+        sec = sec.rstrip() + " per lot"
+    # The denominator is often a decorative restatement of the numerator
+    # rather than literally "per lot"/"per dozen" (e.g. "6 magnums per 6
+    # magnums", "1 jeroboam per jeroboam", "1 impériale per imperiale")
+    # -- confirmed real archive forms, same meaning as "per lot".
+    # "per dozen" is a real, separately-handled denominator (see below),
+    # so it -- like "per lot" itself -- is left untouched here.
+    sec = re.sub(r"\bper\s+(?!lot\b)(?!dozen\b)\S.*$", "per lot", sec,
+                 flags=re.I)
+
+    # Bilingual "N1 bouteilles/Above N2 bottles par lot": the French side
+    # is an exact count, "Above N2" an English-side floor -- when they
+    # disagree (confirmed real archive cases, e.g. "13 bouteilles/Above
+    # 14 bottles par lot"), the smaller is the conservative choice (same
+    # principle as "Above N" alone, see docstring), not just whichever
+    # number happens to come first. Handled directly here, before the
+    # generic bilingual normalisation below collapses both numbers down
+    # to just the French one.
+    m = re.match(
+        r"^(?P<n1>\w+)\s+[a-zàéèêôîû]+/above\s+(?P<n2>\w+)\s+"
+        r"[a-zàéèêôîû]+\s+p(?:ar|er)\s+lot\b", sec, re.I)
+    if m:
+        n1 = _christies_secondary_num(m["n1"])
+        n2 = _christies_secondary_num(m["n2"])
+        if n1 is not None and n2 is not None:
+            return (min(n1, n2), 7.5, False)
+
+    # "Above N ..." is the lower-bound wording (see docstring); stripping
+    # "above" and parsing N like an exact count is the deliberate choice
+    # made here, not a missed distinction.
+    body = re.sub(r"^above\s+", "", sec, flags=re.I).strip()
+    # "N x <size><unit> ... per lot" -- "x" is just a multiplication-style
+    # separator between the count and the size descriptor, same meaning
+    # as the plain "N <size><unit> ..." form below. Confirmed real
+    # archive form ("1 x 70cl bottle per lot").
+    body = re.sub(r"^(\w+)\s+x\s+", r"\1 ", body, flags=re.I)
+    # French bilingual slash form: "N bouteilles/bottles par lot" (or,
+    # confirmed real archive form, the French/English denominator word
+    # itself sometimes stays "per lot" rather than "par lot") -- same
+    # meaning twice over (no second number here, just a translated unit
+    # word), keep one side.
+    body = re.sub(
+        r"[a-zàéèêôîû]+/[a-zàéèêôîû]+(?=\s+p(?:ar|er)\s+lot)",
+        "bottles", body, flags=re.I)
+    body = re.sub(r"\bpar\s+lot\b", "per lot", body, flags=re.I)
+    # Space- rather than hyphen-separated compound units -- confirmed
+    # real archive forms ("double magnum", "half bottles"), same format
+    # as the hyphenated spelling already in the lookup tables.
+    body = re.sub(r"\bdouble\s+magnum", "double-magnum", body, flags=re.I)
+    body = re.sub(r"\bhalf\s+bottle", "half-bottle", body, flags=re.I)
+    # "half-litre bottle(s)" -- the trailing "bottle(s)" is a redundant
+    # descriptor, not a second unit; "half-litre" alone is what
+    # ``_christies_format_dl`` recognises. Confirmed real archive form.
+    body = re.sub(r"\bhalf[\s-]+litre\s+bottles?", "half-litre", body,
+                  flags=re.I)
+
+    # "N dozen and M bottles per lot/dozen" (compound dozen count) --
+    # tried before the generic mixed-format check below, since "dozen"
+    # and "bottles" here are the SAME format, not two different ones.
+    m = re.match(
+        r"^(?P<doz>\w+)\s+dozen\s+and\s+(?P<extra>\w+)\s+"
+        r"(?P<unit>[a-zàéèêôîû\-]+)s?\s+per\s+", body, re.I)
+    if m:
+        doz = _christies_secondary_num(m["doz"])
+        extra = _christies_secondary_num(m["extra"])
+        dl, assumed = _christies_format_dl(m["unit"], title)
+        if doz is not None and extra is not None and dl is not None:
+            return (doz * 12 + extra, dl, assumed)
+
+    # "N dozen <unit>s per lot/dozen"
+    m = re.match(
+        r"^(?P<n>\w+)\s+dozen\s+(?P<unit>[a-zàéèêôîû\-]+?)s?\s+per\s+",
+        body, re.I)
+    if m:
+        n = _christies_secondary_num(m["n"])
+        dl, assumed = _christies_format_dl(m["unit"], title)
+        if n is not None and dl is not None:
+            return (n * 12, dl, assumed)
+
+    # "N <unit>(s) (Xcl/Xml) per lot" -- explicit size overrides the
+    # format table (e.g. "3 Bottles (75cl) per lot", "4 Magnums (150cl)
+    # per lot", "1 bottle (700ml) per lot" -- confirmed real archive
+    # form for the ml spelling). An explicit size here is never a guess,
+    # even for an otherwise-ambiguous unit word like jeroboam.
+    m = re.match(
+        r"^(?P<n>\w+)\s+[a-zàéèêôîû\-]+?s?\s*"
+        r"\((?P<num>[\d.]+)\s*(?P<unit2>cl|ml)\)\s*per\s+", body, re.I)
+    if m:
+        n = _christies_secondary_num(m["n"])
+        if n is not None:
+            divisor = 10.0 if m["unit2"].lower() == "cl" else 100.0
+            return (n, float(m["num"]) / divisor, False)
+
+    # "N Xcl/Xml <unit>s per lot" -- same size info, no parens
+    m = re.match(
+        r"^(?P<n>\w+)\s+(?P<num>[\d.]+)\s*(?P<unit2>cl|ml)\s+"
+        r"[a-zàéèêôîû\-]+?s?\s*per\s+", body, re.I)
+    if m:
+        n = _christies_secondary_num(m["n"])
+        if n is not None:
+            divisor = 10.0 if m["unit2"].lower() == "cl" else 100.0
+            return (n, float(m["num"]) / divisor, False)
+
+    # "N <unit>(s) per lot/dozen" -- the plain case, incl. magnum/
+    # jeroboam/impériale and the French singular/plural bilingual form
+    m = re.match(
+        r"^(?P<n>\w+)\s+(?P<unit>[a-zàéèêôîû\-]+?)s?\s+per\s+(?:lot|dozen)\b",
+        body, re.I)
+    if m:
+        n = _christies_secondary_num(m["n"])
+        dl, assumed = _christies_format_dl(m["unit"], title)
+        if n is not None and dl is not None:
+            return (n, dl, assumed)
+
+    # Genuine mixed-format lot: "N <fmt1> and M <fmt2> per lot" with
+    # fmt1 != fmt2 (e.g. "1 magnum and 34 bottles per lot") -- not one
+    # single size_class, excluded like MIXED (see docstring). Checked
+    # last, after every single-format pattern above had its chance.
+    m = re.match(
+        r"^(?P<n1>\w+)\s+(?P<u1>[a-zàéèêôîû\-]+?)s?\s+and\s+(?P<n2>\w+)\s+"
+        r"(?P<u2>[a-zàéèêôîû\-]+?)s?\s+per\s+lot\b", body, re.I)
+    if m:
+        # Compare the RESOLVED dl, not the raw spelling -- "impériale"
+        # and "imperial" are the same 60.0dl format spelled two ways,
+        # not a genuine mixed-format lot (confirmed real bug: comparing
+        # the literal strings wrongly flagged this MIXED).
+        dl1, assumed1 = _christies_format_dl(m["u1"], title)
+        dl2, assumed2 = _christies_format_dl(m["u2"], title)
+        if dl1 is not None and dl2 is not None:
+            same_format = dl1 == dl2
+        else:
+            same_format = (m["u1"].lower().rstrip("s")
+                           == m["u2"].lower().rstrip("s"))
+        if not same_format:
+            return "MIXED"
+        # Same format on both sides (e.g. two spellings of one format,
+        # or a genuinely split count like "6 bottles and 2 bottles"):
+        # one real lot, combined count.
+        n1 = _christies_secondary_num(m["n1"])
+        n2 = _christies_secondary_num(m["n2"])
+        dl = dl1 if dl1 is not None else dl2
+        assumed = assumed1 or assumed2
+        if n1 is not None and n2 is not None and dl is not None:
+            return (n1 + n2, dl, assumed)
+
+    return None
+
+
 def load_christies(b, limit):
     directory = _christies_directory()
     # The archive keeps BOTH the project's original flat-path scrape and
@@ -1269,9 +1636,18 @@ def load_christies(b, limit):
             # 20.825%, not the 25% wine rate -- 6,188 lots carry currency
             # 'NLG' and were silently getting the wrong rate.
             premium_rate = 1.20825 if currency == "NLG" else 1.25
+            title = lot.get("title")
+            parsed_secondary = parse_christies_secondary(
+                lot.get("secondary"), title)
+            quantity = bottle_size_dl = mixed_lot = size_assumed = None
+            if parsed_secondary == "MIXED":
+                mixed_lot = 1
+            elif parsed_secondary is not None:
+                quantity, bottle_size_dl, assumed = parsed_secondary
+                size_assumed = 1 if assumed else None
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_number")),
-                "wine": lot.get("title"),
+                "wine": title,
                 "estimate_low": to_float(lot.get("estimate_low")),
                 "estimate_high": to_float(lot.get("estimate_high")),
                 "hammer_price": round(price / premium_rate, 2)
@@ -1280,8 +1656,12 @@ def load_christies(b, limit):
                 "price_basis": "HAMMER",
                 "currency": currency,
                 "sold": sold,
+                "quantity": quantity,
+                "bottle_size_dl": bottle_size_dl,
+                "mixed_lot": mixed_lot,
                 "description": lot.get("description"),
                 "source_url": lot.get("url"),
+                "size_assumed": size_assumed,
             })
         n += 1
         if limit and n >= limit:
@@ -1471,6 +1851,15 @@ def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
     claiming lot_no "1"). weinboerse has no such second namespace, so it
     passes none.
 
+    ``quantity``/``bottle_size_dl`` come from ``_weinauktion_parse_qty_size``
+    on the lot's own ``description`` -- the live fetcher's ``_map_lot``
+    (ingest/fetchers/weinauktion.py) deliberately keeps this field raw
+    rather than flattening it away, exactly so this richer parse could be
+    added later (see its own comment). Confirmed real archive pattern
+    (steinfels' historical dump, same platform/field shape): 99.4% of
+    non-empty ``description`` values resolve to a quantity+format or a
+    MIXED sentinel this way.
+
     Known residual risk (senior review, not fixed -- needs real-archive
     verification before touching it, not a guess): for steinfels, this
     function's ``a.get("id")`` is the live fetcher's own ``cat_id``
@@ -1498,6 +1887,14 @@ def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
                              a.get("currency") or "CHF", "HAMMER")
         for lot in d.get("lots", []):
             sold = bool(lot.get("sold"))
+            parsed_qty = _weinauktion_parse_qty_size(
+                lot.get("description"), lot.get("wine"))
+            quantity = bottle_size_dl = mixed_lot = size_assumed = None
+            if parsed_qty == "MIXED":
+                mixed_lot = 1
+            elif parsed_qty is not None:
+                quantity, bottle_size_dl, assumed = parsed_qty
+                size_assumed = 1 if assumed else None
             b.add_lot(a_id, {
                 "lot_no": str(lot.get("lot_no")),
                 "wine": lot.get("wine"),
@@ -1508,6 +1905,11 @@ def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
                 "price_basis": "HAMMER" if sold else "UNKNOWN",
                 "currency": lot.get("currency") or "CHF",
                 "sold": 1 if sold else 0,
+                "quantity": quantity,
+                "bottle_size_dl": bottle_size_dl,
+                "mixed_lot": mixed_lot,
+                "description": lot.get("description"),
+                "size_assumed": size_assumed,
             })
         n += 1
         if limit and n >= limit:
@@ -2757,6 +3159,191 @@ def load_steinfels(b, limit):
         _load_steinfels_resultfile_json(b, remaining)
 
 
+# dl per bottle, by format word as the weinauktion platform's own lot
+# ``description`` spells it (German/French/English mixed -- both houses on
+# this platform write the same templated phrasing). "méthusalem" etc. have
+# no Bordeaux-vs-Champagne ambiguity; "jeroboam" DOES (same split as
+# christies' own ``secondary`` field) -- confirmed real archive check: 208
+# of 218 jeroboam-format lots carry an explicit size (cl/Liter) right
+# alongside the format word, so the explicit size (looked up first, below)
+# resolves almost all of them, but the <5% bare-name residual needs the
+# same disambiguation christies gets, not a silent Bordeaux-only default
+# (senior-review finding, see ``_WA_AMBIGUOUS_FORMAT_KEYS`` and
+# ``_weinauktion_parse_qty_size``'s own ``wine_text``/``_CHAMPAGNE_RE``
+# handling below). This dict's own "jeroboam"/"jéroboam" entries stay at
+# the Bordeaux value only as the regex-alternation placeholder that lets
+# ``_WA_UNIT_ALT`` recognise the word at all -- the actual bare-name value
+# for these two keys is computed by that heuristic instead, never read
+# from here.
+#
+# Built from the canonical ``BOTTLE_FORMATS`` (wine_resolution/bottle.py)
+# rather than hand-copied literals -- a second, independent copy of these
+# values is exactly how this dict's own first draft got "jeroboam" wrong
+# (45.0, the REHOBOAM value, instead of 50.0 -- caught by code review, not
+# a guess). Only genuinely new spellings (German/French plurals, German
+# "Flasche", alternate "Balthasar"/"Mathusalem" transliterations) and the
+# jeroboam Bordeaux-convention exception (absent from BOTTLE_FORMATS for
+# the same reason christies' own table excludes it -- see
+# ``_CHRISTIES_JEROBOAM_DL_BORDEAUX``) are added on top.
+_WA_FORMAT_DL = {
+    "flasche": BOTTLE_FORMATS["FLASCHE"], "flaschen": BOTTLE_FORMATS["FLASCHEN"],
+    "fl": BOTTLE_FORMATS["FL"],
+    "bottle": BOTTLE_FORMATS["BOTTLE"], "bottles": BOTTLE_FORMATS["BOTTLES"],
+    "magnum": BOTTLE_FORMATS["MAGNUM"], "magnums": BOTTLE_FORMATS["MAGNUMS"],
+    "mg": BOTTLE_FORMATS["MG"],
+    "doppelmagnum": BOTTLE_FORMATS["DOUBLEMAGNUM"],
+    "doppelmagnums": BOTTLE_FORMATS["DOUBLEMAGNUM"],
+    "double-magnum": BOTTLE_FORMATS["DOUBLEMAGNUM"],
+    "double-magnums": BOTTLE_FORMATS["DOUBLEMAGNUM"],
+    "halfbottle": BOTTLE_FORMATS["HALF"], "halfbottles": BOTTLE_FORMATS["HALF"],
+    "jeroboam": 50.0, "jeroboams": 50.0, "jéroboam": 50.0, "jéroboams": 50.0,
+    "imperial": BOTTLE_FORMATS["IMPERIALE"], "imperiale": BOTTLE_FORMATS["IMPERIALE"],
+    "impérial": BOTTLE_FORMATS["IMPERIALE"], "impériale": BOTTLE_FORMATS["IMPERIALE"],
+    "balthazar": BOTTLE_FORMATS["BALTHAZAR"], "balthazars": BOTTLE_FORMATS["BALTHAZAR"],
+    "balthasar": BOTTLE_FORMATS["BALTHAZAR"], "balthasars": BOTTLE_FORMATS["BALTHAZAR"],
+    "rehoboam": BOTTLE_FORMATS["REHOBOAM"],
+    "methusalem": BOTTLE_FORMATS["METHUSELAH"],
+    "methusalems": BOTTLE_FORMATS["METHUSELAH"],
+    "mathusalem": BOTTLE_FORMATS["METHUSELAH"],
+    "mathusalems": BOTTLE_FORMATS["METHUSELAH"],
+    "méthusalem": BOTTLE_FORMATS["METHUSELAH"],
+    "méthusalems": BOTTLE_FORMATS["METHUSELAH"],
+    "methuselah": BOTTLE_FORMATS["METHUSELAH"],
+    "salmanazar": BOTTLE_FORMATS["SALMANAZAR"],
+    "nebukadnezar": BOTTLE_FORMATS["NEBUCHADNEZZAR"],
+    "nebuchadnezzar": BOTTLE_FORMATS["NEBUCHADNEZZAR"],
+    "melchior": BOTTLE_FORMATS["MELCHIOR"],
+}
+_WA_UNIT_ALT = "|".join(
+    sorted((re.escape(k) for k in _WA_FORMAT_DL), key=len, reverse=True))
+# Finding 4 (senior review, G0.7b round): the bare-name fallback below
+# (no explicit cl/Liter size in the text at all) resolves EVERY other key
+# to one single, universally fixed format size -- but "jeroboam" is the
+# one key with a real Bordeaux(5l)/Champagne(3l) ambiguity (same split as
+# christies' own ``_CHRISTIES_JEROBOAM_DL_BORDEAUX``), silently guessed
+# here via the Bordeaux-convention default with zero real evidence for
+# that specific lot. Flagged ``size_assumed=1`` downstream so this guess
+# is never confused with a confirmed size by the forecast model -- same
+# reused column/meaning as ``_assume_default_bottle_size``'s "no hint at
+# all" default (build_wines.py), broadened to "the lot's own format word
+# IS known, but which exact convention applies within it is guessed".
+_WA_AMBIGUOUS_FORMAT_KEYS = frozenset({"jeroboam", "jéroboam"})
+# Not a "bottle of wine" container at all -- a decorative decanter/carafe
+# (often accompanying a limited-edition spirit lot). Confirmed real
+# archive: every match is a genuine non-bottle item (e.g. "1 Muranoglas
+# Dekanter 70cl OHK"), same spirit as christies' barrel/pièce/cigars check.
+# "n?"/"s?" plural suffixes -- without them, "Karaffen" (German plural)
+# and "Decanters" (English plural) fail the trailing \b (no boundary
+# between a word char and a directly-attached plural letter).
+_WA_NOT_BOTTLE_RE = re.compile(
+    r"\b(Dekanter|Karaffen?|Decanters?)\b", re.I)
+_WA_HALF_BOTTLE_RE = re.compile(r"\bhalf\s+bottles?\b", re.I)
+_WA_DOUBLE_MAGNUM_RE = re.compile(r"\bdouble\s+magnums?\b", re.I)
+_WA_MAIN_RE = re.compile(
+    r"^(?P<n>\d+)\s+(?:(?P<fn>\d+)/(?P<fd>\d+)\s+)?"
+    r"(?:(?P<presize>\d+(?:[.,]\d+)?)?\s*-?\s*"
+    r"(?P<preunit>liters?|litres?|liter|lt|cl|ml|l)-?\s*)?"
+    rf"(?P<unit>{_WA_UNIT_ALT})s?\b", re.I)
+# Anchored (``^``), not a bare ``search`` -- the explicit size must be the
+# very next token right after the unit word (e.g. "Flasche 70cl"), not just
+# any cl/l-ish number anywhere later in the segment. Confirmed real bug:
+# an unanchored search picked up an unrelated "2cl" in a damage/shipping
+# note or a "1 Liter" olive-oil mention elsewhere in the same free text.
+_WA_SIZE_RE = re.compile(
+    r"^\s*-?\s*(?P<num>\d+(?:[.,]\d+)?)\s*-?\s*"
+    r"(?P<unit2>liters?|litres?|liter|lt|cl|ml|l)\b", re.I)
+
+
+def _wa_size_from_token(num, unit):
+    unit = unit.lower()
+    num = float(num.replace(",", ".")) if num else 1.0
+    if unit == "cl":
+        return num / 10.0
+    if unit == "ml":
+        return num / 100.0
+    # A bare "Liter"/"Litre" with no leading digit means 1 litre.
+    return num * 10.0
+
+
+def _weinauktion_parse_qty_size(description, wine_text=None):
+    """Extract ``(quantity, bottle_size_dl)`` from a weinauktion-platform
+    lot's own ``description`` (e.g. ``"...4 50cl-Flaschen<BR>"``,
+    ``"...1 Jéroboam 300cl OHK<BR>"``) -- a field the loader (both
+    ``_load_weinauktion_json`` and ``_load_steinfels_resultfile_json``)
+    previously kept around but never parsed for quantity, defaulting every
+    such lot to QTY_ASSUMED/``size_assumed`` even though the true count
+    and format are stated in plain text right there (confirmed real,
+    surfaced by the user directly: "Steinfels liefert definitiv immer die
+    Menge und den Preis pro lot" -- this was a gap, not a deliberate
+    design choice).
+
+    Returns ``None`` when nothing usable is found (empty description, or
+    a phrasing this function doesn't recognise -- confirmed real
+    residual, ~0.6% of non-empty descriptions: a bare "N Stück" with no
+    format word, assorted "Set"/"Box"/"Kiste" multi-item lots, and a
+    handful of exotic containers). The caller's existing QTY_ASSUMED
+    default then applies unchanged, same as before this fix.
+
+    Returns ``"MIXED"`` for a lot that isn't "N bottles of ONE thing":
+    a decanter/carafe item (see ``_WA_NOT_BOTTLE_RE``), confirmed always
+    either a decorative non-bottle item or part of a genuinely mixed
+    assortment lot in the real archive.
+
+    On success, returns ``(quantity, bottle_size_dl, size_assumed)`` --
+    ``size_assumed`` is ``True`` only for the bare-jeroboam-name fallback
+    (see ``_WA_AMBIGUOUS_FORMAT_KEYS``); every other resolution (explicit
+    cl/Liter size, fraction modifier, or any other named format) is a
+    confirmed size, not a guess.
+
+    ``wine_text`` (optional: the lot's own wine/title text, separate
+    from ``description``) feeds the same producer-name Champagne-house
+    heuristic (``_CHAMPAGNE_RE``) christies' own jeroboam disambiguation
+    already uses -- senior-review finding: this used to default straight
+    to the Bordeaux convention with no producer check at all, even
+    though the same signal is available in these lots' own wine text,
+    giving the identical ambiguity meaningfully different accuracy
+    depending on which loader happens to hit it.
+    """
+    desc = description or ""
+    if not desc:
+        return None
+    if _WA_NOT_BOTTLE_RE.search(desc):
+        return "MIXED"
+    segs = re.split(r"<BR\s*/?>", desc, flags=re.I)
+    segs = [re.sub(r"<[^>]+>", " ", s).strip() for s in segs]
+    for seg in segs:
+        if not seg:
+            continue
+        seg = _WA_HALF_BOTTLE_RE.sub("halfbottle", seg)
+        seg = _WA_DOUBLE_MAGNUM_RE.sub("double-magnum", seg)
+        m = _WA_MAIN_RE.match(seg)
+        if not m:
+            continue
+        n = int(m["n"])
+        assumed = False
+        if m["fn"]:
+            dl = (int(m["fn"]) / int(m["fd"])) * 10
+        elif m["preunit"]:
+            dl = _wa_size_from_token(m["presize"], m["preunit"])
+        else:
+            sm = _WA_SIZE_RE.match(seg[m.end():])
+            if sm:
+                dl = _wa_size_from_token(sm["num"], sm["unit2"])
+            else:
+                unit_key = m["unit"].lower().rstrip("s")
+                if unit_key in _WA_AMBIGUOUS_FORMAT_KEYS:
+                    dl = (_CHRISTIES_JEROBOAM_DL_CHAMPAGNE
+                          if _CHAMPAGNE_RE.search(wine_text or "")
+                          else _CHRISTIES_JEROBOAM_DL_BORDEAUX)
+                    assumed = True
+                else:
+                    dl = _WA_FORMAT_DL.get(unit_key)
+                    assumed = False
+        if dl:
+            return (n, dl, assumed)
+    return None
+
+
 def _load_steinfels_resultfile_json(b, limit):
     """Historical raw export of the weinauktion platform's own paginated
     API response (confirmed: 3,904 files, 2016-2026, e.g. "Auktion 408" --
@@ -2769,12 +3356,12 @@ def _load_steinfels_resultfile_json(b, limit):
     ingest/fetchers/weinauktion.py), not because the house stopped
     running auctions (it is mid "eAuktion 125" as of 2026-11-01).
 
-    Field mapping deliberately stays as flat as the live fetcher's own
-    ``_map_lot`` (ingest/fetchers/weinauktion.py) -- wine text + a
-    vintage regex, not weinboerse's richer producer/quantity/OHK
-    free-text parse -- since steinfels' live-fetched lots never got that
-    treatment either; consistency with the live path matters more than
-    per-house parsing depth here.
+    Wine/vintage mapping deliberately stays as flat as the live fetcher's
+    own ``_map_lot`` (ingest/fetchers/weinauktion.py) -- wine text + a
+    vintage regex, not weinboerse's richer producer/OHK free-text parse --
+    consistency with the live path matters more than per-house parsing
+    depth there. ``quantity``/``bottle_size_dl`` are the one exception:
+    see ``_weinauktion_parse_qty_size``.
     """
     files = _json_files("Steinfels", "**/Resultfile*.json")
     auctions, catalogs, parts = {}, {}, {}
@@ -2845,6 +3432,14 @@ def _load_steinfels_resultfile_json(b, limit):
             # is kept rather than squashed to None.
             estimate_low = to_float(it.get("basePrice"))
             estimate_high = to_float(it.get("upperBasePrice")) or None
+            parsed_qty = _weinauktion_parse_qty_size(
+                it.get("description"), text)
+            quantity = bottle_size_dl = mixed_lot = size_assumed = None
+            if parsed_qty == "MIXED":
+                mixed_lot = 1
+            elif parsed_qty is not None:
+                quantity, bottle_size_dl, assumed = parsed_qty
+                size_assumed = 1 if assumed else None
             b.add_lot(a_id, {
                 "lot_no": str(it.get("number")),
                 "source_lot_key": f"{key[0]}:{key[1]}",
@@ -2856,6 +3451,11 @@ def _load_steinfels_resultfile_json(b, limit):
                 "sold": 1 if sold else 0,
                 "price_basis": "HAMMER" if sold else "UNKNOWN",
                 "currency": a.get("currency") or "CHF",
+                "quantity": quantity,
+                "bottle_size_dl": bottle_size_dl,
+                "mixed_lot": mixed_lot,
+                "description": it.get("description"),
+                "size_assumed": size_assumed,
             })
             n += 1
         if limit and n >= limit:
@@ -4533,14 +5133,19 @@ def _report_07_forecast_input(conn):
     #
     # _assume_default_bottle_size's own docstring promises 0.7 "can
     # report on or exclude assumed sizes separately" -- n_assumed is the
-    # "report on" half. NOT excluded here: size_assumed=1 means "no size
-    # hint found anywhere", not "size is wrong" -- 750ml is the
-    # overwhelmingly dominant real bottle size, so defaulting to it is a
-    # well-justified guess for most of these rows, and excluding all of
-    # them would drop a large share of otherwise-good data for no
-    # demonstrated benefit. Open decision (D21, see docs/
-    # price-prediction-plan.md) if this ever needs to become an
-    # exclusion/flag instead of an informational count.
+    # "report on" half. NOT excluded here: size_assumed=1 means
+    # ``bottle_size_dl`` was derived by a guess rather than confirmed by
+    # the source data -- either no size hint found anywhere (750ml
+    # default, the overwhelmingly common case) or, since finding 4
+    # (senior review, G0.7b round), a known format whose exact
+    # Bordeaux/Champagne-convention size was itself guessed (christies'
+    # jeroboam producer-name heuristic, weinauktion's bare-jeroboam-name
+    # fallback). Neither is "size is wrong" -- both are well-justified
+    # guesses for most of these rows, and excluding all of them would
+    # drop a large share of otherwise-good data for no demonstrated
+    # benefit. Open decision (D21, see docs/price-prediction-plan.md) if
+    # this ever needs to become an exclusion/flag instead of an
+    # informational count.
     n_final, n_assumed = conn.execute(
         "SELECT COUNT(*), SUM(l.size_assumed = 1) FROM forecast_input fi"
         " JOIN lots l ON l.id = fi.lot_id").fetchone()
@@ -4551,8 +5156,9 @@ def _report_07_forecast_input(conn):
           f"({total_lots - n_final} verloren von {total_lots} Rohdaten-"
           f"Zeilen)")
     if n_assumed:
-        print(f"  -> davon size_assumed=1 (kein Groessen-Hinweis in den "
-              f"Rohdaten, 7,5 dl angenommen, D21 offen): {n_assumed} "
+        print(f"  -> davon size_assumed=1 (Groesse geraten -- kein Hinweis "
+              f"in den Rohdaten ODER Format bekannt, exakte Grossflaschen-"
+              f"Konvention geraten, D21 offen): {n_assumed} "
               f"({n_assumed / n_final:.1%})")
 
 

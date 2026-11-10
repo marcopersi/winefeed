@@ -69,7 +69,7 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
 | 0.6 / D20 Outlier-/Dubletten-Bereinigung | ✅ erledigt — `DUP_CANDIDATE` 23 636, `OUTLIER` 67 258, `price_kind='COTE'` 33 963 (alle idealwine), nur geflaggt, nichts gelöscht |
 | 0.7 View `forecast_input` | ✅ erledigt — 969 183 Zeilen / 119 646 Serien, Zeilenbilanz im Build-Report |
 | **Gate G0** (Review Stufe 0) | ✅ erledigt 2026-11-06 — 9 echte Bugs über 2 Runden gefunden+behoben (Wermuth-Spaltenversatz+Trailing-Blank, Magnum/Double-Magnum-Grössenerkennung inkl. Bare-Word-Kollisionen, UNKNOWN-Lose, Outlier-Kontamination, D15-Fenster-Scope, `strip_bottle_format`-Fragmentierung), D21 neu eröffnet. 0.2b bleibt blockiert (Token) |
-| Stufe 1 – Baselines & Eval-Harness | ⬜ nicht begonnen, kein `data/forecast/`-Paket im Repo |
+| Stufe 1 – Baselines & Eval-Harness | ✅ 1.1–1.5 alle erledigt (2026-11-10, Code+Tests+Live-Report-Lauf verifiziert) — Gate G1 (Baseline-Zahlen festschreiben) als nächstes |
 | Stufe 2 – Local-Level-Modell (Kalman) | ⬜ nicht begonnen |
 | Stufe 3 – Gruppenindex/Fallback | ⬜ nicht begonnen |
 | Stufe 4 – Konforme Kalibrierung | ⬜ nicht begonnen |
@@ -809,12 +809,115 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 
 **1.4 Baselines** (S): (a) Last-Value, (b) Median der letzten k Lose, (c) gleitender Median 12 M, (d) saisonfreie lineare Trend-Regression im Log. Alle liefern Quantile via empirische Residuen.
 - Test: Konstante Serie ⇒ Prognose konstant, Intervallbreite 0.
+- **Status: Code + Tests erledigt 2026-11-10** (`forecast/models.py`:
+  `_last_value`/`_median_last_k`/`_rolling_median_12m`/`_trend` +
+  `_retrospective_residuals`/`_quantiles_from_residuals`/`make_baseline`,
+  registriert in `run.py`s `FORECASTERS`). `k=5` für (b) gesetzt, nicht
+  entschieden (Plan nennt die Methode, nicht `k`). 18 neue Tests
+  (`test_forecast_baselines.py`), inkl. der AC selbst UND eines
+  strukturellen G4-Tests ("Intervallbreite wächst mit Horizont" --
+  schärfer als die reine Konstante-Serie-AC, da die triviale
+  Konstante-Serie-Variante auch bei horizontunabhängiger Breite
+  bestehen würde).
+  Zwei echte, beim Design selbst gefundene Bugs: (1) `(c)` ankerte das
+  12M-Fenster am Prognose-Zieldatum statt am letzten bekannten Datum --
+  für den 12M-Horizont dadurch IMMER ein leeres Fenster (das Zieldatum
+  liegt per Konstruktion `origin+12M` hinter `train`s eigenem Ende),
+  gefangen vom eigenen Konstante-Serie-Test, nicht geraten. (2) Der
+  verschachtelte Residual-Backtest lief ungekappt O(n) `point_fn`-Calls
+  pro Origin -- beim echten Live-Report-Lauf (siehe unten) mit
+  einzelnen ~2000-Zeilen-Serien O(n²), nach 20+ Minuten ohne Ende
+  abgebrochen; `MAX_BACKTEST_STEPS=50` (gekappt auf die letzten
+  GEEIGNETEN Mini-Origins, nicht die letzten rohen Zeilenindizes --
+  sonst fallen für den 12M-Horizont genau die kappbaren Schritte weg)
+  behebt das, mit eigenem Performance-Test.
+  **Zwei weitere echte Bugs beim echten Live-DB-Lauf gefunden** (nicht
+  durch synthetische Tests erfasst): (3) `eval.extrapolation_flag`
+  rief `math.exp()` auf einen rohen Log-Forecast auf -- eine echte
+  "trend"-Extrapolation auf einer kurzen/lauten Serie überschritt
+  dabei `math.exp`s Überlauf-Grenze (~709) und warf `OverflowError`,
+  brach einen ansonsten erfolgreichen ~25-Minuten-Lauf ab. Fix: der
+  Vergleich bleibt vollständig im Log-Raum (Differenz statt Quotient
+  von zwei `exp()`-Werten), kein `exp()` mehr nötig. (4)
+  `mape_eur`/`mdape_eur` exponenzierten denselben rohen Forecast ohne
+  Overflow-Schutz -- NumPy wirft hier nur eine `RuntimeWarning` (kein
+  Crash), aber eine einzige `inf`-Zeile macht den MITTELWERT-basierten
+  MAPE für eine ganze Gruppe unbrauchbar (bestätigt im echten Report:
+  `trend`s MAPE-Spalte zeigte `inf` oder astronomische Zahlen wie
+  `2,8×10^50` in mehreren Zeilen). Fix: nicht-finite Zeilen werden aus
+  MAPE/MdAPE ausgeschlossen UND explizit gezählt
+  (`n_nonfinite_ape`, eigene Report-Spalte) -- dieselbe "flaggen, nie
+  stillschweigend verwerfen"-Konvention wie 0.6s OUTLIER/DUP_CANDIDATE.
+  MdAPE (Median) war von Natur aus robust dagegen, wird aber aus
+  Konsistenzgründen gleich gefiltert.
+  **Fünfter echter Bug, selbst beim Fix von #4 gefunden** (nicht
+  geraten -- der korrigierte Report zeigte weiterhin astronomische
+  MAPE-Werte wie `2,8×10^50` trotz `n_nonfinite_ape=0`): eine erste
+  Fix-Version filterte nur `~np.isfinite(ape)` -- das erfasst `inf`/
+  `nan`, aber NICHT eine `exp()`-Extrapolation, die knapp UNTER der
+  Überlauf-Grenze eines Double landet (z. B. `exp(600) ≈ 3,8×10^260`,
+  eine ganz normale finite Zahl, aber als EUR-Flaschenpreis absurd).
+  Fix: `mape_eur`/`mdape_eur` schliessen Zeilen aus, deren
+  `extrapolation_flag` (die ohnehin schon existierende G4-Markierung)
+  gesetzt ist -- derselbe Massstab wie "Prognose weit ausserhalb
+  [0,2×; 5×] des letzten bekannten Preises", nicht eine zweite,
+  erfundene Schwelle; seit dem User-Entscheid (siehe §8-Review-Log)
+  gilt derselbe Ausschluss für ALLE Metriken (`extrapolation_exclusion_mask`/
+  `n_extrapolation_excluded`), nicht nur MAPE/MdAPE. Ausgeschlossene
+  Zeilen werden gezählt, nie stillschweigend verworfen.
+
+  **Live-Report-Lauf** (`python3 -m forecast.run`, alle 4 Baselines ×
+  2 Horizonte über alle ~971 510 `forecast_input`-Zeilen /
+  ~120 513 Serien, `--as-of 2026-11-10`): vier Versuche liefen auf
+  echte Bugs (siehe §8-Review-Log, Bugs 2-5); der **fünfte, finale
+  Versuch** (nach allen 6 Fixes + der Metrik-Ausweitung) lief
+  **~33 Minuten, fehlerfrei, keine Ausreisser mehr in irgendeiner
+  Spalte** -- der `n_train=1-2`-Bucket ist aus dem "next"-Horizont
+  vollständig verschwunden (Fix 6 greift: diese Serien sind jetzt
+  korrekt `INSUFFICIENT_DATA`, nicht mehr nullbreite Scheinsicherheit).
+  Kopfzahlen ("alle"-Zeile je Modell/Horizont):
+
+  | Modell | Horizont | n | MAPE | MdAPE | N ausgeschl. (EXTRAPOLATION) | Pinball q0.5 | Coverage 80% |
+  |---|---|---|---|---|---|---|---|
+  | last_value | next | 79 244 | 0,535 | 0,222 | 16 (0,02 %) | 0,1834 | 0,572 |
+  | last_value | 12m | 146 010 | 0,719 | 0,265 | 610 (0,4 %) | 0,2178 | 0,639 |
+  | median_last_5 | next | 79 244 | 0,471 | 0,216 | 872 (1,1 %) | 0,1673 | 0,564 |
+  | median_last_5 | 12m | 146 010 | 0,586 | 0,254 | 3 294 (2,3 %) | 0,1948 | 0,587 |
+  | rolling_median_12m | next | 79 244 | 0,469 | 0,208 | 435 (0,5 %) | 0,1677 | 0,579 |
+  | rolling_median_12m | 12m | 146 010 | 0,563 | 0,241 | 3 662 (2,5 %) | 0,1906 | 0,601 |
+  | trend | next | 67 981 | 0,545 | 0,241 | 1 733 (2,6 %) | 0,1818 | 0,608 |
+  | trend | 12m | 137 774 | 0,594 | 0,297 | 7 962 (5,8 %) | 0,2099 | 0,612 |
+
+  Zeilenbilanz je Modell/Horizont geht exakt auf
+  (`forecast + insufficient = candidates`). Vorläufige Lesung (keine
+  Gate-G1-Entscheidung, die kommt erst mit Stufe 2's Vergleich):
+  `median_last_5`/`rolling_median_12m` schlagen `last_value` auf
+  MAPE/Pinball in beiden Horizonten leicht, `trend` liegt bei "next"
+  nah dran, verliert aber sichtbar bei "12m" (höchste MAPE/MdAPE UND
+  höchster Extrapolations-Ausschluss -- erwartbar, da `trend` als
+  einzige Baseline überhaupt extrapoliert statt zu persistieren/
+  mitteln). Alle Gruppen (Dichteklasse `n_train`, Haus) aufgeschlüsselt
+  in `docs/forecast-baseline-report.md`.
 
 **1.5 Rolling-Origin-Evaluator** (M)
 - Origins: alle Jahres-/Halbjahresgrenzen der letzten 24 M; je Origin nur Daten `< origin`; Targets = Beobachtungen in `[origin, origin+Horizont)`.
 - Metriken: MAPE (EUR), MdAPE, Pinball-Loss (q=0,1/0,5/0,9), Winkler-Score, Coverage je Nominal, Intervallbreite (median), Aufteilung nach Dichteklasse und Haus.
 - Test: `test_no_lookahead` (G1), `test_metric_known_values`.
 - AC: Baseline-Report als Tabelle in `docs/forecast-baseline-report.md` (reproduzierbar per Befehl).
+- **Status: erledigt 2026-11-10.** `forecast/eval.py` (Rolling-Origin-Split
+  `half_year_origins`/`split`/`admits_horizon`, G4-Hartchecks in
+  `_validate_forecast`, alle Metriken, `summarize`/`write_baseline_report`)
+  + `forecast/run.py` (CLI, G6 `mode=ro`) + `data.load_all_series`
+  (Bulk-Loader für alle ~120k Serien in einer Query statt N Einzel-
+  Queries). Bewusst **vor** 1.4 gebaut (User-Entscheid: Reihenfolge
+  1.5 → 1.4) — generisches Evaluations-Geruest zuerst, Baselines
+  stecken sich später rein (`run.py`s `FORECASTERS`-Dict ist noch
+  leer). AC-Report lief bereits erfolgreich gegen die Live-DB (0
+  Modelle, siehe Datei) — die eigentliche Tabellenbefüllung mit echten
+  Baselines folgt in 1.4. 22 neue Tests (`test_forecast_eval.py`,
+  inkl. beider Pflicht-Tests `test_no_lookahead`/`test_metric_known_values`
+  plus einem Leap-Year-Test für die 12M-Fenstergrenze), volle Suite
+  478/478 grün.
 
 **Gate G1:** Baseline-Zahlen im Review festgeschrieben = die Latte für alles Weitere.
 
@@ -890,7 +993,7 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 | D18 | 0.3-AC (≥ 99 %) nicht erreichbar (96,04 %) wegen struktureller EODHD-Lücke vor Cache-Start (AUD vor 2006-03-01, 158 920 Zeilen; HKD vor 1999-12-31, 261 Zeilen) — AC-Zahl senken, Zeilen explizit als `fx_status='MISSING'` dokumentieren und aus `forecast_input` ausschliessen, oder eine zweite FX-Quelle für die Vor-Cache-Spanne suchen? | 0.3/0.7, AC-Formulierung |
 | D19 | zacky's `bottle_size_dl=1.0`-Bug (24 129 Zeilen): `parse_dl` bekam das `quantity`-Feld (Flaschenzähler, z. B. "6") statt eines Size-Felds übergeben und las die blanke Zahl über seinen Zahlen-Fallback fälschlich als dl-Wert. Keine echte Alternative abzuwägen — reiner Bug, nur eine sinnvolle Behebung (Guard vor `parse_dl`, siehe 0.4). | 0.4 |
 | D20 | 0.6-Dubletten-Regel: wine-Identitäts-Heuristik (wine_ref_id/Jahrgang/Datum/Preis±1%/Haus) erzeugt live bestätigte False Positives (echte Zwillings-Lose bei langtons/ackerwines, Pagination bei steinfels) — stattdessen `_check_duplicate_lot_numbers`s bestehende (auction_id, lot_no, voller Inhalt)-Definition wiederverwenden? | 0.6 |
-| D21 | `size_assumed=1` (kein Grössen-Hinweis in den Rohdaten, `_assume_default_bottle_size` setzt 7,5 dl als Default) macht ~38 % aller `SINGLE`-Lose aus (Gate-G0-Fund, 2026-11-06, Code-Review). `forecast_input` behandelt diese Zeilen aktuell identisch zu einer bestätigten 7,5-dl-Flasche — nur gezählt/reported (`_report_07_forecast_input`), nicht ausgeschlossen oder separat geflaggt. Ausschliessen (verliert einen grossen, mutmasslich meist korrekten Anteil echter 750-ml-Flaschen) oder als eigenes `ppb_flags`-Flag markieren (Modell entscheidet, wie 0.6) oder so lassen (750 ml ist die weit überwiegende reale Grösse, der Default ist kein Rateversuch ins Blaue)? | 0.7, Stufe 1-2 (Feature `size_assumed`?) |
+| D21 | `size_assumed=1` (kein Grössen-Hinweis in den Rohdaten, `_assume_default_bottle_size` setzt 7,5 dl als Default) macht ~38 % aller `SINGLE`-Lose aus (Gate-G0-Fund, 2026-11-06, Code-Review). `forecast_input` behandelt diese Zeilen aktuell identisch zu einer bestätigten 7,5-dl-Flasche — nur gezählt/reported (`_report_07_forecast_input`), nicht ausgeschlossen oder separat geflaggt. Ausschliessen (verliert einen grossen, mutmasslich meist korrekten Anteil echter 750-ml-Flaschen) oder als eigenes `ppb_flags`-Flag markieren (Modell entscheidet, wie 0.6) oder so lassen (750 ml ist die weit überwiegende reale Grösse, der Default ist kein Rateversuch ins Blaue)? **2026-11-09 (G0.7b, Finding 4):** Semantik von `size_assumed` bewusst verbreitert — nicht mehr nur "kein Hinweis gefunden", sondern auch "Format bekannt, exakte Grossflaschen-Konvention geraten" (christies' Jeroboam Bordeaux/Champagne-Heuristik, weinauktion/steinfels' Bare-Jeroboam-Fallback), da beides für das Forecast-Modell dieselbe Unsicherheit ist und die bestehende Spalte/`fit_provider_effects`-Kovariate genau dafür gebaut ist. Betrifft 3 081 zusätzliche Zeilen (3 steinfels, 0 weinboerse, 3 078 christies). **D21 ENTSCHIEDEN (User, 2026-11-09): Option 2 — `size_assumed` bleibt als eigenes Flag/Kovariate, kein Ausschluss.** Nach dem steinfels-Fix (G0.7b) + Rebuild: `forecast_input` gesamt 971 510 Zeilen, davon 35 426 (3,6 %) `size_assumed=1`; steinfels alleine fiel von 619 auf 28 solcher Zeilen (−95,5 %, Haus-Offset in `fit_provider_effects` von ~3,04× auf log-offset 0.020 ≈ 1,02× — praktisch neutral). Kein Code-Änderungsbedarf: `fit_provider_effects` (1.3) nutzt `size_assumed` bereits als Kovariate, genau wie entschieden. | 0.7, Stufe 1-2 — **erledigt**, kein offener Punkt mehr |
 
 **Entschieden am 2026-10-29:**
 D10 Grossformate = **eigene Reihen** (Schlüssel `wine_ref_id · vintage · size_class`, kein Äquivalent-Faktor) ·
@@ -909,7 +1012,12 @@ D19 zacky-Bug = **behoben** (`zacky_bottle_size_dl`-Guard, siehe 0.4) — kein E
 **Entschieden am 2026-11-06:**
 D20 Dubletten-Regel = **`_check_duplicate_lot_numbers`-Definition wiederverwenden** (nicht: Wein-Identitäts-Heuristik, auch nicht deren verschärfte Variante) — siehe 0.6 für die live-verifizierte Begründung (beide Heuristiken erzeugten nachweisbare False Positives, (auction_id, lot_no) + voller Inhalt praktisch nicht).
 
-D10–D20 sind damit getroffen. D21 ist **offen** — bewusst nicht im Rahmen von Gate G0 entschieden, da sie 38 % der Daten betrifft und eine Produktentscheidung ist, keine reine Code-Korrektur; `_report_07_forecast_input` zählt die betroffenen Zeilen jetzt zumindest sichtbar (siehe 0.7-Status).
+D10–D20 sind damit getroffen.
+
+**Entschieden am 2026-11-09 (nach G0.7b, steinfels-Fix + Rebuild):**
+D21 `size_assumed`-Behandlung = **als eigenes Flag/Kovariate belassen** (nicht: ausschliessen) — `fit_provider_effects` (1.3) nutzt `size_assumed` dafür bereits als Regressor, kein Code-Änderungsbedarf. Entscheidung erleichtert durch den steinfels-Fix selbst: die betroffene Zeilenzahl ist mit dem Fix von ~38 % aller `SINGLE`-Lose auf 3,6 % von `forecast_input` gesunken, und die einzige konkret nachgewiesene Verzerrung durch Grössen-Rateversuche (steinfels' Haus-Offset) ist dadurch bereits von ~3,04× auf praktisch neutral (~1,02×) gefallen.
+
+D10–D21 sind damit alle getroffen.
 
 ---
 
@@ -946,6 +1054,17 @@ Ablauf je Gate (G0–G3 + Abschluss):
 |---|---|---|---|---|
 | 2026-11-06 | G0, Runde 1 | Claude (Autor-Stichproben: 0.4 100-Lose, 0.5 Los-Konstellationen, 0.6 50-Lose) | 127 verdächtige „1,0 dl"-Zeilen voll aufgeklärt (64 echter Bug, 63 echte Mini-Formate); 1 neuer echter Bug (Wermuth-sa-Spaltenversatz, verfälschte auch `hammer_price`, 215 Zeilen) | Fix + 5 Tests + Rebuild verifiziert |
 | 2026-11-06 | G0, Runde 2 | Claude (`/code-review high`, Multi-Agent: 2 parallele Durchläufe, 8 Finder-Winkel je Durchlauf plus Straggler-Agenten, insg. ~20 Teilagenten) | 1. Durchlauf (committeter Branch-Diff): 11 Befunde, 3 echte Bugs (UNKNOWN-Lose fingiert bepreist, Outlier-Vergleichsgruppen-Kontamination, D15-Fenster-Scope-Bug). 2. Durchlauf (neue, unkommittierte G0-Fixes selbst re-geprüft): 4 Reuse-Befunde (sofort behoben) + danach 3 weitere, von Straggler-Agenten gemeldete **echte Bugs in den soeben selbst geschriebenen Fixes**: (a) `_BARE_FORMATS`-Kollisionen (DEMI/HALF/BALTHAZAR/MELCHIOR/DM lesen echte Markennamen/Text als Flaschenformat), (b) `parse_bottle_format`-Präzedenz (ein schwacher Bare-Word-Treffer in `name` blockierte einen starken Treffer in `description`), (c) Wermuth-Validated-CSV: ein leeres Trailing-Feld wurde als echte 11. Spalte gezählt (2 weitere falsch gelesene Zeilen). Dritter Durchlauf (finaler Diff): 1 weiterer echter Bug (`strip_bottle_format` wendet die Compound-Normalisierung nicht an, liess "Double-Magnum"-Text im Weinnamen stehen → Wein-Identitäts-Fragmentierung). Alle committeten Reuse-/Altitude-Befunde (Dreifach-`instr()`-Duplikat, `_flag_duplicate_lots`/`_check_duplicate_lot_numbers`-Logikduplikat, `zacky`/`winebarrel`-Wrapper-Architektur, `_assume_default_bottle_size` vs. `quantity`-Default-Asymmetrie, MAD=0-Mehrheitsverzerrung bei `_flag_price_outliers`) als Tech-Debt dokumentiert/vertagt, kein aktiver Schaden nachgewiesen. | 6 weitere echte Bugs gefixt (insg. **9 echte Bugs über beide G0-Runden**) + 12 weitere Tests + Index `idx_lots_wine_ref_vintage_size` + `forecast_input`-View als Single-Pass-CTE statt Join + `_report_07`-Query-Merge; 1 Restfund dokumentiert statt gefixt (Mehrfach-Wein-Freitextlisten können `quantity` mit einer Jahrgangszahl verwechseln -- betrifft nur `lot_kind='MIXED'`, bekommt nie einen Flaschenpreis, daher kein Preis-Risiko); D21 (`size_assumed`-Ausschluss) als offene Produktentscheidung dokumentiert statt entschieden. **G0 freigegeben, Stufe 1 kann starten.** |
+| 2026-11-09 | G0.7b (Stufe-1 QTY_ASSUMED-Nachprüfung, steinfels) | Claude (`code-review`-Skill auf vollem unkommittierten Diff, nach User-Korrektur: "Steinfels liefert definitiv immer die Menge und den Preis pro Lot. Immer.") | Ursprüngliche Annahme (steinfels liefert keine Menge/Grösse, "bewusste Design-Entscheidung") war falsch — echter Bug: `description` enthält die Angabe immer (z. B. "4 50cl-Flaschen"), nie geparst. Neue `_weinauktion_parse_qty_size` (steinfels + weinboerse, 99,4 % Archiv-Abdeckung) + `parse_christies_secondary`-Erweiterung + `parse_dl`-Reihenfolge-Fix. Review danach: 10 Befunde, 8 echte Bugs (unverankerte Size-Suche griff unverwandte Zahlen ab, `_CHAMPAGNE_RE` ohne Wortgrenze traf "Mumm" in "Mummius", Jeroboam-Wert 45.0 statt 50.0 vertauscht + `_WA_FORMAT_DL`-Duplikat-Tabelle auf `BOTTLE_FORMATS` zurückgeführt, Mixed-Format-Vergleich auf rohe Spelling- statt aufgelöste dl-Werte, `build_wines._parse_bottle_formats` fingierte Menge aus Limited-Edition-Zählung auf MIXED-Dekanter-Lot, Plural-Dekanter-Erkennung, `parse_dl`-Reihenfolgegefahr proaktiv behoben). 2 Befunde bewusst zurückgestellt: (4) Jeroboam-Grössenkonvention wird geraten, landete aber ohne `size_assumed`-Flag — Architekturfrage, nicht mechanischer Bug; (10) christies-Parser-Performance, kein nachgewiesener realer Kostenpunkt. | 8 Bugs gefixt + Regressionstests; danach Finding 4 auf User-Wunsch VOR dem Rebuild zusätzlich gefixt: `size_assumed`-Semantik bewusst verbreitert (siehe D21-Zeile oben) — `_christies_format_dl`/`parse_christies_secondary`/`_weinauktion_parse_qty_size` geben jetzt zusätzlich ein `size_assumed`-Flag zurück, `add_lot` persistiert es; 3 081 betroffene Zeilen (3 steinfels, 0 weinboerse, 3 078 christies). Volle Suite 456/456 grün. Finding 10 bleibt offen/dokumentiert. |
+| 2026-11-10 | 1.5 (Rolling-Origin-Evaluator) | Claude (Design via `advisor` vor Implementierung: Forecaster-Signatur `(train, origin, horizon) -> dict\|None`, Log-y-Skala für alle Metriken ausser MAPE/MdAPE, Long-Format-Rows-Tabelle als zentrale Zwischenstruktur) | Kein Review-Finding — neues Modul, keine Review in diesem Schritt angefordert. Design-Entscheide dokumentiert in `eval.py`s Docstrings: Dichteklassen aus 3.6/D5 übernommen statt neu erfunden (`1-2/3-4/5-9/10+`, nach `n_train`, nicht Gesamtserien-Grösse — sonst Zukunfts-Leck); 12M-Horizont rechts-zensierte Origins ausgeschlossen statt auf Teilfenster gewertet; `split()` nutzt Kalendermonate, kein 365-Tage-Fenster (Leap-Year-Differenz per Test belegt). | `data/forecast/eval.py` (Rolling-Origin-Split + alle Metriken + Report-Writer) + `run.py` (CLI, G6) + `data.load_all_series` (Bulk-Loader) neu; 22 neue Tests (`test_forecast_eval.py`), beide Pflicht-Tests (`test_no_lookahead` als Spy- UND Cheater-Forecaster-Variante, `test_metric_known_values` mit handgerechneten Pinball/Winkler/Coverage/MAPE-Werten). Volle Suite 478/478 grün. CLI erfolgreich gegen Live-DB getestet (0 Modelle, Report-Datei erzeugt). |
+| 2026-11-10 | 1.4 (Baselines) + Live-Verifikation von 1.4/1.5 | Claude (eigene Tests + 4 Bugs erst beim tatsächlichen Live-DB-Lauf gefunden, nicht durch synthetische Tests allein; 1 weiterer Bug durch eigenen `advisor`-Review NACH dem vierten Live-Lauf, bevor irgendetwas committet wurde) | 6 echte Bugs über die Implementierung: (1) `_rolling_median_12m` ankerte das 12M-Fenster am Prognose-Zieldatum statt am letzten bekannten Datum -- für den 12M-Horizont IMMER leer, vom eigenen Konstante-Serie-Test gefangen; (2) ungekappter verschachtelter Residual-Backtest war O(n²) für ~2000-Zeilen-Serien, Live-Lauf nach 20+ Min. ohne Ende abgebrochen; (3) `extrapolation_flag` rief `math.exp()` auf rohen Log-Forecast, `OverflowError` brach einen ~25-Min.-Lauf ab; (4) `mape_eur`/`mdape_eur` exponenzierten denselben Wert ohne Schutz -- NumPy warnt nur, aber eine `inf`-Zeile macht den Mittelwert für die ganze Gruppe unbrauchbar (Report zeigte `2,8×10^50`); (5) erster Fix von (4) filterte nur `~np.isfinite`, übersah aber `exp()`-Werte knapp UNTER der Überlauf-Grenze (z. B. `exp(600)` -- finite, aber absurd) -- derselbe Report zeigte nach Fix (4) weiterhin astronomische MAPE-Werte; (6) `make_baseline` verlangte nur >= 1 Residuum statt >= 2 -- mit genau 1 Residuum sind alle 7 Quantile identisch (`np.quantile([r], q) == r` für jedes `q`), eine scheinsichere Nullbreite-Prognose aus einem einzigen Datenpunkt (exakt die "false certainty", vor der `MIN_OBS`s eigener Docstring warnt). Sichtbar im Live-Report: `n_train=1-2`/Horizont `next` zeigte `Breite 50/80/95% = 0.000` für JEDE Baseline. | (1)+(2) gefixt vor dem ersten Live-Lauf (Konstante-Serie- bzw. eigener Performance-Test); (3)+(4)+(5) durch 3 aufeinanderfolgende Live-DB-Läufe gefunden, jeweils sofort gefixt + Regressionstest + Re-Lauf; (6) durch eigenen `advisor`-Review nach dem vierten (erfolgreichen) Live-Lauf gefunden, noch vor jedem Commit. `MAX_BACKTEST_STEPS=50` (gekappt auf die letzten GEEIGNETEN Mini-Origins, nicht die letzten rohen Zeilenindizes), `extrapolation_flag`-Vergleich bleibt vollständig im Log-Raum, `mape_eur`/`mdape_eur` schliessen jetzt `extrapolation_flag`-markierte Zeilen aus (nicht nur nicht-finite) und zählen sie (`n_mape_excluded`, eigene Report-Spalte), `make_baseline` verlangt jetzt >= 2 Residuen. **G2-Designfrage dem User vorgelegt statt selbst entschieden** (`extrapolation_flag`-Ausschluss nur für MAPE/MdAPE, oder für alle Metriken?): **User-Entscheid 2026-11-10 — auf ALLE Metriken ausweiten** (nicht nur im Report-Header vermerken) — dieselbe Kontamination war in Pinball/Winkler nur weniger sichtbar (Log-Raum dämpft 10^50 auf z. B. 78 statt ~5), nicht behoben, und G2 nennt Pinball-Loss als Haupt-Beat-the-Baseline-Kriterium. Umgesetzt: `extrapolation_exclusion_mask` (umbenannt von `mape_exclusion_mask`) jetzt von `pinball_loss`/`winkler_score`/`coverage`/`median_width`/`mape_eur`/`mdape_eur` gemeinsam genutzt, `n_extrapolation_excluded` (umbenannt von `n_mape_excluded`) als eine Spalte für alle. 4 weitere Tests (gezielter Nachweis, dass Pinball/Winkler/Coverage jetzt auch ausschliessen; "alle Zeilen ausgeschlossen" → NaN statt Crash). `test_forecast_eval.py` von 22 auf 30. Volle Suite 509/509 grün.
+  **Fünfter Live-Report-Lauf** (nach Fix 6 + der Metrik-Ausweitung):
+  **~33 Minuten, fehlerfrei, keine Ausreisser mehr in irgendeiner
+  Spalte** -- `n_train=1-2` ist aus dem "next"-Horizont komplett
+  verschwunden. Finale Kopfzahlen siehe 1.4-Eintrag in §5 und
+  `docs/forecast-baseline-report.md`. **Stufe 1 (1.1-1.5) damit
+  vollständig abgeschlossen** -- noch ausstehend: Senior-Code-Review
+  über den gesamten 1.4+1.5-Diff vor jedem Commit (Standing Rule), dann
+  Gate G1 (Baseline-Zahlen im Review festschreiben).
 
 ---
 
