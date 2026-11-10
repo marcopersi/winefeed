@@ -9,6 +9,10 @@ build/
 *.iws
 .vscode/
 
+# Local venvs (project-root level; priceData/api have their own entries below)
+.venv/
+.venv-forecast/
+
 # OS
 .DS_Store
 Thumbs.db

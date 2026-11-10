@@ -60,6 +60,109 @@ class TestBottleFormat(unittest.TestCase):
         self.assertEqual(b.parse_bottle_format("Château X (2 BT) (1 MAG)"),
                          (2, 7.5))
 
+class BareWordFallbackTest(unittest.TestCase):
+    """Gate-G0 (2026-11-06): hyphenated/spaced compounds ("Double-Magnum")
+    and bare, no-leading-count format mentions ("... Magnum"). Split out
+    of TestBottleFormat to keep each test class under pylint's
+    too-many-public-methods threshold."""
+
+    def test_hyphenated_double_magnum(self):
+        # Confirmed real case: besch-cannes' own descriptions write "1
+        # Double-Magnum ..." -- the hyphen broke the single-token
+        # BOTTLE_FORMATS lookup ("DOUBLEMAGNUM") before this fix, silently
+        # falling through to no hint at all.
+        self.assertEqual(
+            b.parse_bottle_format(None, "1 Double-Magnum CHÂTEAU LARMANDE"),
+            (1, 30.0))
+
+    def test_spaced_double_magnum(self):
+        self.assertEqual(
+            b.parse_bottle_format("Château X 1 Double Magnum"), (1, 30.0))
+
+    def test_bare_magnum_no_leading_count(self):
+        # Confirmed real case: dorotheum never puts a count in front
+        # ("... 95 Parker-Punkte, Magnum"), so this always fell through
+        # to the generic 7.5 dl default -- silently halving
+        # price_per_bottle_eur for every such lot. qty is None (not 1):
+        # no real count was found, so the caller must not fabricate
+        # quantity=1 from this.
+        self.assertEqual(
+            b.parse_bottle_format(
+                "2007 Morillon Zieregg, Weingut Tement, 95 Parker-Punkte,"
+                " Magnum"),
+            (None, 15.0))
+
+    def test_bare_methuselah_no_leading_count(self):
+        self.assertEqual(
+            b.parse_bottle_format("Krug Methuselah"), (None, 60.0))
+
+    def test_bare_demi_not_parsed_sec_collision(self):
+        # Confirmed real collision -- "Demi-Sec" is a standard Champagne/
+        # Vouvray sweetness designation, not a bottle size statement (395
+        # live matches). DEMI/HALF are deliberately NOT in the bare-word
+        # set for this reason.
+        self.assertEqual(
+            b.parse_bottle_format(None, "NV Veuve Clicquot Demi-Sec"),
+            (None, None))
+
+    def test_bare_half_not_parsed_unrelated_text(self):
+        # Confirmed real collision -- "half" turns up in unrelated text
+        # far more often than as a size word ("half sweet", "half dozen",
+        # even non-wine text).
+        self.assertEqual(
+            b.parse_bottle_format("MADEIRA RESERVA SOLERA HALF SWEET 1940"),
+            (None, None))
+
+    def test_bare_balthazar_not_parsed_producer_collision(self):
+        # Confirmed real collision -- Franck Balthazar is a real Cornas
+        # producer (158 live matches); "Balthazar" alone must not be read
+        # as a 120 dl bottle format.
+        self.assertEqual(
+            b.parse_bottle_format("2015 Cornas, Les Chaillots, Franck"
+                                  " Balthazar"),
+            (None, None))
+
+    def test_bare_melchior_not_parsed_brand_collision(self):
+        # Confirmed real collision -- "Don Melchior" is Concha y Toro's
+        # flagship Chilean wine; "Melchior" alone must not be read as a
+        # 180 dl bottle format.
+        self.assertEqual(
+            b.parse_bottle_format("Don Melchior Cabernet Sauvignon 2000"),
+            (None, None))
+
+    def test_bare_dm_not_parsed_productline_collision(self):
+        # Confirmed real collision -- "DM" is a real producer's product-
+        # line code ("Denton Hill Vineyards DM Chardonnay"), not a bottle
+        # format.
+        self.assertEqual(
+            b.parse_bottle_format("DENTON HILL VINEYARDS DM Chardonnay"),
+            (None, None))
+
+    def test_explicit_hint_in_description_wins_over_bare_match_in_name(self):
+        # Structural fix: a bare (low-precision) match in `name` must not
+        # pre-empt a stronger, explicit-count hint sitting in
+        # `description` -- explicit hints are now checked across BOTH
+        # texts before the bare fallback is tried on either.
+        self.assertEqual(
+            b.parse_bottle_format("Krug Methuselah", "(6 BT)"), (6, 7.5))
+
+    def test_bare_jeroboam_still_not_parsed(self):
+        # Deliberately NOT in the bare-word set: Jeroboam has no single dl
+        # value across regions (3 l Champagne vs. 5 l Bordeaux) -- an
+        # explicit leading count/bracket is still required.
+        self.assertEqual(
+            b.parse_bottle_format(None, "1 Jeroboam CHÂTEAU MOUTON ROTHSCHILD"),
+            (None, None))
+
+    def test_bare_imperial_still_not_parsed(self):
+        # Deliberately NOT in the bare-word set: collides with the real
+        # wine brand CVNE "Imperial" (a Rioja Gran Reserva), confirmed
+        # live among winefields' lots -- "Imperial" alone must not be
+        # read as a 60 dl bottle format.
+        self.assertEqual(
+            b.parse_bottle_format("Rioja 'Imperial' Gran Reserva 1988"),
+            (None, None))
+
 
 class TestStripBottleFormat(unittest.TestCase):
     """Confirmed real case: "Sassicaia" vs. "Sassicaia (2 BT)" vs.
@@ -77,6 +180,22 @@ class TestStripBottleFormat(unittest.TestCase):
 
     def test_strips_plain_form(self):
         self.assertEqual(b.strip_bottle_format("Krug 1 Magnum"), "Krug")
+
+    def test_strips_hyphenated_double_magnum(self):
+        # Gate-G0 review fix: confirmed real fragmentation -- parse_
+        # bottle_format already sizes this correctly (30.0 dl via its
+        # own _COMPOUND normalization), but strip_bottle_format left the
+        # hyphenated text in the name, so "1 Double-Magnum CHÂTEAU
+        # LARMANDE" and "CHÂTEAU LARMANDE" resolved to two different
+        # wine_ref_id rows for the same real wine.
+        self.assertEqual(
+            b.strip_bottle_format("1 Double-Magnum CHÂTEAU LARMANDE"),
+            "CHÂTEAU LARMANDE")
+
+    def test_strips_spaced_double_magnum(self):
+        self.assertEqual(
+            b.strip_bottle_format("Château X 1 Double Magnum"),
+            "Château X")
 
     def test_strips_liter_form(self):
         self.assertEqual(b.strip_bottle_format("Petrus 2014 3 Ltr"),
