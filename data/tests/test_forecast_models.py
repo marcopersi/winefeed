@@ -75,7 +75,7 @@ class FitProviderEffectsTest(unittest.TestCase):
 
     def test_recovers_known_offsets_exactly(self):
         self._populate_balanced_design()
-        offsets, report = models.fit_provider_effects(self.conn)
+        offsets, _report = models.fit_provider_effects(self.conn)
 
         expected_mean = sum(self.TRUE_OFFSET.values()) / len(self.TRUE_OFFSET)
         expected = {p: v - expected_mean

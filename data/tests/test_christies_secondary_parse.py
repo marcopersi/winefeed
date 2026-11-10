@@ -6,6 +6,7 @@ Each case here is a real example pulled from the archive (not invented),
 surfaced while investigating the Stufe-1 QTY_ASSUMED finding
 (docs/price-prediction-plan.md).
 """
+# pylint: disable=too-many-public-methods
 import os
 import sys
 import unittest

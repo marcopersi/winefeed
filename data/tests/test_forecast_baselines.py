@@ -1,6 +1,6 @@
 """1.4: forecast.models' four naive baselines + the shared "quantiles
 via empirical residuals" machinery they're built on."""
-import math
+# pylint: disable=protected-access
 import unittest
 
 import numpy as np

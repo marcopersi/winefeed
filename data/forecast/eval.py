@@ -154,7 +154,7 @@ def extrapolation_flag(forecast, train):
         return False
     log_ratio = forecast[0.5] - float(train["y"].iloc[-1])
     lo, hi = _EXTRAPOLATION_LOG_BOUNDS
-    return not (lo <= log_ratio <= hi)
+    return not lo <= log_ratio <= hi
 
 
 def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name):

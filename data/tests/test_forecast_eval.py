@@ -1,6 +1,7 @@
 """1.5: forecast.eval -- rolling-origin splitting (G1), metrics against
 hand-computed values, and the two mandated tests (test_no_lookahead,
 test_metric_known_values)."""
+# pylint: disable=protected-access
 import math
 import os
 import sqlite3
@@ -11,7 +12,6 @@ import numpy as np
 import pandas as pd
 
 import build_db
-from forecast import data as fdata
 from forecast import eval as feval
 from forecast.models import QUANTILE_LEVELS, HORIZON_NEXT, HORIZON_12M
 
@@ -133,8 +133,9 @@ class ExtrapolationFlagTest(unittest.TestCase):
         self.assertTrue(feval.extrapolation_flag(forecast, train))
 
     def test_empty_train_is_not_flagged(self):
+        empty = self._train_with_last_y(0.0).iloc[0:0]
         self.assertFalse(
-            feval.extrapolation_flag(_const_forecast(0.0), train=self._train_with_last_y(0.0).iloc[0:0]))
+            feval.extrapolation_flag(_const_forecast(0.0), train=empty))
 
     def test_extreme_forecast_does_not_overflow(self):
         # Confirmed real crash on the live DB: a "trend" baseline
@@ -186,7 +187,7 @@ class NoLookaheadTest(unittest.TestCase):
         ])
         calls = []
 
-        def spy(train, origin, horizon):
+        def spy(train, origin, _horizon):
             if len(train):
                 calls.append((origin, train["date"].max()))
             return _const_forecast(0.0)
@@ -212,14 +213,14 @@ class NoLookaheadTest(unittest.TestCase):
         ])
         medians = []
 
-        def cheater(train, origin, horizon):
+        def cheater(train, _origin, _horizon):
             if train.empty:
                 return None
             m = float(train["y"].mean())
             return _const_forecast(m)
 
         for horizon in (HORIZON_NEXT, HORIZON_12M):
-            rows, n_candidates, n_insufficient = feval.evaluate_series(
+            rows, n_candidates, _n_insufficient = feval.evaluate_series(
                 df, ("w", 2020, 7.5), cheater, horizon, "2024-01-01",
                 "cheater")
             self.assertGreater(n_candidates, 0)
@@ -431,7 +432,7 @@ class EvaluateZeilenbilanzTest(unittest.TestCase):
             ("2023-02-01", 3.0, "koppe", 1),
         ])
 
-        def sometimes_insufficient(train, origin, horizon):
+        def sometimes_insufficient(train, _origin, _horizon):
             if len(train) < 2:
                 return None
             return _const_forecast(0.0)

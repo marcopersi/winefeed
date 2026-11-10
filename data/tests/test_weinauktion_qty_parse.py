@@ -7,6 +7,7 @@ invented), surfaced after the user pointed out that steinfels always
 states quantity and price per lot -- a gap this function closes
 (docs/price-prediction-plan.md Stufe-1 QTY_ASSUMED investigation, D21).
 """
+# pylint: disable=protected-access,too-many-public-methods
 import os
 import sys
 import unittest

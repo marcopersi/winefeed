@@ -162,21 +162,21 @@ def fit_provider_effects(conn):
 K_MEDIAN = 5
 
 
-def _last_value(sub, target_date):
+def _last_value(sub, _target_date):
     """(a) Last-Value."""
     if sub.empty:
         return None
     return float(sub["y"].iloc[-1])
 
 
-def _median_last_k(sub, target_date, k=K_MEDIAN):
+def _median_last_k(sub, _target_date, k=K_MEDIAN):
     """(b) Median der letzten k Lose."""
     if sub.empty:
         return None
     return float(sub["y"].iloc[-k:].median())
 
 
-def _rolling_median_12m(sub, target_date, months=12):
+def _rolling_median_12m(sub, _target_date, months=12):
     """(c) Gleitender Median 12 M -- the window is relative to ``sub``'s
     OWN last observed date (ignores ``target_date``, same as (a)/(b)):
     "the last 12 months of data we actually have", used as the point
