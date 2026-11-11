@@ -9,6 +9,7 @@ import unittest.mock
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from scipy.stats import norm
 
 from forecast import models
 from forecast.models import HORIZON_NEXT, HORIZON_12M, QUANTILE_LEVELS
@@ -92,6 +93,72 @@ class PredictionIntervalIncludesMeasurementNoiseTest(unittest.TestCase):
         for h in (1, 6, 24):
             var = res.get_forecast(h).var_pred_mean.iloc[-1]
             self.assertGreaterEqual(var, sigma2_irregular)
+
+
+class WithinMonthLotVarianceTest(unittest.TestCase):
+    """Copilot review, Finding 2 (2026-11-11): _monthly_series averages
+    away within-month lot scatter before the Kalman model ever sees
+    it, understating the prediction interval for an individual lot.
+    ``_within_month_lot_variance`` recovers it from ``train`` itself
+    when there's enough of it, falling back to a global constant
+    otherwise (most series: median size 2, so almost never)."""
+
+    def test_fallback_used_when_too_few_multi_lot_months(self):
+        df = _random_walk_series(24, sigma_eta=0.05, sigma_eps=0.1, seed=3)
+        variance, used_fallback = models._within_month_lot_variance(df)
+        self.assertTrue(used_fallback)
+        self.assertEqual(variance, models._WITHIN_MONTH_LOT_VARIANCE_FALLBACK)
+
+    def test_uses_pooled_variance_from_train_when_enough_multi_lot_months(
+            self):
+        # 3 months, 2 lots each, every cell hand-picked to have
+        # variance exactly 1.0 (ddof=0: deviations +-1.0 from the
+        # cell's own mean) -- the pooled estimate must be exactly 1.0
+        # too, not the fallback constant.
+        rows = []
+        for month, (a, b) in enumerate(
+                [(0.0, 2.0), (1.0, 3.0), (5.0, 7.0)], start=1):
+            date = f"2020-{month:02d}-01"
+            rows.append((date, a, "koppe", 1))
+            rows.append((date, b, "koppe", 1))
+        df = _series(rows)
+        variance, used_fallback = models._within_month_lot_variance(df)
+        self.assertFalse(used_fallback)
+        self.assertAlmostEqual(variance, 1.0, places=9)
+
+
+class LocalLevelForecastIncludesWithinMonthVarianceTest(unittest.TestCase):
+    """Confirms local_level_forecast actually ADDS
+    _within_month_lot_variance's result to the model's own
+    var_pred_mean before building quantiles -- not just that the
+    helper function computes the right number in isolation."""
+
+    def test_interval_width_matches_model_variance_plus_within_month_term(
+            self):
+        df = _random_walk_series(60, 0.05, 0.1, seed=2, freq="30D",
+                                 start="2018-01-01")
+        origin = pd.Timestamp(
+            df["date"].iloc[-1].year, df["date"].iloc[-1].month,
+            1) + pd.DateOffset(months=1)
+
+        with unittest.mock.patch.object(
+                models, "_within_month_lot_variance",
+                return_value=(0.5, False)):
+            quantiles, flags = models.local_level_forecast(
+                df, origin, HORIZON_NEXT)
+        self.assertFalse(flags["within_month_variance_fallback"])
+
+        # Independently recompute the model's OWN forecast variance --
+        # same style as PredictionIntervalIncludesMeasurementNoiseTest.
+        monthly = models._monthly_series(df)
+        res = sm.tsa.UnobservedComponents(
+            monthly, level="local level").fit(disp=False)
+        h = models._months_between(monthly.index[-1], origin)
+        model_var = float(res.get_forecast(h).var_pred_mean.iloc[-1])
+
+        expected_sd = (model_var + 0.5) ** 0.5
+        actual_sd = (quantiles[0.9] - quantiles[0.1]) / (2 * norm.ppf(0.9))
+        self.assertAlmostEqual(actual_sd, expected_sd, places=6)
 
 
 class LocalLevelForecastTest(unittest.TestCase):
@@ -235,6 +302,21 @@ class MakeLocalLevelForecasterTest(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertEqual(forecaster.counters["n_sigma2_irregular_clamped"], 1)
         self.assertEqual(forecaster.counters["n_sigma2_level_clamped"], 0)
+
+    def test_within_month_fallback_counter_increments_on_a_sparse_series(
+            self):
+        # The common case: every month in this fixture has exactly one
+        # lot, so the fallback constant is always used.
+        forecaster = models.make_local_level_forecaster()
+        df = _random_walk_series(60, 0.05, 0.1, seed=2, freq="30D",
+                                 start="2018-01-01")
+        origin = pd.Timestamp(
+            df["date"].iloc[-1].year, df["date"].iloc[-1].month,
+            1) + pd.DateOffset(months=1)
+        result = forecaster(df, origin, HORIZON_NEXT)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(
+            forecaster.counters["n_within_month_variance_fallback"], 1)
 
     def test_never_returns_the_fit_failed_sentinel_itself(self):
         forecaster = models.make_local_level_forecaster()

@@ -473,6 +473,170 @@ class HouseOffsetInvarianceTest(unittest.TestCase):
                 feval.median_width(shifted, level), places=9)
 
 
+class ApplyOriginOffsetTest(unittest.TestCase):
+    """G1 fix (Copilot review 2026-11-11, Finding 1):
+    ``eval._apply_origin_offset`` undoes the full-data house offset
+    already baked into ``y`` (``y + house_offset`` recovers the raw log
+    price) and reapplies a point-in-time one instead."""
+
+    def test_undoes_full_offset_and_reapplies_point_in_time(self):
+        df = pd.DataFrame({
+            "y": [1.0 - 0.4, 2.0 - 0.4],
+            "house_offset": [0.4, 0.4],
+            "provider": ["koppe", "langtons"],
+        })
+        corrected = feval._apply_origin_offset(
+            df, {"koppe": 0.1, "langtons": 0.3})
+        self.assertAlmostEqual(corrected["y"].iloc[0], 1.0 - 0.1, places=9)
+        self.assertAlmostEqual(corrected["y"].iloc[1], 2.0 - 0.3, places=9)
+
+    def test_missing_provider_gets_zero_offset(self):
+        df = pd.DataFrame({"y": [1.0 - 0.4], "house_offset": [0.4],
+                           "provider": ["unknown"]})
+        corrected = feval._apply_origin_offset(df, {"koppe": 0.1})
+        self.assertAlmostEqual(corrected["y"].iloc[0], 1.0, places=9)
+
+    def test_none_offset_by_provider_is_a_no_op(self):
+        # origin_offsets not supplied at all to evaluate_series -- the
+        # pre-fix behaviour, for callers whose df was never house-
+        # adjusted in the first place (e.g. every other test in this
+        # file's synthetic fixtures).
+        df = pd.DataFrame({"y": [0.6], "house_offset": [0.4],
+                           "provider": ["koppe"]})
+        corrected = feval._apply_origin_offset(df, None)
+        self.assertIs(corrected, df)
+
+    def test_empty_frame_is_a_no_op(self):
+        df = pd.DataFrame({"y": [], "house_offset": [], "provider": []})
+        corrected = feval._apply_origin_offset(df, {"koppe": 0.1})
+        self.assertTrue(corrected.empty)
+
+
+class OriginOffsetLeakageTest(unittest.TestCase):
+    """G1 fix, Finding 1's own failure mode as a regression test:
+    before this fix, EVERY origin's train/targets were adjusted with
+    one single, full-data-fit offset, regardless of which origin was
+    being scored -- i.e. partly informed by data that origin could not
+    yet have seen. This confirms each origin now only ever sees ITS
+    OWN entry in ``origin_offsets``, never a later origin's."""
+
+    def test_each_origin_sees_only_its_own_point_in_time_offset(self):
+        full_offset = 0.4  # the (buggy) full-data offset data.py bakes in
+        df = pd.DataFrame({
+            "date": pd.to_datetime(
+                ["2021-06-01", "2022-02-01", "2022-08-01"]),
+            "y": [1.0 - full_offset, 2.0 - full_offset, 3.0 - full_offset],
+            "provider": ["koppe"] * 3,
+            "qty": [1, 1, 1],
+            "house_offset": [full_offset] * 3,
+        })
+        origin_offsets = {
+            pd.Timestamp("2022-01-01"): {"koppe": 0.1},
+            pd.Timestamp("2022-07-01"): {"koppe": 0.9},
+        }
+        seen_train_by_origin = {}
+
+        def spy(train, origin, _horizon):
+            if len(train):
+                seen_train_by_origin.setdefault(origin, list(train["y"]))
+
+        for horizon in (HORIZON_NEXT, HORIZON_12M):
+            feval.evaluate_series(
+                df, ("w", 2020, 7.5), spy, horizon, "2023-01-01", "spy",
+                origin_offsets=origin_offsets)
+
+        # Origin 2022-01-01's only training row is the raw-y=1.0 row --
+        # corrected with THIS origin's own 0.1 offset, not the later
+        # origin's 0.9, and not the un-corrected full_offset=0.4.
+        self.assertAlmostEqual(
+            seen_train_by_origin[pd.Timestamp("2022-01-01")][0],
+            1.0 - 0.1, places=9)
+        # Origin 2022-07-01's training includes the raw-y=2.0 row,
+        # corrected with 0.9 -- never 0.1, never 0.4.
+        self.assertAlmostEqual(
+            seen_train_by_origin[pd.Timestamp("2022-07-01")][-1],
+            2.0 - 0.9, places=9)
+
+
+class PairedComparisonTest(unittest.TestCase):
+    """Copilot review, Finding 3 (Low): ``eval.paired_comparison``
+    restricts every model's rows to the target lots EVERY model in the
+    comparison actually scored."""
+
+    def _row(self, series_key, origin, horizon, target_date, q05):
+        return {
+            "series_key": series_key, "origin": origin, "horizon": horizon,
+            "target_date": target_date, "y_true": 0.0,
+            "extrapolation_flag": False,
+            "q0.025": q05 - 2, "q0.1": q05 - 1, "q0.25": q05 - 0.5,
+            "q0.5": q05, "q0.75": q05 + 0.5, "q0.9": q05 + 1,
+            "q0.975": q05 + 2,
+        }
+
+    def test_restricts_to_the_common_key_intersection(self):
+        common_key = ("w", pd.Timestamp("2022-01-01"), HORIZON_NEXT,
+                     pd.Timestamp("2022-02-01"))
+        only_a_key = ("w", pd.Timestamp("2022-07-01"), HORIZON_NEXT,
+                     pd.Timestamp("2022-08-01"))
+        rows_a = pd.DataFrame([
+            self._row(*common_key, q05=0.0),
+            self._row(*only_a_key, q05=5.0),
+        ])
+        rows_b = pd.DataFrame([self._row(*common_key, q05=1.0)])
+
+        result = feval.paired_comparison({"a": rows_a, "b": rows_b})
+        self.assertEqual(result["a"]["n_own"], 2)
+        self.assertEqual(result["a"]["n_paired"], 1)
+        self.assertEqual(result["b"]["n_own"], 1)
+        self.assertEqual(result["b"]["n_paired"], 1)
+        self.assertAlmostEqual(
+            result["a"]["pinball_q0.5_paired"],
+            feval.pinball_loss(rows_a.iloc[[0]], 0.5), places=9)
+        self.assertAlmostEqual(
+            result["b"]["pinball_q0.5_paired"],
+            feval.pinball_loss(rows_b, 0.5), places=9)
+
+    def test_empty_input_is_an_empty_dict(self):
+        self.assertEqual(feval.paired_comparison({}), {})
+
+
+class WriteBaselineReportPairedSectionTest(unittest.TestCase):
+    def test_paired_section_and_return_value_with_two_models(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(build_db.SCHEMA)
+        builder = build_db.Builder(conn)
+        aid = builder.add_auction("koppe", "1", "x", None, "EUR", "HAMMER")
+        import datetime
+        recent = (datetime.date.today() - datetime.timedelta(days=10)
+                 ).isoformat()
+        lot_id = builder.add_lot(aid, {
+            "lot_no": "1", "wine": "test-wine", "wine_ref_id": 1,
+            "bottle_size_dl": 7.5, "quantity": 1, "lot_date": recent,
+            "sold": 1, "hammer_price": 100.0})
+        conn.execute(
+            "UPDATE lots SET lot_kind='SINGLE', vintage_status='STRUCTURED',"
+            " vintage_final=2015, price_per_bottle_eur=100.0 WHERE id=?",
+            (lot_id,))
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                out = os.path.join(d, "report.md")
+                forecasters = {
+                    "a": lambda train, o, h: _const_forecast(0.0),
+                    "b": lambda train, o, h: _const_forecast(0.1),
+                }
+                rows = feval.write_baseline_report(
+                    conn, forecasters, "2024-01-01", out)
+                with open(out, encoding="utf-8") as f:
+                    text = f.read()
+            self.assertIn("Paired-Vergleich", text)
+            self.assertEqual(
+                set(rows),
+                {("a", HORIZON_NEXT), ("a", HORIZON_12M),
+                 ("b", HORIZON_NEXT), ("b", HORIZON_12M)})
+        finally:
+            conn.close()
+
+
 class EvaluateZeilenbilanzTest(unittest.TestCase):
     def test_candidates_equals_forecast_plus_insufficient(self):
         df = _series([
