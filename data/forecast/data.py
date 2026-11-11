@@ -13,18 +13,24 @@ realised EUR price for a specific lot once its house has a nonzero
 offset -- it's that price net of its house's own average effect. Any
 caller that needs the real, unadjusted price must read
 ``price_per_bottle_eur`` directly, not reconstruct it from ``y``.
+
+``house_offset`` (the same value already subtracted into ``y``) is its
+own returned column too -- not redundant: ``forecast/eval.py``'s
+rolling-origin harness needs to UNDO this full-data offset and reapply
+a point-in-time one per origin (G1 fix, Copilot review 2026-11-11), and
+can only do that if ``y + house_offset`` recovers the raw log price.
 """
 import numpy as np
 import pandas as pd
 
-_COLUMNS = ["date", "y", "provider", "qty"]
+_COLUMNS = ["date", "y", "provider", "qty", "house_offset"]
 
 
 def load_series(conn, wine_ref_id, vintage, size_class):
     """Load one ``(wine_ref_id, vintage, size_class)`` series as a
-    DataFrame with columns ``date, y, provider, qty`` (D2/D8: ``y =
-    ln(price_per_bottle_eur) - house_offset``, see this module's own
-    docstring).
+    DataFrame with columns ``date, y, provider, qty, house_offset``
+    (D2/D8: ``y = ln(price_per_bottle_eur) - house_offset``, see this
+    module's own docstring).
 
     Sorted by ``(date, lot_id)`` for a deterministic row order (G5):
     ``date`` alone repeats within a series whenever two lots sold on the

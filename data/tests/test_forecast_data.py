@@ -44,7 +44,9 @@ class LoadSeriesTest(unittest.TestCase):
     def test_empty_series_returns_empty_frame_with_right_columns(self):
         df = fdata.load_series(self.conn, 999, 2015, 7.5)
         self.assertEqual(len(df), 0)
-        self.assertEqual(list(df.columns), ["date", "y", "provider", "qty"])
+        self.assertEqual(
+            list(df.columns),
+            ["date", "y", "provider", "qty", "house_offset"])
 
     def test_single_row(self):
         self._add_lot(self.koppe_id, price=150.0, qty=2)
@@ -118,6 +120,21 @@ class LoadSeriesTest(unittest.TestCase):
         self._add_lot(self.langtons_id, price=100.0)
         df = fdata.load_series(self.conn, 1, 2015, 7.5)
         self.assertAlmostEqual(df["y"].iloc[0], math.log(100.0))
+
+    def test_house_offset_column_lets_the_raw_log_price_be_recovered(self):
+        # G1 fix (Copilot review, Finding 1): forecast/eval.py needs to
+        # undo this offset per rolling origin -- only possible if
+        # y + house_offset recovers ln(price_per_bottle_eur) exactly.
+        self._add_lot(self.langtons_id, price=100.0)
+        provider_id = self.conn.execute(
+            "SELECT id FROM providers WHERE name='langtons'").fetchone()[0]
+        self.conn.execute(
+            "INSERT INTO provider_effects(provider_id, offset, n_obs)"
+            " VALUES (?, 0.5, 10)", (provider_id,))
+        df = fdata.load_series(self.conn, 1, 2015, 7.5)
+        self.assertAlmostEqual(df["house_offset"].iloc[0], 0.5)
+        self.assertAlmostEqual(
+            df["y"].iloc[0] + df["house_offset"].iloc[0], math.log(100.0))
 
     def test_different_wine_ref_id_is_a_different_series(self):
         self._add_lot(self.koppe_id, wine_ref_id=1, price=100.0)

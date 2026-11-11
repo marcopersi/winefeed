@@ -38,6 +38,23 @@ add the row's own provider's offset back first, which this module's
 rows do not carry today (only the already-adjusted ``y_true``/
 quantiles). Flag this if Stufe 5's serving layer, or G7's fan-charts,
 ever read an absolute EUR value out of here directly.
+
+G1 fix (Copilot review, 2026-11-11, Finding 1): ``forecast/data.py``'s
+loaders bake in a SINGLE house offset fit once on the FULL
+``forecast_input`` table -- fine for live serving (no held-out future
+to leak into), but wrong for THIS module's rolling-origin evaluation:
+every origin's training AND target rows would be adjusted using a
+provider offset partly estimated from data that origin could not yet
+have seen. ``evaluate``/``evaluate_series`` take an optional
+``origin_offsets`` mapping (``{origin: {provider: offset}}``, one
+entry per ``half_year_origins`` origin, each fit with ``models.
+fit_provider_effects(conn, cutoff=origin)``) and use it to UNDO the
+global offset and reapply the point-in-time one, per origin, via
+``_apply_origin_offset``. ``write_baseline_report`` is the only
+production caller and always builds + passes this; direct callers
+(tests) that omit it get the pre-fix behaviour unchanged (``df``'s own
+``y``, as loaded) -- correct for synthetic test data that was never
+house-adjusted to begin with.
 """
 import math
 
@@ -45,7 +62,8 @@ import numpy as np
 import pandas as pd
 
 from . import data
-from .models import QUANTILE_LEVELS, HORIZON_NEXT, HORIZON_12M
+from .models import (QUANTILE_LEVELS, HORIZON_NEXT, HORIZON_12M,
+                     fit_provider_effects)
 
 # D4: the three nominal central intervals, as (lower_q, upper_q, alpha)
 # -- alpha is the two-sided miss rate (1 - nominal coverage), the
@@ -176,7 +194,27 @@ def extrapolation_flag(forecast, train):
     return not lo <= log_ratio <= hi
 
 
-def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name):
+def _apply_origin_offset(df, offset_by_provider):
+    """G1 fix (Finding 1): ``df``'s own ``y`` already has the FULL-data
+    house offset baked in (``forecast/data.py``) -- undo that
+    (``y + house_offset`` recovers the raw log price) and reapply the
+    point-in-time ``offset_by_provider`` (fit using only data before
+    this origin) instead. A missing provider (no offset estimable yet
+    as of this origin) gets 0, same COALESCE convention ``data.py``
+    itself uses. A no-op when ``offset_by_provider`` is ``None``
+    (``origin_offsets`` not supplied at all -- the pre-fix behaviour,
+    for callers whose ``df`` was never house-adjusted in the first
+    place)."""
+    if offset_by_provider is None or df.empty:
+        return df
+    corrected = df.copy()
+    point_in_time = df["provider"].map(offset_by_provider).fillna(0.0)
+    corrected["y"] = df["y"] + df["house_offset"] - point_in_time
+    return corrected
+
+
+def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name,
+                    origin_offsets=None):
     """Run one forecaster against one series' rolling origins, for one
     horizon. Returns ``(rows, n_candidates, n_insufficient)`` -- ``rows``
     is a list of per-scored-target-observation dicts (one row per
@@ -184,7 +222,12 @@ def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name):
     at most one row per origin but "12m" can contribute several);
     ``n_candidates``/``n_insufficient`` are counted per ORIGIN (G4's
     Zeilenbilanz unit), not per target row, since a forecaster is called
-    once per origin regardless of how many target rows follow."""
+    once per origin regardless of how many target rows follow.
+
+    ``origin_offsets`` (G1 fix, Finding 1): ``{origin: {provider:
+    offset}}`` -- when given, both ``train`` and ``targets`` are
+    re-adjusted to that origin's own point-in-time house offsets (see
+    ``_apply_origin_offset``) before the forecaster ever sees them."""
     rows = []
     n_candidates = 0
     n_insufficient = 0
@@ -194,6 +237,10 @@ def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name):
         train, targets = split(df, origin, horizon)
         if targets.empty:
             continue
+        if origin_offsets is not None:
+            offset_by_provider = origin_offsets.get(origin, {})
+            train = _apply_origin_offset(train, offset_by_provider)
+            targets = _apply_origin_offset(targets, offset_by_provider)
         n_candidates += 1
         forecast = forecaster(train, origin, horizon)
         if forecast is None:
@@ -223,17 +270,22 @@ def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name):
     return rows, n_candidates, n_insufficient
 
 
-def evaluate(series_iter, forecaster, horizon, as_of, model_name):
+def evaluate(series_iter, forecaster, horizon, as_of, model_name,
+            origin_offsets=None):
     """``evaluate_series`` over every ``(series_key, df)`` pair (e.g.
     ``data.load_all_series(conn)``). Returns ``(rows_df, tally)``;
     ``tally`` has ``n_candidates``/``n_forecast``/``n_insufficient``,
     which must sum as ``n_forecast + n_insufficient == n_candidates``
-    (G4's Zeilenbilanz, asserted by the caller/report, not here)."""
+    (G4's Zeilenbilanz, asserted by the caller/report, not here).
+
+    ``origin_offsets``: forwarded to ``evaluate_series`` unchanged (see
+    its own docstring, G1 fix / Finding 1)."""
     rows = []
     n_candidates = n_insufficient = 0
     for series_key, df in series_iter:
         s_rows, s_cand, s_insuff = evaluate_series(
-            df, series_key, forecaster, horizon, as_of, model_name)
+            df, series_key, forecaster, horizon, as_of, model_name,
+            origin_offsets=origin_offsets)
         rows.extend(s_rows)
         n_candidates += s_cand
         n_insufficient += s_insuff
@@ -434,6 +486,58 @@ def summarize(rows_df):
 
 
 # --------------------------------------------------------------------------- #
+# Paired comparison -- Copilot review, Finding 3 (Low, 2026-11-11).
+# --------------------------------------------------------------------------- #
+
+_PAIR_KEY_COLS = ["series_key", "origin", "horizon", "target_date"]
+
+
+def _row_keys(rows_df):
+    if rows_df.empty:
+        return set()
+    return set(map(tuple, rows_df[_PAIR_KEY_COLS].itertuples(index=False)))
+
+
+def paired_subset(rows_df, keys):
+    """``rows_df`` restricted to rows whose ``_PAIR_KEY_COLS`` tuple is
+    in ``keys`` -- see ``paired_comparison``'s own docstring."""
+    if rows_df.empty or not keys:
+        return rows_df.iloc[0:0]
+    row_keys = list(map(tuple, rows_df[_PAIR_KEY_COLS].itertuples(index=False)))
+    return rows_df[[k in keys for k in row_keys]]
+
+
+def paired_comparison(rows_by_model):
+    """Copilot review finding: comparing models' Pinball-Loss over EACH
+    model's own scored rows doesn't establish a like-for-like
+    improvement when their INSUFFICIENT_DATA criteria differ --
+    ``local_level`` has no backtest-residual requirement the way the
+    1.4 baselines do, so it typically scores a different (and larger)
+    set of target lots than they do. This restricts every model's rows
+    to the INTERSECTION of target keys every model in ``rows_by_model``
+    actually scored, and reports Pinball q0.5 on exactly that common
+    subset alongside each model's own (unrestricted) N -- so the paired
+    AC and each model's availability are both visible, never conflated
+    into one number.
+
+    Returns ``{model_name: {"n_own", "n_paired", "pinball_q0.5_paired"}}``;
+    empty dict for empty input (no models to pair)."""
+    if not rows_by_model:
+        return {}
+    key_sets = [_row_keys(df) for df in rows_by_model.values()]
+    common = set.intersection(*key_sets) if key_sets else set()
+    out = {}
+    for name, df in rows_by_model.items():
+        paired = paired_subset(df, common)
+        out[name] = {
+            "n_own": len(df),
+            "n_paired": len(paired),
+            "pinball_q0.5_paired": pinball_loss(paired, 0.5),
+        }
+    return out
+
+
+# --------------------------------------------------------------------------- #
 # Report -- 1.5 AC: "Baseline-Report als Tabelle in
 # docs/forecast-baseline-report.md (reproduzierbar per Befehl)".
 # --------------------------------------------------------------------------- #
@@ -465,14 +569,42 @@ _REPORT_HEADER = (
     "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
 
 
+def _fit_origin_offsets(conn, as_of):
+    """G1 fix (Finding 1): point-in-time provider offsets for every
+    origin ``evaluate_series`` scores -- one global refit per origin
+    (``fit_provider_effects`` is already a single regression over every
+    series at once, not something to repeat per series), shared across
+    every model and both horizons in this report run."""
+    offsets = {}
+    for origin in half_year_origins(as_of):
+        off_df, _report = fit_provider_effects(conn, cutoff=origin)
+        offsets[origin] = dict(zip(off_df["provider"], off_df["offset"]))
+    return offsets
+
+
 def write_baseline_report(conn, forecasters, as_of, path):
     """Runs every ``{name: forecaster}`` entry over every series in
     ``conn`` (G6: caller opens ``conn`` read-only), for both horizons,
     and writes a Markdown table to ``path``. 1.5 ships this with
     ``forecasters`` normally empty (no baseline exists yet, see 1.4);
     the scaffold still needs to run cleanly end-to-end so 1.4 only has
-    to add dict entries, not touch this function."""
+    to add dict entries, not touch this function.
+
+    Returns ``{(model_name, horizon): rows_df}`` for every model/horizon
+    run -- not used by the Markdown output itself, but lets a caller
+    (e.g. an ad-hoc Gate-G2 analysis script) reuse this one expensive
+    pass over the live DB instead of re-querying it (G5: reproducible
+    per command, without re-running the whole report to get at the
+    same rows twice).
+
+    G1 fix (Finding 1): house offsets are refit per origin via
+    ``_fit_origin_offsets`` (shared across every model/horizon here) and
+    passed to ``evaluate`` as ``origin_offsets`` -- see that module's
+    own docstring. Finding 3: a paired comparison section (restricted
+    to the target lots EVERY model actually scored) follows the normal
+    per-model tables, once per horizon, when more than one model ran."""
     series = data.load_all_series(conn)
+    origin_offsets = _fit_origin_offsets(conn, as_of) if forecasters else {}
     lines = [
         "# Forecast Baseline Report",
         "",
@@ -484,14 +616,16 @@ def write_baseline_report(conn, forecasters, as_of, path):
         lines.append(
             "_Keine Modelle registriert (1.5-Geruest; Baselines folgen"
             " in 1.4)._")
+    rows_by_model_horizon = {}
     for name, forecaster in forecasters.items():
         lines.append(f"## {name}")
         lines.append("")
         for horizon in (HORIZON_NEXT, HORIZON_12M):
             rows_df, tally = evaluate(series, forecaster, horizon, as_of,
-                                      name)
+                                      name, origin_offsets=origin_offsets)
             assert (tally["n_forecast"] + tally["n_insufficient"]
                     == tally["n_candidates"]), tally
+            rows_by_model_horizon[(name, horizon)] = rows_df
             summary = summarize(rows_df)
             lines.append(f"### Horizon: {horizon}")
             lines.append("")
@@ -507,5 +641,31 @@ def write_baseline_report(conn, forecasters, as_of, path):
             for p, m in sorted(summary["by_provider"].items()):
                 lines.append(_format_metrics_row(p, m))
             lines.append("")
+    if len(forecasters) > 1:
+        lines.append("## Paired-Vergleich (gemeinsame Zielmengen)")
+        lines.append("")
+        lines.append(
+            "_Finding 3 (Copilot review 2026-11-11): verschiedene Modelle"
+            " scoren unterschiedliche Ziel-Lose (unterschiedliche"
+            " INSUFFICIENT_DATA-Kriterien). Diese Tabelle beschränkt"
+            " Pinball q0.5 auf die Schnittmenge der Ziel-Lose, die JEDES"
+            " Modell tatsächlich erfolgreich prognostiziert hat, und"
+            " zeigt zusätzlich die eigene (ungekürzte) N jedes Modells._")
+        lines.append("")
+        for horizon in (HORIZON_NEXT, HORIZON_12M):
+            pairs = paired_comparison(
+                {n: rows_by_model_horizon[(n, horizon)] for n in forecasters})
+            lines.append(f"### Horizon: {horizon}")
+            lines.append("")
+            lines.append("| Modell | n (eigen) | n (paired) | "
+                         "Pinball q0.5 (paired) |")
+            lines.append("|---|---|---|---|")
+            for name in forecasters:
+                p = pairs[name]
+                lines.append(
+                    f"| {name} | {p['n_own']} | {p['n_paired']} | "
+                    f"{p['pinball_q0.5_paired']:.4f} |")
+            lines.append("")
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
+    return rows_by_model_horizon
