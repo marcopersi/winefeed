@@ -98,6 +98,27 @@ class LoadSeriesTest(unittest.TestCase):
         df = fdata.load_series(self.conn, 1, 2015, 7.5)
         self.assertEqual(df["provider"].iloc[0], "langtons")
 
+    def test_house_offset_is_subtracted_from_y(self):
+        # D8 (User decision, 2026-11-11): y is house-adjusted --
+        # ln(price) minus the persisted provider_effects.offset for
+        # that lot's own provider.
+        self._add_lot(self.langtons_id, price=100.0)
+        provider_id = self.conn.execute(
+            "SELECT id FROM providers WHERE name='langtons'").fetchone()[0]
+        self.conn.execute(
+            "INSERT INTO provider_effects(provider_id, offset, n_obs)"
+            " VALUES (?, 0.5, 10)", (provider_id,))
+        df = fdata.load_series(self.conn, 1, 2015, 7.5)
+        self.assertAlmostEqual(df["y"].iloc[0], math.log(100.0) - 0.5)
+
+    def test_provider_with_no_persisted_offset_is_unadjusted(self):
+        # No provider_effects row at all for this provider (e.g. too
+        # few observations for fit_provider_effects to include it) --
+        # COALESCE to 0, not a crash or a NULL y.
+        self._add_lot(self.langtons_id, price=100.0)
+        df = fdata.load_series(self.conn, 1, 2015, 7.5)
+        self.assertAlmostEqual(df["y"].iloc[0], math.log(100.0))
+
     def test_different_wine_ref_id_is_a_different_series(self):
         self._add_lot(self.koppe_id, wine_ref_id=1, price=100.0)
         self._add_lot(self.koppe_id, wine_ref_id=2, price=9999.0)
@@ -166,6 +187,19 @@ class LoadAllSeriesTest(unittest.TestCase):
         sizes = {key: len(df) for key, df in out}
         self.assertEqual(
             sizes, {(1, 2015, 7.5): 2, (1, 2016, 7.5): 1, (2, 2015, 7.5): 1})
+
+    def test_house_offset_is_subtracted_from_y(self):
+        # D8 (User decision, 2026-11-11): same house-adjustment as
+        # load_series, applied here too.
+        self._add_lot(1, 2015, 7.5, 100.0)
+        provider_id = self.conn.execute(
+            "SELECT id FROM providers WHERE name='koppe'").fetchone()[0]
+        self.conn.execute(
+            "INSERT INTO provider_effects(provider_id, offset, n_obs)"
+            " VALUES (?, 0.5, 10)", (provider_id,))
+        out = dict(fdata.load_all_series(self.conn))
+        self.assertAlmostEqual(
+            out[(1, 2015, 7.5)]["y"].iloc[0], math.log(100.0) - 0.5)
 
     def test_matches_load_series_for_the_same_key(self):
         self._add_lot(1, 2015, 7.5, 100.0,

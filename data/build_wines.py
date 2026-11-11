@@ -45,6 +45,15 @@ def run(conn):
     _backfill_wine_ref(conn)
     _match_varieties(conn)
     _link_origins(conn)
+    # _persist_provider_effects (D8) deliberately does NOT run here --
+    # see build_db.py's own call site. fit_provider_effects reads
+    # forecast_input, which also needs price_per_bottle_eur (0.5) and
+    # the OUTLIER/DUP_CANDIDATE/QTY_SUSPECT flags (0.6), neither of
+    # which exist yet at this point in the pipeline (build_db.py's
+    # main() calls resolve_wines() = this function BEFORE
+    # _fill_price_per_bottle/_flag_price_outliers). Confirmed real bug:
+    # running it here persisted zero rows against the live DB --
+    # forecast_input was still entirely empty every time this ran.
 
 
 # --------------------------------------------------------------------------- #

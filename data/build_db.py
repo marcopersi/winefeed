@@ -49,6 +49,7 @@ DB_PATH = os.environ.get(
 # --------------------------------------------------------------------------- #
 
 SCHEMA = """
+DROP TABLE IF EXISTS provider_effects;
 DROP TABLE IF EXISTS wine_varieties;
 DROP TABLE IF EXISTS wine_origin_mappings;
 DROP TABLE IF EXISTS wine_alias_resolutions;
@@ -291,6 +292,23 @@ CREATE TABLE fx_rates (
   source   TEXT NOT NULL,
   PRIMARY KEY (currency, date)
 ) WITHOUT ROWID;
+
+-- D8/D9 (price-prediction-plan.md): house/lot effects, fixed-effects
+-- estimated once over all of forecast_input (forecast/models.py's
+-- fit_provider_effects) and persisted here so Stufe 1's baselines and
+-- Stufe 2's Local-Level model can both subtract the SAME house offset
+-- from `y` before fitting ("vorher herausrechnen, Rest geht ins
+-- Kalman-Modell") -- not recomputed ad hoc inside either model family,
+-- which would risk the two drifting onto different offsets. Populated
+-- by build_wines.py (same split as wine_alias_observations/
+-- wine_varieties above: schema lives here, population there), not by
+-- the forecast package itself (G6: forecast/ is read-only on the
+-- master DB).
+CREATE TABLE provider_effects (
+  provider_id INTEGER PRIMARY KEY REFERENCES providers(id),
+  offset      REAL NOT NULL,
+  n_obs       INTEGER NOT NULL
+);
 
 CREATE INDEX idx_lots_auction ON lots(auction_id);
 CREATE INDEX idx_lots_wine ON lots(wine);
@@ -4434,6 +4452,16 @@ def _build(conn, args):
         _flag_duplicate_lots(conn)
         # _flag_price_outliers needs price_per_bottle_eur from this step.
         _flag_price_outliers(conn)
+        # D8/D9 (price-prediction-plan.md): persist house offsets for
+        # Stufe 1/2's models (forecast/data.py's house-adjusted `y`).
+        # Must run here, not inside resolve_wines() -- confirmed real
+        # bug: fit_provider_effects reads forecast_input, which also
+        # needs price_per_bottle_eur (0.5) and the OUTLIER/DUP_CANDIDATE/
+        # QTY_SUSPECT flags (0.6) that don't exist yet at the point
+        # resolve_wines() runs (before this block); persisting there
+        # wrote zero rows every time against the live DB, since
+        # forecast_input was still entirely empty.
+        _persist_provider_effects(conn)
 
     _record_build_metadata(conn)
 
@@ -5229,6 +5257,38 @@ def _check_duplicate_lot_numbers(conn):
             seen[key].add(content)
             source_dups += 1
     return load_dups, source_dups
+
+
+def _persist_provider_effects(conn):
+    """D8/D9 (price-prediction-plan.md): persists
+    ``forecast.models.fit_provider_effects``' house offsets into
+    ``provider_effects`` so Stufe 1's baselines and Stufe 2's
+    Local-Level model both subtract the SAME house offset from `y`
+    (``forecast/data.py``'s ``load_series``/``load_all_series``)
+    instead of each model family computing its own -- which would risk
+    the two drifting onto different offsets, or one adjusting and the
+    other not.
+
+    Must run after 0.5/0.6 (price_per_bottle_eur + OUTLIER/DUP_CANDIDATE/
+    QTY_SUSPECT flags) -- see this function's own call site for the
+    confirmed real bug this fixes (an earlier version lived inside
+    build_wines.run(), which executes before those two steps, so
+    forecast_input was always still empty there). Replaces the table
+    wholesale each build (``DELETE`` then re-``INSERT``) -- these
+    offsets are a function of the CURRENT ``forecast_input`` contents,
+    not an incremental or historical record to append to."""
+    from forecast.models import fit_provider_effects
+    offsets, _report = fit_provider_effects(conn)
+    conn.execute("DELETE FROM provider_effects")
+    if offsets.empty:
+        return
+    provider_ids = dict(conn.execute("SELECT name, id FROM providers"))
+    rows = [(provider_ids[p], float(off), int(n))
+            for p, off, n in offsets.itertuples(index=False)
+            if p in provider_ids]
+    conn.executemany(
+        "INSERT INTO provider_effects(provider_id, offset, n_obs)"
+        " VALUES (?,?,?)", rows)
 
 
 def _record_build_metadata(conn):

@@ -12,12 +12,33 @@ import datetime
 import sqlite3
 
 from . import eval as feval
-from .models import BASELINES
+from . import models as fmodels
 
-# 1.4's four naive baselines -- see models.BASELINES. Stufe 2+ adds
-# real models here alongside them, never replacing them (G2: every
-# later model must keep beating these on the same report).
-FORECASTERS = dict(BASELINES)
+# 1.4's four naive baselines -- see models.BASELINES. Stufe 2 adds
+# local_level (2.2-2.4) alongside them, never replacing them (G2: every
+# later model must keep beating these on the same report). local_level
+# is NOT in the default set below -- a statsmodels MLE fit is far
+# slower than a baseline's microseconds-per-call, so including it by
+# default would silently turn an ordinary baseline-only report run
+# into a much longer one. Select it explicitly with --models.
+#
+# Only NAMES live at module level, not forecaster instances -- senior-
+# review finding: an earlier version built
+# ``fmodels.make_local_level_forecaster()`` once here, at import time,
+# so its ``.counters`` dict was one shared, mutable closure reused by
+# every ``main()`` call. Harmless for the normal one-shot CLI
+# invocation, but a real trap for anything that imports this module
+# and calls ``main()`` more than once in the same process (a test, a
+# notebook, a future scheduler) -- counts would silently accumulate
+# across runs instead of resetting. Each ``main()`` call now builds its
+# own fresh forecaster instances instead.
+_MODEL_NAMES = list(fmodels.BASELINES) + ["local_level"]
+
+
+def _build_forecasters():
+    forecasters = dict(fmodels.BASELINES)
+    forecasters["local_level"] = fmodels.make_local_level_forecaster()
+    return forecasters
 
 
 def main():
@@ -29,15 +50,34 @@ def main():
         " this explicitly for a reproducible run)")
     parser.add_argument(
         "--out", default="docs/forecast-baseline-report.md")
+    parser.add_argument(
+        "--models", default=",".join(fmodels.BASELINES),
+        help="comma-separated subset of " +
+        ",".join(_MODEL_NAMES) +
+        " (default: the 1.4 baselines only -- local_level opts in"
+        " explicitly, see this module's own comment)")
     args = parser.parse_args()
+
+    names = [n.strip() for n in args.models.split(",") if n.strip()]
+    unknown = [n for n in names if n not in _MODEL_NAMES]
+    if unknown:
+        parser.error(f"unknown model(s): {unknown}; choose from "
+                     f"{sorted(_MODEL_NAMES)}")
+    all_forecasters = _build_forecasters()
+    forecasters = {n: all_forecasters[n] for n in names}
 
     as_of = args.as_of or datetime.date.today().isoformat()
     conn = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     try:
-        feval.write_baseline_report(conn, FORECASTERS, as_of, args.out)
+        feval.write_baseline_report(conn, forecasters, as_of, args.out)
     finally:
         conn.close()
-    print(f"wrote {args.out} (as_of={as_of}, {len(FORECASTERS)} model(s))")
+    for name, forecaster in forecasters.items():
+        counters = getattr(forecaster, "counters", None)
+        if counters:
+            print(f"{name}: {counters}")
+    print(f"wrote {args.out} (as_of={as_of}, {len(forecasters)} model(s): "
+         f"{', '.join(forecasters)})")
 
 
 if __name__ == "__main__":

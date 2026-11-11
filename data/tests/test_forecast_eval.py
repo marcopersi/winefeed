@@ -424,6 +424,55 @@ class MetricKnownValuesTest(unittest.TestCase):
         self.assertEqual(summary["by_provider"]["christies"]["n"], 1)
 
 
+class HouseOffsetInvarianceTest(unittest.TestCase):
+    """Senior-review finding (D8): ``_eur_ape`` exponentiates
+    ``y_true``, which is house-adjusted since D8 -- NOT the lot's real
+    realised price in isolation. Verified numerically (not assumed)
+    that every metric here is still correct regardless: a per-row
+    constant offset cancels out of both a log-space difference
+    (``a-b == (a+c)-(b+c)``, what Pinball/Winkler/coverage/width use)
+    and a ratio/percentage error (``exp(a)/exp(b) ==
+    exp(a+c)/exp(b+c)``, what MAPE/MdAPE reduce to). This test builds
+    two rows with DIFFERENT simulated "house offsets" (not a uniform
+    shift -- that would hide a mistake that only shows up when rows
+    differ) and confirms every metric is identical whether or not that
+    offset is present."""
+
+    def _rows(self, offsets):
+        forecast_cols = {
+            "q0.025": -2.0, "q0.1": -1.0, "q0.25": -0.5, "q0.5": 0.0,
+            "q0.75": 0.5, "q0.9": 1.0, "q0.975": 2.0,
+        }
+        rows = []
+        for y_true, offset in zip((0.0, 3.0), offsets):
+            row = {"y_true": y_true + offset, "extrapolation_flag": False}
+            row.update({k: v + offset for k, v in forecast_cols.items()})
+            rows.append(row)
+        return pd.DataFrame(rows)
+
+    def test_every_metric_is_unchanged_by_a_per_row_house_offset(self):
+        unshifted = self._rows([0.0, 0.0])
+        shifted = self._rows([0.5, -1.2])  # different offset per row
+        self.assertAlmostEqual(
+            feval.mape_eur(unshifted), feval.mape_eur(shifted), places=9)
+        self.assertAlmostEqual(
+            feval.mdape_eur(unshifted), feval.mdape_eur(shifted), places=9)
+        for q in (0.1, 0.5, 0.9):
+            self.assertAlmostEqual(
+                feval.pinball_loss(unshifted, q),
+                feval.pinball_loss(shifted, q), places=9)
+        for level in (0.50, 0.80, 0.95):
+            self.assertAlmostEqual(
+                feval.winkler_score(unshifted, level),
+                feval.winkler_score(shifted, level), places=9)
+            self.assertAlmostEqual(
+                feval.coverage(unshifted, level),
+                feval.coverage(shifted, level), places=9)
+            self.assertAlmostEqual(
+                feval.median_width(unshifted, level),
+                feval.median_width(shifted, level), places=9)
+
+
 class EvaluateZeilenbilanzTest(unittest.TestCase):
     def test_candidates_equals_forecast_plus_insufficient(self):
         df = _series([
