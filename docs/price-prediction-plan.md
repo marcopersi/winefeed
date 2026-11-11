@@ -70,7 +70,7 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
 | 0.7 View `forecast_input` | ✅ erledigt — 969 183 Zeilen / 119 646 Serien, Zeilenbilanz im Build-Report |
 | **Gate G0** (Review Stufe 0) | ✅ erledigt 2026-11-06 — 9 echte Bugs über 2 Runden gefunden+behoben (Wermuth-Spaltenversatz+Trailing-Blank, Magnum/Double-Magnum-Grössenerkennung inkl. Bare-Word-Kollisionen, UNKNOWN-Lose, Outlier-Kontamination, D15-Fenster-Scope, `strip_bottle_format`-Fragmentierung), D21 neu eröffnet. 0.2b bleibt blockiert (Token) |
 | Stufe 1 – Baselines & Eval-Harness | ✅ 1.1–1.5 alle erledigt (2026-11-10, Code+Tests+Live-Report-Lauf verifiziert) — Gate G1 (Baseline-Zahlen festschreiben) als nächstes |
-| Stufe 2 – Local-Level-Modell (Kalman) | ⬜ nicht begonnen |
+| Stufe 2 – Local-Level-Modell (Kalman) | 🟡 2.2-2.5 erledigt, G2-ACs erfüllt (Pinball 91,2 % der Gruppen, siehe §5) -- 2.1/2.6/Gate G2 (Gold-Set fehlt noch) offen |
 | Stufe 3 – Gruppenindex/Fallback | ⬜ nicht begonnen |
 | Stufe 4 – Konforme Kalibrierung | ⬜ nicht begonnen |
 | Stufe 5 – Serving (API/UI) | ⬜ nicht begonnen |
@@ -335,7 +335,7 @@ Quelle: `/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite`, View
 | D5 | Mindestdichte Stufe 2 | ≥ 10 Beobachtungen, ≥ 3 Kalenderjahre, ≥ 5 Auktionen, letzte Beobachtung ≤ 36 M alt | Datenbasiert (§2.10) – im Schritt 2.1 über Backtest zu kalibrieren, nicht zu raten |
 | D6 | Fallback | Gruppenindex-Prognose, Intervall aus Gruppenstreuung, Flag `method=GROUP_INDEX` | Brief: „breiteres Intervall statt Scheingenauigkeit" |
 | D7 | Zensur (`sold=0`) | v1: ignorieren, aber **als bekannte Verzerrung dokumentieren** und Rückgangsquote je Gruppe mitliefern | Tobit-Modell wäre Overkill für v1 |
-| D8 | Haus-/Los-Effekte | Als **Fixed Effects** vorab herausrechnen (Stufe 1.3), Rest geht ins Kalman-Modell | Brief: Auktionsrauschen separat |
+| D8 | Haus-/Los-Effekte | Als **Fixed Effects** vorab herausrechnen (Stufe 1.3), Rest geht ins Kalman-Modell | Brief: Auktionsrauschen separat. **Umgesetzt 2026-11-11** (User-Entscheid, Stufe 2): `provider_effects`-Tabelle (persistiert von `build_db.py` nach 0.5/0.6, NICHT in `build_wines.run()` -- siehe §8-Review-Log), `forecast/data.py`s `load_series`/`load_all_series` subtrahieren den Haus-Offset von `y`. Gilt für Baselines UND Local-Level gleich (fairer Vergleich) -- die zuvor "eingefrorenen" Stufe-1-Zahlen sind damit überholt, neu erzeugt in `docs/forecast-baseline-report.md`. |
 | D9 | Code-Ort | `data/forecast/` als Paket, Output in neue DB-Tabelle `price_forecasts` (nicht in `lots`) | Prognose ist abgeleitet, regenerierbar, versioniert |
 
 ---
@@ -923,8 +923,6 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 
 ### Stufe 2 – Local-Level-Modell (Kern)
 
-**2.1 Dichte-Schwellen kalibrieren** (S): Backtest: ab welchem `n_obs`/Spanne schlägt Local-Level die Baselines? D5 wird mit den Zahlen belegt.
-
 **2.2 Irregulärer Zeitschritt** (L, **Kernrisiko**)
 - `UnobservedComponents('llevel')` von statsmodels erwartet gleichabständige Daten. Optionen:
   A) auf Monatsraster aggregieren, fehlende Monate als NaN (Kalman behandelt Lücken korrekt, Varianz wächst) – **empfohlen**;
@@ -932,17 +930,29 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 - Messvarianz σ²_ε (Auktionsrauschen) und Prozessvarianz σ²_η (Drift des „wahren Wertes") per ML schätzen; Untergrenzen für σ² (gegen Degeneration auf 0 = Scheingenauigkeit).
 - Mehrere Lose im selben Monat: als mehrere Beobachtungen mit identischem Zeitpunkt (Option B) oder Mittel + Gewicht nach Anzahl (Option A) – Entscheid mit Test.
 - Test: Synthetische Serie mit bekannten σ²: Schätzung innerhalb ±30 %; Lücke von 24 M ⇒ Prognoseintervall breiter als bei Lücke 1 M.
+- **Status: erledigt 2026-11-11.** Option A umgesetzt (`forecast/models.py`'s `_monthly_series`: `resample("MS").mean()`, NaN-Lücken ohne Zusatzcode korrekt vom Kalman-Filter behandelt). Gewichtung nach Lot-Anzahl pro Monat (die 2.2-Alternative) bewusst NICHT gebaut für v1 -- siehe 2.5's Coverage-Befund unten, der entscheidet, ob das nachgezogen werden muss. Beide σ² empirisch bestätigt (240-Monate-Synthetik, fixer Seed, Schätzung innerhalb ±30 % des wahren Werts) sowie der Lücke-verbreitert-Intervall-Test, beide in `test_forecast_local_level.py`.
 
 **2.3 Konvergenz-Handling** (M): Fehlgeschlagene Fits → Flag `FIT_FAILED`, Fallback Stufe 3. Zähler im Report; Quote > 5 % ⇒ Review.
+- **Status: erledigt 2026-11-11, mit einer echten Design-Korrektur mitten im Prozess** (via `advisor`, nach einem Live-DB-Befund, nicht geraten): die erste Lesung von "Untergrenzen für σ²... gegen Scheingenauigkeit" als Ablehnungsregel (σ² unter der Schwelle ⇒ FIT_FAILED) war falsch -- "Untergrenzen" heisst CLAMP, nicht verwerfen. Bestätigt an einer 400-Serien-Stichprobe der Live-DB: die Ablehnungs-Lesung verwarf **~50 %** jedes tatsächlich versuchten Fits, kein Rand-/Ausnahmefall, sondern strukturell (ein Monatswert pro Periode macht σ²_ε/σ²_η schwach identifizierbar, MLE landet routinemässig auf dem Rand). Fix: σ² wird bei Unterschreitung auf die Untergrenze GEKLEMMT (`mod.smooth(params_geklemmt)`, keine Neuoptimierung), FIT_FAILED bleibt reserviert für echte Fehlschläge (Nicht-Konvergenz, Exception, nicht-finite Prognose). Floors selbst auch korrigiert: absolut statt pro-Serie-relativ (beide σ² leben schon im Log-Raum, der selbst schon skaleninvariant ist -- ein Pétrus und ein 10-EUR-Wein brauchen DIESELBE Grenze, nicht verschiedene), `sigma2.irregular`-Floor empirisch aus `fit_provider_effects`s eigenem `var_residual_after` (~0,206 auf der Live-DB) abgeleitet (5 % davon, ~0,01). **FIT_FAILED-Quote nach dem Fix: 1,93 % der tatsächlich versuchten Fits** (vorher ~50 %) -- unter der 5 %-Schwelle, keine Review nötig. 4 neue Tests in `test_forecast_local_level.py` (Clamp statt Failed bei echtem Live-DB-Fall, Nicht-Konvergenz bei exakt konstanter Serie bleibt FIT_FAILED, Exception-Pfad gemockt, Clamp-Zähler).
 
 **2.4 Prognose-Verteilung** (S): Aus Zustandsverteilung am Ziel-Zeitpunkt: Median, Quantile q05–q95 im Log, Rücktransformation. **Prädiktions-** nicht Konfidenzintervall (Messrauschen einrechnen!). Test: Intervall ≥ Messrauschen-Intervall.
+- **Status: erledigt 2026-11-11.** Empirisch bestätigt (nicht aus der statsmodels-Doku übernommen): `get_forecast(h).var_pred_mean` entspricht bereits exakt der gefilterten Zustandsvarianz PLUS `sigma2.irregular` -- kein manueller Zuschlag nötig, auch nach dem Floor-Clamping nicht (derselbe `UnobservedComponents`, nur fixierte statt optimierte Parameter). Quantile: `mean + norm.ppf(q) * sd`, Gaussian im Log-y-Raum, per Konstruktion monoton.
 
 **2.5 Vergleich gegen Baselines** (M): Eval-Harness aus 1.5.
 - AC (G2): Pinball-Loss < beste Baseline in ≥ 60 % der Gruppen; Coverage 80 % ∈ [77, 83].
+- **Status: erledigt 2026-11-11.** `local_level` als `make_local_level_forecaster()` direkt in `forecast.eval`s bestehendem `Forecaster`-Contract registriert (`run.py --models ..., local_level`), kein Harness-Code geändert. Ein kombinierter Lauf (alle 4 Baselines + local_level, EIN Befehl, EINE DB/`as_of`/Hausbereinigung -- nicht zwei separate Läufe, die wäre kein fairer Vergleich gewesen) über alle ~971k `forecast_input`-Zeilen, ~54 Minuten.
+  **Pinball-Loss-AC: 31/34 Gruppen (91,2 %)** -- lokal besser als die jeweils beste Baseline, deutlich über der 60 %-Schwelle. Die 3 Verlust-Gruppen (`dorotheum`/`finarte` je einmal pro Horizont, `n`~200-700) sind kleine, rauschanfällige Häuser.
+  **Coverage-80 %-AC: "12m" trifft die Bande ([77,83]), "next" liegt knapp darunter** (next: 74,0 %, 12m: 78,8 % -- Gesamtwerte, "alle"-Zeile). Intervalle für den "next"-Horizont sind leicht zu eng. Bewusst NICHT jetzt nachjustiert -- Stufe 4 ("Konforme Kalibrierung der Intervalle: Garantierte, empirisch belegte Abdeckung") existiert genau für diesen Fall; ein Vorgriff hier wäre eine Schätzung ohne den dafür vorgesehenen Prozess.
+  Volle Zahlen (alle Gruppen/Häuser/Dichteklassen, beide Horizonte): `docs/forecast-baseline-report.md`.
 
 **2.6 Zusatz: Trend-Komponente testen** (M): `local linear trend` vs. `local level`; nur übernehmen, wenn nach G2 besser. Dämpfung zwingend (Trend-Extrapolation über 12 M kann Fantasiepreise liefern).
+- **Status: noch offen** -- 2.5 zeigt `local level` bereits deutlich vor den Baselines; `local linear trend`-Vergleich folgt als nächster Schritt, nicht vorgezogen.
+
+**2.1 Dichte-Schwellen kalibrieren** (S): Backtest: ab welchem `n_obs`/Spanne schlägt Local-Level die Baselines? D5 wird mit den Zahlen belegt.
+- **Status: noch offen** -- braucht 2.2-2.5's Ergebnisse als Grundlage (bewusste Reihenfolge-Abweichung vom Plan-Text, gleiche Logik wie "1.5 vor 1.4"). `docs/forecast-baseline-report.md`s `n_train`-Dichteklassen (`1-2/3-4/5-9/10+`) liegen jetzt vor; die eigentliche Kalibrierung (bei welchem `n_obs` lokal besser als Baseline UND Coverage in Band) ist der nächste Schritt.
 
 **Gate G2:** Senior-Review mit Plots (Fan-Charts) der 30 Gold-Set-Weine.
+- **Noch offen, Vorbedingung fehlt:** `data/tests/fixtures/forecast_gold.json` (G7) existiert noch nicht -- das bestehende `gold_lots.csv`/`build_gold_set.py` ist ein ANDERES Gold-Set (§4.0 Wein-Normalisierung: Produzent/Wein/Jahrgang/Menge, keine Preishistorie). User-Entscheid (2026-11-11): Kuration erst bei Gate G2 selbst, nicht parallel vorgezogen.
 
 ### Stufe 3 – Gruppenindex & Fallback
 
@@ -1065,6 +1075,7 @@ Ablauf je Gate (G0–G3 + Abschluss):
   vollständig abgeschlossen** -- noch ausstehend: Senior-Code-Review
   über den gesamten 1.4+1.5-Diff vor jedem Commit (Standing Rule), dann
   Gate G1 (Baseline-Zahlen im Review festschreiben).
+| 2026-11-10/11 | Senior-Review (1.4+1.5-Diff) + Stufe 2 (2.2-2.5) + D8 | Claude (`code-review high` auf dem vollen uncommitteten Diff; danach `advisor`-Konsultation zu Stufe 2's Design, zweimal -- vor Implementierung und nach einem Live-DB-Befund, der die erste Lesung widerlegte) | **Senior-Review (6 Befunde, alle echt, alle gefixt):** (1) `_parse_bottle_formats` nur auf rohes `mixed_lot`-Flag gegated, nicht auf `_classify_lots`' Keyword-/Gruppen-MIXED -- in `_strip_bottle_format_from_wine` (bleibt vor `_classify_lots`, wegen `wine_key`-Gruppierung) und `_parse_bottle_formats` (jetzt danach, `lot_kind != 'MIXED'`) aufgeteilt; (2) `_christies_format_dl`s Jeroboam-Check nur ASCII, "jéroboam" fiel durch; (3) `parse_dl`s bare "jeroboam" defaultete unbegründet auf Champagne (30.0) statt Bordeaux (50.0), inkonsistent zu jedem anderen Jeroboam-Pfad dieser Runde; (4) `parse_dl`s Unit-Regex ohne `\b`, "15lbs" matchte "l" → falsch 150.0dl; (5) `_CHRISTIES_FORMAT_DL` duplizierte Literale statt `BOTTLE_FORMATS`; (6) weinauktion/steinfels' Jeroboam-Default hatte KEINEN Produzenten-Check (immer Bordeaux), christies' identische Ambiguität schon -- `wine_text`-Parameter ergänzt, beide Loader geben jetzt den Wein-/Titeltext mit. **Zusätzlich gefunden, nicht Teil des Diffs (nur erwähnt, nicht gefixt):** `_WB_NAMED_DL["jeroboam"]=45.0` in `load_weinboerse`s älterem, separatem Parser -- derselbe Bug wie `_WA_FORMAT_DL`s erste Fassung, aber in unverändertem Code, daher nicht im Scope dieser Review-Runde. **Stufe 2 (2.2-2.5):** Local-Level-Modell gebaut, 2 Design-Entscheide per `advisor` getroffen und dokumentiert (Reihenfolge 2.2+2.4→2.3→2.5→2.1, D8 jetzt umgesetzt statt vertagt). **Echter Bug, erst beim Live-Lauf gefunden:** `_persist_provider_effects` lief ursprünglich als letzter Schritt in `build_wines.run()` -- das passiert VOR `_fill_price_per_bottle`/`_flag_price_outliers`, `forecast_input` war zu dem Zeitpunkt leer, 0 Zeilen persistiert. Verschoben nach `build_db.py`s Pipeline (nach 0.5/0.6). **Design-Korrektur per `advisor`, nach einem zweiten Live-Befund:** "Untergrenzen für σ²" als Ablehnungsregel (FIT_FAILED) statt Clamp verwarf ~50 % jedes Fit-Versuchs (strukturell, nicht Zufall -- ein Beobachtungspunkt pro Monat macht σ²_ε/σ²_η schwach identifizierbar) -- auf Clamp umgestellt, Floors zusätzlich von relativ auf absolut korrigiert (Log-Raum ist bereits skaleninvariant). | Alle 6 Review-Findings gefixt + Regressionstests, 538/538 Tests grün. D8 umgesetzt (`provider_effects`-Tabelle + Pipeline-Fix + House-Adjustment in `load_series`/`load_all_series`), 2 volle DB-Rebuilds (erster mit dem Pipeline-Bug, zweiter korrekt -- beide mit Backup+SHA-256-Verify davor). Kombinierter Live-Lauf (4 Baselines + local_level, 1 Befehl, ~54 Min., `docs/forecast-baseline-report.md`): **G2-AC Pinball-Loss 31/34 Gruppen (91,2 %, Schwelle 60 %) erfüllt.** G2-AC Coverage 80 %: "12m" in Band (78,8 %), "next" knapp darunter (74,0 %) -- bewusst nicht nachjustiert, das ist Stufe 4's Aufgabe. FIT_FAILED-Quote nach dem Clamp-Fix: 1,93 % (Schwelle 5 %). 2.1/2.6/Gate G2 (Gold-Set fehlt) bleiben offen. |
 
 ---
 

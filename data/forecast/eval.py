@@ -19,6 +19,25 @@ would be dominated by a handful of very expensive wines (Pétrus, DRC,
 ...); MAPE/MdAPE get their own EUR-scale numbers specifically because
 G2 wants an EUR-interpretable point-forecast error, not because the
 other metrics should also live there.
+
+D8 (User decision, 2026-11-11): ``y`` is house-adjusted since
+``forecast/data.py``'s loaders subtract each row's own provider's
+offset. Senior-review finding, verified numerically (not assumed):
+EVERY metric here stays correct regardless, because each row's
+``y_true`` and its forecast are compared against EACH OTHER, never
+against a different row's house -- the offset is a per-row constant
+that cancels out of both a log-space difference (``a-b == (a+c)-(b+c)``)
+and a ratio-based percentage error (``exp(a)/exp(b) ==
+exp(a+c)/exp(b+c)``), so ``_eur_ape``'s ``np.exp(y_true)`` is NOT the
+lot's real realised price in isolation, but the resulting MAPE/MdAPE
+IS numerically identical to computing it from the real EUR price with
+the same house offset added back to both sides first. This stops
+holding the moment any FUTURE code reads an ABSOLUTE price straight
+off this module's rows (not a difference or a ratio) -- that code must
+add the row's own provider's offset back first, which this module's
+rows do not carry today (only the already-adjusted ``y_true``/
+quantiles). Flag this if Stufe 5's serving layer, or G7's fan-charts,
+ever read an absolute EUR value out of here directly.
 """
 import math
 
@@ -243,7 +262,11 @@ def _eur_ape(rows_df):
     which missed exactly this case: a "trend" forecast whose ``exp()``
     lands just under a double's overflow point, e.g. ~2.8e50, is
     perfectly finite and still utterly meaningless as a predicted EUR
-    price). See ``extrapolation_exclusion_mask`` for the actual filter."""
+    price). See ``extrapolation_exclusion_mask`` for the actual filter.
+
+    ``np.exp(y_true)`` is NOT the lot's real realised price since D8
+    (it's house-adjusted) -- the resulting ratio/APE is still correct;
+    see this module's own docstring for why."""
     y_true = np.exp(rows_df["y_true"].to_numpy(dtype=float))
     with np.errstate(over="ignore"):
         y_pred = np.exp(rows_df[_qkey(0.5)].to_numpy(dtype=float))

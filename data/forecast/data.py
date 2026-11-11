@@ -1,6 +1,18 @@
 """1.2: load one wine/vintage/size series from ``forecast_input``.
 
 Read-only (G6): never writes to the master DB.
+
+D8 (price-prediction-plan.md, User decision 2026-11-11): ``y`` is
+HOUSE-ADJUSTED here -- ``ln(price_per_bottle_eur) - provider_effects.
+offset`` (0 when a provider has no persisted offset, e.g. too few
+observations for ``fit_provider_effects`` to include it) -- so every
+model family downstream (1.4's baselines, 2.2's Local-Level) fits the
+SAME de-noised series without each recomputing or forgetting the
+adjustment. Consequence: ``np.exp(y)`` is no longer the literal
+realised EUR price for a specific lot once its house has a nonzero
+offset -- it's that price net of its house's own average effect. Any
+caller that needs the real, unadjusted price must read
+``price_per_bottle_eur`` directly, not reconstruct it from ``y``.
 """
 import numpy as np
 import pandas as pd
@@ -10,10 +22,9 @@ _COLUMNS = ["date", "y", "provider", "qty"]
 
 def load_series(conn, wine_ref_id, vintage, size_class):
     """Load one ``(wine_ref_id, vintage, size_class)`` series as a
-    DataFrame with columns ``date, y, provider, qty`` (D2: ``y =
-    ln(price_per_bottle_eur)``; the raw EUR price itself is recovered
-    with ``np.exp(y)`` wherever a caller needs it, so it is not carried
-    as its own column here).
+    DataFrame with columns ``date, y, provider, qty`` (D2/D8: ``y =
+    ln(price_per_bottle_eur) - house_offset``, see this module's own
+    docstring).
 
     Sorted by ``(date, lot_id)`` for a deterministic row order (G5):
     ``date`` alone repeats within a series whenever two lots sold on the
@@ -31,10 +42,12 @@ def load_series(conn, wine_ref_id, vintage, size_class):
     """
     rows = conn.execute(
         """
-        SELECT fi.lot_date, fi.price_per_bottle_eur, p.name, l.quantity
+        SELECT fi.lot_date, fi.price_per_bottle_eur, p.name, l.quantity,
+               COALESCE(pe.offset, 0) AS house_offset
         FROM forecast_input fi
         JOIN lots l ON l.id = fi.lot_id
         JOIN providers p ON p.id = fi.provider_id
+        LEFT JOIN provider_effects pe ON pe.provider_id = fi.provider_id
         WHERE fi.wine_ref_id = ? AND fi.vintage = ? AND fi.size_class = ?
         ORDER BY fi.lot_date, fi.lot_id
         """,
@@ -42,9 +55,9 @@ def load_series(conn, wine_ref_id, vintage, size_class):
     ).fetchall()
 
     df = pd.DataFrame(
-        rows, columns=["date", "price", "provider", "qty"])
+        rows, columns=["date", "price", "provider", "qty", "house_offset"])
     df["date"] = pd.to_datetime(df["date"])
-    df["y"] = np.log(df["price"].astype(float))
+    df["y"] = np.log(df["price"].astype(float)) - df["house_offset"]
     df["qty"] = df["qty"].astype("Int64")
     return df[_COLUMNS]
 
@@ -73,19 +86,20 @@ def load_all_series(conn):
         """
         SELECT fi.wine_ref_id, fi.vintage, fi.size_class,
                fi.lot_date, fi.price_per_bottle_eur, p.name, l.quantity,
-               fi.lot_id
+               fi.lot_id, COALESCE(pe.offset, 0) AS house_offset
         FROM forecast_input fi
         JOIN lots l ON l.id = fi.lot_id
         JOIN providers p ON p.id = fi.provider_id
+        LEFT JOIN provider_effects pe ON pe.provider_id = fi.provider_id
         ORDER BY fi.wine_ref_id, fi.vintage, fi.size_class,
                  fi.lot_date, fi.lot_id
         """
     ).fetchall()
     df = pd.DataFrame(rows, columns=[
         "wine_ref_id", "vintage", "size_class", "date", "price",
-        "provider", "qty", "lot_id"])
+        "provider", "qty", "lot_id", "house_offset"])
     df["date"] = pd.to_datetime(df["date"])
-    df["y"] = np.log(df["price"].astype(float))
+    df["y"] = np.log(df["price"].astype(float)) - df["house_offset"]
     df["qty"] = df["qty"].astype("Int64")
 
     out = []

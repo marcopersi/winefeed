@@ -1,9 +1,13 @@
 """1.3: fixed-effects model isolating house/lot effects from "true" wine
-value. 1.4: baseline forecasting methods.
+value. 1.4: baseline forecasting methods. 2.2-2.4: Local-Level (Kalman)
+model.
 """
+import warnings
+
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from scipy.stats import norm
 
 # D4: 50/80/95% central intervals + median.
 QUANTILE_LEVELS = [0.025, 0.10, 0.25, 0.50, 0.75, 0.90, 0.975]
@@ -336,3 +340,193 @@ BASELINES = {
     "rolling_median_12m": make_baseline(_rolling_median_12m),
     "trend": make_baseline(_trend),
 }
+
+
+# --------------------------------------------------------------------------- #
+# 2.2-2.4 -- Local-Level-Modell (Kalman)
+# --------------------------------------------------------------------------- #
+
+# Technical floor only (>= 2 non-NaN monthly points, or nothing at all is
+# estimable) -- NOT D5's own >= 10 obs/>= 3 years/>= 5 auctions threshold,
+# which is what 2.1's backtest MEASURES against this model's output, not
+# something this function enforces itself (same separation of concerns
+# MIN_OBS already keeps for the baselines above).
+LOCAL_LEVEL_MIN_MONTHS = 2
+
+# 2.3: "Untergrenzen für sigma^2 (gegen Degeneration auf 0 =
+# Scheingenauigkeit)" -- ABSOLUTE floors, not relative to each series'
+# own var(y): both sigma^2 live in LOG-y space already, which is itself
+# scale-invariant (a log-price difference is already a relative/percent
+# move), so a Pétrus series and a EUR10 wine series genuinely need the
+# SAME floor here -- an earlier version used a per-series-relative floor
+# on the theory that they wouldn't, which was wrong for that reason, not
+# just in the number it produced (real-DB finding below).
+#
+# sigma2.irregular (observation/auction noise): confirmed empirically on
+# the live DB, NOT guessed -- fit_provider_effects' own
+# var_residual_after (~0.206, the within-series log-price variance
+# AFTER house effects are removed, i.e. exactly the residual auction
+# noise this parameter means to capture) gives the scale; 5% of that
+# (~0.01, SD ~10%) is the floor. A fitted value near 0 would claim
+# auction prices are measured to within a fraction of a percent, which
+# is not plausible for this data.
+_SIGMA2_IRREGULAR_FLOOR = 0.01
+# sigma2.level (level drift): stays small -- a genuinely flat-priced
+# wine legitimately has near-zero drift; G4's "Intervallbreite wächst
+# mit Horizont" only needs a NONZERO floor to keep contributing growth
+# with h, not a large one.
+_SIGMA2_LEVEL_FLOOR = 1e-6
+
+# Confirmed empirically on a 400-series live-DB sample (senior review,
+# advisor consult): the FIRST version of this model treated a floored
+# sigma^2 as FIT_FAILED (per the original 2.3 reading: "Untergrenzen...
+# gegen Scheingenauigkeit" sounded like a rejection rule). That rejected
+# ~50% of every fit actually attempted -- not a bug in the floor's
+# VALUE, but a structural consequence of _monthly_series producing one
+# observation per month: with a single point per period, sigma2.irregular
+# (noise around the level) and sigma2.level (drift of the level) are
+# weakly identified, and MLE routinely drives one of them to the
+# boundary. That is a usable, if conservatively uncertain, fit -- not a
+# broken one. "Untergrenzen" means CLAMP (use the floor value and keep
+# going), not reject; FIT_FAILED is reserved for an actually broken fit
+# (non-convergence, an exception, or a non-finite forecast).
+_SIGMA2_FLOORS = {
+    "sigma2.irregular": _SIGMA2_IRREGULAR_FLOOR,
+    "sigma2.level": _SIGMA2_LEVEL_FLOOR,
+}
+
+
+def _monthly_series(train):
+    """Aggregate ``train`` to a calendar-month grid (2.2 Option A, the
+    plan's own recommendation): unweighted mean log-price per month,
+    NaN for months with zero lots. statsmodels' Kalman filter treats a
+    NaN ``endog`` entry as "skip this measurement update" -- exactly
+    2.2's "Lücken korrekt behandeln, Varianz wächst" requirement, with
+    no extra code needed. Same-month weighting by lot count (the
+    alternative 2.2 also names) is deliberately NOT done for v1 -- see
+    ``local_level_forecast``'s own docstring."""
+    return train.set_index("date")["y"].resample("MS").mean()
+
+
+def _months_between(start, end):
+    start = pd.Timestamp(start)
+    end = pd.Timestamp(end)
+    return (end.year - start.year) * 12 + (end.month - start.month)
+
+
+def local_level_forecast(train, origin, horizon):
+    """2.2-2.4: ``UnobservedComponents(endog, level="local level")`` on
+    the monthly grid from ``_monthly_series``, forecast ``h`` months
+    ahead to the real target (``origin`` for "next", ``origin + 12M``
+    for "12m" -- ``h >= 1`` always, since ``train`` is strictly
+    ``< origin`` and every origin is itself a calendar-month start).
+
+    Returns ``None`` (too few months, or ``h < 1``), the string
+    ``"FIT_FAILED"`` (non-convergence, an exception, or a non-finite
+    forecast -- an actually broken fit, see ``_SIGMA2_FLOORS``'s own
+    docstring for why a floored sigma^2 is NOT this), or
+    ``(quantiles, clamped)``: ``quantiles`` is the ``eval.Forecaster``-
+    standard dict (one value per ``QUANTILE_LEVELS``, Gaussian in
+    log-y space: ``mean + norm.ppf(q) * sd``, monotone in ``q`` by
+    construction); ``clamped`` is ``{"sigma2.irregular": bool,
+    "sigma2.level": bool}``, for the wrapper's own per-parameter clamp
+    counters (``make_local_level_forecaster``) -- 2.3's AC is a rate,
+    so both how often FIT_FAILED fires and how often each floor had to
+    bind are tracked, not just a single pass/fail flag.
+
+    2.4's own test requirement -- "Prädiktions- nicht Konfidenz-
+    intervall (Messrauschen einrechnen!)" -- is NOT something this
+    function has to add manually: confirmed empirically (not assumed)
+    that ``res.get_forecast(h).var_pred_mean`` already equals the
+    filtered state variance PLUS ``sigma2.irregular`` (the observation-
+    noise variance) to float precision, i.e. statsmodels' own forecast
+    variance for the OBSERVED series already is the prediction variance,
+    not the latent state's confidence interval. This still holds after
+    clamping, since the clamped forecast is read off ``mod.smooth(...)``
+    with the SAME ``UnobservedComponents`` model, just fixed parameters.
+
+    Same-month lot weighting ("Mittel + Gewicht nach Anzahl", the 2.2
+    alternative to a plain mean): deliberately left as a plain,
+    unweighted mean for v1 -- not forgotten, just not pre-emptively
+    built. 2.5's own empirical coverage check (80% in [77, 83]) is the
+    test the plan itself names for whether this needs revisiting; it is
+    not guessed at here."""
+    monthly = _monthly_series(train)
+    if monthly.notna().sum() < LOCAL_LEVEL_MIN_MONTHS:
+        return None
+    target_date = (origin if horizon == HORIZON_NEXT
+                   else origin + pd.DateOffset(months=12))
+    h = _months_between(monthly.index[-1], target_date)
+    if h < 1:
+        return None
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            mod = sm.tsa.UnobservedComponents(monthly, level="local level")
+            res = mod.fit(disp=False)
+    except Exception:
+        return "FIT_FAILED"
+    if not res.mle_retvals.get("converged", False):
+        return "FIT_FAILED"
+    params = res.params.copy()
+    clamped = {}
+    for name, floor in _SIGMA2_FLOORS.items():
+        value = params.get(name)
+        if value is None or not np.isfinite(value):
+            return "FIT_FAILED"
+        clamped[name] = value < floor
+        if clamped[name]:
+            params[name] = floor
+    if any(clamped.values()):
+        res = mod.smooth(params.to_numpy())
+    fc = res.get_forecast(h)
+    mean = float(fc.predicted_mean.iloc[-1])
+    var = float(fc.var_pred_mean.iloc[-1])
+    if not np.isfinite(mean) or not np.isfinite(var) or var <= 0:
+        return "FIT_FAILED"
+    sd = var ** 0.5
+    quantiles = {q: mean + norm.ppf(q) * sd for q in QUANTILE_LEVELS}
+    return quantiles, clamped
+
+
+def make_local_level_forecaster():
+    """Wraps ``local_level_forecast`` into the plain ``Forecaster``
+    contract (``-> dict | None``), counting on the returned closure's
+    own ``.counters`` instead of threading a second return channel
+    through ``eval.py``:
+
+    - ``n_calls``: every invocation.
+    - ``n_insufficient_months``: too few monthly points to fit at all
+      (``local_level_forecast`` returned ``None``) -- NOT a 2.3
+      concern (no fit was ever attempted), but needed as the
+      denominator for the other two rates (``n_calls -
+      n_insufficient_months`` = fits actually attempted).
+    - ``n_fit_failed``: an actually broken fit (2.3's own AC is this
+      rate, ">5% of attempted fits ⇒ Review" -- compute it against
+      ``n_calls - n_insufficient_months``, not ``n_calls``).
+    - ``n_sigma2_irregular_clamped`` / ``n_sigma2_level_clamped``: a
+      successful fit where that one variance floor had to bind (see
+      ``_SIGMA2_FLOORS``) -- informational, not itself a failure."""
+    counters = {
+        "n_calls": 0, "n_insufficient_months": 0, "n_fit_failed": 0,
+        "n_sigma2_irregular_clamped": 0, "n_sigma2_level_clamped": 0,
+    }
+
+    def forecaster(train, origin, horizon):
+        counters["n_calls"] += 1
+        result = local_level_forecast(train, origin, horizon)
+        if result is None:
+            counters["n_insufficient_months"] += 1
+            return None
+        if result == "FIT_FAILED":
+            counters["n_fit_failed"] += 1
+            return None
+        quantiles, clamped = result
+        if clamped["sigma2.irregular"]:
+            counters["n_sigma2_irregular_clamped"] += 1
+        if clamped["sigma2.level"]:
+            counters["n_sigma2_level_clamped"] += 1
+        return quantiles
+
+    forecaster.counters = counters
+    return forecaster
