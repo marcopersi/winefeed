@@ -4869,28 +4869,41 @@ def _flag_price_outliers(conn):
     a case/mixed lot still priced as a single bottle) from the group the
     same way COTE already was: a bulk-lot price is a different economics,
     not a comparable single-bottle sale."""
+    rows = conn.execute(
+        "SELECT id, wine_ref_id, vintage_final,"
+        " price_per_bottle_eur FROM single_wine_prices"
+        " WHERE price_per_bottle_eur IS NOT NULL"
+        " AND price_kind IS NULL"
+        " AND (ppb_flags IS NULL OR instr(ppb_flags, 'QTY_SUSPECT') = 0)")
+    _append_ppb_flag(conn, "OUTLIER", list(_outlier_lot_ids(rows)))
+
+
+def _outlier_lot_ids(rows):
+    """Core median/MAD test from ``_flag_price_outliers`` above, pulled
+    out as a pure function (no DB access) of an iterable of
+    ``(lot_id, wine_ref_id, vintage, price)`` rows -- reused by
+    ``forecast/eval.py``'s ``_origin_outlier_lot_ids`` (Copilot review
+    2026-11-11, Finding B) to recompute the SAME test restricted to
+    pre-origin data only, rather than duplicating the median/MAD logic.
+    Returns the set of flagged lot_ids; see ``_flag_price_outliers``
+    for every threshold's rationale."""
     groups = {}
-    for lot_id, wine_ref_id, vintage, price in conn.execute(
-            "SELECT id, wine_ref_id, vintage_final,"
-            " price_per_bottle_eur FROM single_wine_prices"
-            " WHERE price_per_bottle_eur IS NOT NULL"
-            " AND price_kind IS NULL"
-            " AND (ppb_flags IS NULL OR instr(ppb_flags, 'QTY_SUSPECT') = 0)"):
+    for lot_id, wine_ref_id, vintage, price in rows:
         groups.setdefault((wine_ref_id, vintage), []).append((lot_id, price))
 
-    flagged = []
-    for rows in groups.values():
-        if len(rows) < 5:
+    flagged = set()
+    for group_rows in groups.values():
+        if len(group_rows) < 5:
             continue
-        logs = [math.log(price) for _, price in rows]
+        logs = [math.log(price) for _, price in group_rows]
         med = statistics.median(logs)
         mad = statistics.median([abs(x - med) for x in logs])
         if mad == 0:
             continue
-        for (lot_id, _), lx in zip(rows, logs):
+        for (lot_id, _), lx in zip(group_rows, logs):
             if abs(0.6745 * (lx - med) / mad) > 5:
-                flagged.append(lot_id)
-    _append_ppb_flag(conn, "OUTLIER", flagged)
+                flagged.add(lot_id)
+    return flagged
 
 
 # Buyer's premium policy per house. ``rate`` = flat premium fraction of the

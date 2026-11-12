@@ -46,7 +46,7 @@ class LoadSeriesTest(unittest.TestCase):
         self.assertEqual(len(df), 0)
         self.assertEqual(
             list(df.columns),
-            ["date", "y", "provider", "qty", "house_offset"])
+            ["date", "y", "provider", "qty", "house_offset", "lot_id"])
 
     def test_single_row(self):
         self._add_lot(self.koppe_id, price=150.0, qty=2)
@@ -135,6 +135,19 @@ class LoadSeriesTest(unittest.TestCase):
         self.assertAlmostEqual(df["house_offset"].iloc[0], 0.5)
         self.assertAlmostEqual(
             df["y"].iloc[0] + df["house_offset"].iloc[0], math.log(100.0))
+
+    def test_lot_id_column_identifies_the_real_lot(self):
+        # G1 fix (Copilot review, Finding B): forecast/eval.py needs to
+        # exclude specific rows by lot_id (an origin-outlier recompute
+        # can't match on date/provider/price alone -- those can
+        # collide across rows).
+        first = self._add_lot(self.koppe_id, price=100.0)
+        second = self._add_lot(self.koppe_id, price=200.0,
+                               lot_date=(datetime.date.today()
+                                        - datetime.timedelta(days=1)
+                                        ).isoformat())
+        df = fdata.load_series(self.conn, 1, 2015, 7.5)
+        self.assertEqual(list(df["lot_id"]), [first, second])
 
     def test_different_wine_ref_id_is_a_different_series(self):
         self._add_lot(self.koppe_id, wine_ref_id=1, price=100.0)

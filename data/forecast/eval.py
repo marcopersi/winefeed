@@ -55,15 +55,33 @@ production caller and always builds + passes this; direct callers
 (tests) that omit it get the pre-fix behaviour unchanged (``df``'s own
 ``y``, as loaded) -- correct for synthetic test data that was never
 house-adjusted to begin with.
+
+G1 fix, continued (Copilot review, 2026-11-11, Finding B): the
+``cutoff`` restriction above still drew its PRE-cutoff rows from
+``forecast_input``, whose own OUTLIER flag and "series active" recency
+check are both computed relative to "now", not to ``cutoff`` -- a sale
+AFTER an origin can still change which of that origin's PRE-origin
+rows the regression (and, equally, this module's own per-series
+backtest training) ever sees. ``evaluate``/``evaluate_series`` take a
+second optional mapping, ``origin_outlier_ids`` (``{origin:
+set(lot_id)}``, from ``_origin_outlier_lot_ids``), and additionally
+recompute the D15 recency check relative to each origin
+(``_is_active_as_of``) -- both confirmed material on the live DB (up
+to 10.7% of series at the earliest rolling origin were only "active"
+there because of a later sale; see ``_is_active_as_of``'s own
+docstring). Scoped to TRAINING rows only, never targets -- a target is
+the real, already-realised price being scored against, not a value
+any model is fit on.
 """
 import math
 
 import numpy as np
 import pandas as pd
 
+import build_db
 from . import data
 from .models import (QUANTILE_LEVELS, HORIZON_NEXT, HORIZON_12M,
-                     fit_provider_effects)
+                     RECENCY_MONTHS, fit_provider_effects)
 
 # D4: the three nominal central intervals, as (lower_q, upper_q, alpha)
 # -- alpha is the two-sided miss rate (1 - nominal coverage), the
@@ -213,8 +231,61 @@ def _apply_origin_offset(df, offset_by_provider):
     return corrected
 
 
+def _is_active_as_of(train, origin, months=RECENCY_MONTHS):
+    """Recency eligibility (Copilot review 2026-11-11, Finding B part
+    1): mirrors ``build_db.py``'s ``forecast_input`` D15 check (series'
+    last observation within ``months``) but relative to ``origin``
+    instead of "now". ``train`` is already ``date < origin``
+    (``split()``); uses ``train``'s own RAW max date, i.e. not yet
+    reduced by ``_exclude_outlier_rows`` -- same ordering convention as
+    ``models.py``'s ``_load_fe_frame`` (code-review finding, 2026-11-12:
+    the two are separate implementations over differently-shaped data,
+    not one shared helper, so keep this ordering in sync by hand if
+    either changes).
+
+    Known residual gap (code-review finding, 2026-11-12, documented
+    not fixed -- see that review's §8 entry): ``train`` itself already
+    came from ``forecast_input``'s OUTPUT, which has ALREADY dropped
+    OUTLIER/QTY_SUSPECT/DUP_CANDIDATE rows at the SQL view level (unlike
+    that view's own internal ``series_last_obs`` computation, which
+    does see them -- build_db.py's own D15 comment). So this "RAW max
+    date" is raw only relative to ``_exclude_outlier_rows``, not truly
+    every pre-filter date -- if a series' single most recent sale
+    happens to be one of those flagged rows, this function can judge it
+    dormant when it was not. Confirmed on the live DB: 1.05% of series
+    (1,259/120,357) have their forecast_input-visible last-sale date
+    understated versus their true last-sale date for exactly this
+    reason -- conservative direction (loses candidates, does not
+    inflate reported performance), not fixed this round (would require
+    bypassing forecast_input for this check).
+
+    Confirmed material on the live DB: up to 10.7% of series at the
+    earliest rolling origin only looked "active" there because of a
+    LATER (post-origin) sale -- a series that had genuinely gone quiet
+    36+ months before that origin would never have been forecastable
+    by a real point-in-time system, yet pre-fix still contributed
+    training rows and scored metrics at that origin."""
+    if train.empty:
+        return False
+    return (train["date"].max()
+           >= pd.Timestamp(origin) - pd.DateOffset(months=months))
+
+
+def _exclude_outlier_rows(df, outlier_lot_ids):
+    """Drops rows whose ``lot_id`` is in ``outlier_lot_ids`` (Copilot
+    review 2026-11-11, Finding B part 2; see ``_origin_outlier_lot_ids``).
+    Scoped to TRAINING rows only by every caller below -- a target is
+    the real, already-realised price being scored against, not
+    something any model is fit on, so whether it would have looked
+    like an outlier from an earlier vantage point doesn't bear on
+    scoring it."""
+    if not outlier_lot_ids or df.empty:
+        return df
+    return df[~df["lot_id"].isin(outlier_lot_ids)]
+
+
 def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name,
-                    origin_offsets=None):
+                    origin_offsets=None, origin_outlier_ids=None):
     """Run one forecaster against one series' rolling origins, for one
     horizon. Returns ``(rows, n_candidates, n_insufficient)`` -- ``rows``
     is a list of per-scored-target-observation dicts (one row per
@@ -227,7 +298,16 @@ def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name,
     ``origin_offsets`` (G1 fix, Finding 1): ``{origin: {provider:
     offset}}`` -- when given, both ``train`` and ``targets`` are
     re-adjusted to that origin's own point-in-time house offsets (see
-    ``_apply_origin_offset``) before the forecaster ever sees them."""
+    ``_apply_origin_offset``) before the forecaster ever sees them.
+
+    ``origin_outlier_ids`` (G1 fix, Finding B): ``{origin:
+    set(lot_id)}`` -- when given, ``train`` additionally drops any row
+    that would be ``OUTLIER``-flagged using only pre-``origin`` data
+    (see ``_exclude_outlier_rows``). Independently of both mappings,
+    an origin where the series was not recently active AS OF THAT
+    ORIGIN (``_is_active_as_of``) is skipped entirely -- not counted
+    as a candidate, the same treatment a globally-dormant series
+    already gets today (it simply never appears in ``df`` at all)."""
     rows = []
     n_candidates = 0
     n_insufficient = 0
@@ -237,6 +317,11 @@ def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name,
         train, targets = split(df, origin, horizon)
         if targets.empty:
             continue
+        if not _is_active_as_of(train, origin):
+            continue
+        if origin_outlier_ids is not None:
+            train = _exclude_outlier_rows(
+                train, origin_outlier_ids.get(origin, set()))
         if origin_offsets is not None:
             offset_by_provider = origin_offsets.get(origin, {})
             train = _apply_origin_offset(train, offset_by_provider)
@@ -271,21 +356,23 @@ def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name,
 
 
 def evaluate(series_iter, forecaster, horizon, as_of, model_name,
-            origin_offsets=None):
+            origin_offsets=None, origin_outlier_ids=None):
     """``evaluate_series`` over every ``(series_key, df)`` pair (e.g.
     ``data.load_all_series(conn)``). Returns ``(rows_df, tally)``;
     ``tally`` has ``n_candidates``/``n_forecast``/``n_insufficient``,
     which must sum as ``n_forecast + n_insufficient == n_candidates``
     (G4's Zeilenbilanz, asserted by the caller/report, not here).
 
-    ``origin_offsets``: forwarded to ``evaluate_series`` unchanged (see
-    its own docstring, G1 fix / Finding 1)."""
+    ``origin_offsets``/``origin_outlier_ids``: forwarded to
+    ``evaluate_series`` unchanged (see its own docstring, G1 fix /
+    Findings 1 and B)."""
     rows = []
     n_candidates = n_insufficient = 0
     for series_key, df in series_iter:
         s_rows, s_cand, s_insuff = evaluate_series(
             df, series_key, forecaster, horizon, as_of, model_name,
-            origin_offsets=origin_offsets)
+            origin_offsets=origin_offsets,
+            origin_outlier_ids=origin_outlier_ids)
         rows.extend(s_rows)
         n_candidates += s_cand
         n_insufficient += s_insuff
@@ -521,14 +608,29 @@ def paired_comparison(rows_by_model):
     into one number.
 
     Returns ``{model_name: {"n_own", "n_paired", "pinball_q0.5_paired"}}``;
-    empty dict for empty input (no models to pair)."""
+    empty dict for empty input (no models to pair).
+
+    Fix (Copilot review 2026-11-11, Finding A): the intersection must
+    be taken over each model's own SCORED keys (post-
+    ``extrapolation_exclusion_mask``, via ``_scored``), not the raw
+    attempted keys -- models exclude very different ROW COUNTS (16 to
+    7,956 in one live report), so two models can share the same raw
+    target key while one of them drops it internally inside
+    ``pinball_loss`` and the other doesn't. Pairing on raw keys would
+    then report the same ``n_paired`` for both while actually averaging
+    over different underlying observations -- not a paired comparison
+    at all. ``n_own`` still reports each model's raw (unfiltered)
+    attempt count, matching the main report table's own "n" column
+    convention (exclusions are reported separately via
+    ``n_extrapolation_excluded``, never folded silently into n_own)."""
     if not rows_by_model:
         return {}
-    key_sets = [_row_keys(df) for df in rows_by_model.values()]
+    scored_by_model = {name: _scored(df) for name, df in rows_by_model.items()}
+    key_sets = [_row_keys(df) for df in scored_by_model.values()]
     common = set.intersection(*key_sets) if key_sets else set()
     out = {}
     for name, df in rows_by_model.items():
-        paired = paired_subset(df, common)
+        paired = paired_subset(scored_by_model[name], common)
         out[name] = {
             "n_own": len(df),
             "n_paired": len(paired),
@@ -569,15 +671,57 @@ _REPORT_HEADER = (
     "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
 
 
-def _fit_origin_offsets(conn, as_of):
-    """G1 fix (Finding 1): point-in-time provider offsets for every
-    origin ``evaluate_series`` scores -- one global refit per origin
-    (``fit_provider_effects`` is already a single regression over every
-    series at once, not something to repeat per series), shared across
-    every model and both horizons in this report run."""
+def _origin_outlier_lot_ids(conn, origin):
+    """G1 fix (Copilot review 2026-11-11, Finding B part 2):
+    ``build_db._flag_price_outliers`` computes its median/MAD test per
+    (wine_ref_id, vintage) group over the ENTIRE history, so whether a
+    PRE-``origin`` row is flagged can depend on sales AFTER ``origin``.
+    Recomputes the same test (reusing ``build_db._outlier_lot_ids``, not
+    a duplicate copy of the median/MAD logic), restricted to
+    ``lot_date < origin`` data only. Returns the set of lot_ids that
+    would be flagged OUTLIER as of ``origin``.
+
+    ``_flag_price_outliers``'s own query has no ``lot_date`` filter at
+    all, so a (wine_ref_id, vintage) group containing a NULL-lot_date
+    row would see that row counted in the full-history median/MAD but
+    never in this per-origin recompute -- confirmed 0 such rows on the
+    live DB (every row this function's population could include
+    already has a non-NULL ``lot_date``), so this is not a live
+    discrepancy today, only a latent one if that ever changes."""
+    rows = conn.execute(
+        "SELECT id, wine_ref_id, vintage_final, price_per_bottle_eur"
+        " FROM single_wine_prices"
+        " WHERE price_per_bottle_eur IS NOT NULL AND price_kind IS NULL"
+        " AND (ppb_flags IS NULL OR instr(ppb_flags, 'QTY_SUSPECT') = 0)"
+        " AND lot_date IS NOT NULL AND lot_date < ?",
+        (pd.Timestamp(origin).date().isoformat(),)).fetchall()
+    return build_db._outlier_lot_ids(rows)  # pylint: disable=protected-access
+
+
+def _origin_outlier_ids(conn, as_of):
+    """``{origin: set(lot_id)}`` for every origin ``evaluate_series``
+    scores -- one full-table recompute per origin (same "once per
+    origin, shared across every model/horizon" pattern as
+    ``_fit_origin_offsets`` below, which this feeds into)."""
+    return {origin: _origin_outlier_lot_ids(conn, origin)
+            for origin in half_year_origins(as_of)}
+
+
+def _fit_origin_offsets(conn, as_of, origin_outlier_ids):
+    """G1 fix (Finding 1 + Finding B): point-in-time provider offsets
+    for every origin ``evaluate_series`` scores -- one global refit per
+    origin (``fit_provider_effects`` is already a single regression
+    over every series at once, not something to repeat per series),
+    shared across every model and both horizons in this report run.
+    ``origin_outlier_ids`` (Finding B): forwarded as
+    ``fit_provider_effects``'s ``exclude_lot_ids`` so the refit itself
+    does not see rows that would be OUTLIER as of that origin
+    either."""
     offsets = {}
     for origin in half_year_origins(as_of):
-        off_df, _report = fit_provider_effects(conn, cutoff=origin)
+        off_df, _report = fit_provider_effects(
+            conn, cutoff=origin,
+            exclude_lot_ids=origin_outlier_ids.get(origin))
         offsets[origin] = dict(zip(off_df["provider"], off_df["offset"]))
     return offsets
 
@@ -600,11 +744,17 @@ def write_baseline_report(conn, forecasters, as_of, path):
     G1 fix (Finding 1): house offsets are refit per origin via
     ``_fit_origin_offsets`` (shared across every model/horizon here) and
     passed to ``evaluate`` as ``origin_offsets`` -- see that module's
-    own docstring. Finding 3: a paired comparison section (restricted
-    to the target lots EVERY model actually scored) follows the normal
-    per-model tables, once per horizon, when more than one model ran."""
+    own docstring. G1 fix (Finding B): per-origin OUTLIER lot_ids
+    (``_origin_outlier_ids``) are computed once here too, fed into both
+    the offset refit (so it excludes them) and ``evaluate`` (so every
+    model's own training excludes them too). Finding 3: a paired
+    comparison section (restricted to the target lots EVERY model
+    actually scored) follows the normal per-model tables, once per
+    horizon, when more than one model ran."""
     series = data.load_all_series(conn)
-    origin_offsets = _fit_origin_offsets(conn, as_of) if forecasters else {}
+    origin_outlier_ids = _origin_outlier_ids(conn, as_of) if forecasters else {}
+    origin_offsets = (_fit_origin_offsets(conn, as_of, origin_outlier_ids)
+                      if forecasters else {})
     lines = [
         "# Forecast Baseline Report",
         "",
@@ -621,8 +771,10 @@ def write_baseline_report(conn, forecasters, as_of, path):
         lines.append(f"## {name}")
         lines.append("")
         for horizon in (HORIZON_NEXT, HORIZON_12M):
-            rows_df, tally = evaluate(series, forecaster, horizon, as_of,
-                                      name, origin_offsets=origin_offsets)
+            rows_df, tally = evaluate(
+                series, forecaster, horizon, as_of, name,
+                origin_offsets=origin_offsets,
+                origin_outlier_ids=origin_outlier_ids)
             assert (tally["n_forecast"] + tally["n_insufficient"]
                     == tally["n_candidates"]), tally
             rows_by_model_horizon[(name, horizon)] = rows_df

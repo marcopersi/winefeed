@@ -18,7 +18,11 @@ from forecast.models import QUANTILE_LEVELS, HORIZON_NEXT, HORIZON_12M
 
 def _series(rows):
     """rows: list of (date_str, y, provider, qty) -> load_series-shaped
-    DataFrame."""
+    DataFrame, minus ``house_offset``/``lot_id`` (real ``load_series``
+    has both; no test below combines this helper with
+    ``origin_offsets``/``origin_outlier_ids``, which need them -- those
+    build their DataFrame by hand instead, see e.g.
+    ``OriginOutlierExclusionTest``)."""
     df = pd.DataFrame(rows, columns=["date", "y", "provider", "qty"])
     df["date"] = pd.to_datetime(df["date"])
     return df
@@ -558,16 +562,203 @@ class OriginOffsetLeakageTest(unittest.TestCase):
             2.0 - 0.9, places=9)
 
 
+class IsActiveAsOfTest(unittest.TestCase):
+    """G1 fix (Copilot review 2026-11-11, Finding B part 1):
+    ``eval._is_active_as_of`` recomputes D15's recency check relative
+    to an origin instead of "now"."""
+
+    def test_empty_train_is_not_active(self):
+        df = _series([])
+        self.assertFalse(feval._is_active_as_of(df, pd.Timestamp("2022-01-01")))
+
+    def test_recent_train_is_active(self):
+        df = _series([("2021-10-01", 1.0, "koppe", 1)])
+        self.assertTrue(
+            feval._is_active_as_of(df, pd.Timestamp("2022-01-01")))
+
+    def test_stale_train_is_not_active(self):
+        # Last pre-origin row is 37 months before the origin -- just
+        # past the 36-month D15 threshold.
+        df = _series([("2018-12-01", 1.0, "koppe", 1)])
+        self.assertFalse(
+            feval._is_active_as_of(df, pd.Timestamp("2022-01-01")))
+
+    def test_exactly_36_months_is_still_active(self):
+        df = _series([("2019-01-01", 1.0, "koppe", 1)])
+        self.assertTrue(
+            feval._is_active_as_of(df, pd.Timestamp("2022-01-01")))
+
+
+class ExcludeOutlierRowsTest(unittest.TestCase):
+    """G1 fix (Copilot review 2026-11-11, Finding B part 2):
+    ``eval._exclude_outlier_rows`` drops rows by ``lot_id``, scoped to
+    whatever ``outlier_lot_ids`` the caller passes for ONE origin."""
+
+    def test_drops_only_the_listed_lot_ids(self):
+        df = pd.DataFrame({"lot_id": [10, 20, 30], "y": [1.0, 2.0, 3.0]})
+        out = feval._exclude_outlier_rows(df, {20})
+        self.assertEqual(list(out["lot_id"]), [10, 30])
+
+    def test_empty_outlier_set_is_a_no_op(self):
+        df = pd.DataFrame({"lot_id": [10], "y": [1.0]})
+        out = feval._exclude_outlier_rows(df, set())
+        self.assertIs(out, df)
+
+    def test_empty_frame_is_a_no_op(self):
+        df = pd.DataFrame({"lot_id": [], "y": []})
+        out = feval._exclude_outlier_rows(df, {10})
+        self.assertIs(out, df)
+
+
+class RecencyEligibilityLeakageTest(unittest.TestCase):
+    """G1 fix, Finding B part 1's own failure mode as a regression
+    test: a series that went quiet, then revived long after, must not
+    be scored at an EARLY origin where it had already been dormant for
+    over 36 months -- that origin is skipped entirely (not counted),
+    the same treatment a globally-dormant series already gets (it
+    simply never appears in ``df`` for ANY origin)."""
+
+    def test_early_origin_skipped_until_the_series_reactivates(self):
+        df = _series([
+            ("2017-01-01", 1.0, "koppe", 1),   # dormant era
+            ("2022-02-01", 2.0, "koppe", 1),   # reactivation
+            ("2022-09-01", 3.0, "koppe", 1),   # first post-reactivation sale
+        ])
+        seen = []
+
+        def spy(train, origin, _horizon):
+            seen.append((origin, list(train["y"])))
+
+        feval.evaluate_series(
+            df, ("w", 2020, 7.5), spy, HORIZON_NEXT, "2023-07-01", "spy")
+
+        # Only one origin ever reaches the forecaster: 2022-07-01 (train
+        # = the dormant row + the reactivation row, target = the row
+        # after). The two origins before reactivation (2021-07-01,
+        # 2022-01-01) see only the >36-months-stale dormant row and are
+        # skipped; the two after (2023-01-01, 2023-07-01) have no target
+        # row left (both skipped for that unrelated, pre-existing
+        # reason).
+        self.assertEqual(len(seen), 1)
+        origin, train_y = seen[0]
+        self.assertEqual(origin, pd.Timestamp("2022-07-01"))
+        self.assertEqual(train_y, [1.0, 2.0])
+
+
+class OriginOutlierExclusionTest(unittest.TestCase):
+    """G1 fix, Finding B part 2's own failure mode as a regression
+    test: ``origin_outlier_ids`` excludes a training row for exactly
+    the origin it was computed for, never a different one."""
+
+    def test_excludes_the_flagged_lot_only_for_its_own_origin(self):
+        df = pd.DataFrame({
+            "date": pd.to_datetime(["2021-06-01", "2022-02-01", "2022-09-01"]),
+            "y": [1.0, 2.0, 3.0],
+            "provider": ["koppe"] * 3,
+            "qty": [1, 1, 1],
+            "lot_id": [111, 222, 333],
+        })
+        origin_outlier_ids = {
+            pd.Timestamp("2022-01-01"): {111},
+            pd.Timestamp("2022-07-01"): set(),
+        }
+        seen_train_by_origin = {}
+
+        def spy(train, origin, _horizon):
+            seen_train_by_origin[origin] = list(train["lot_id"])
+
+        feval.evaluate_series(
+            df, ("w", 2020, 7.5), spy, HORIZON_NEXT, "2023-01-01", "spy",
+            origin_outlier_ids=origin_outlier_ids)
+
+        # Origin 2022-01-01: lot 111 is flagged for THIS origin -> excluded.
+        self.assertEqual(
+            seen_train_by_origin[pd.Timestamp("2022-01-01")], [])
+        # Origin 2022-07-01: lot 111 is NOT flagged for this later
+        # origin (empty set) -> still present, never the other origin's
+        # exclusion leaking across.
+        self.assertEqual(
+            seen_train_by_origin[pd.Timestamp("2022-07-01")], [111, 222])
+
+
+class OriginOutlierLotIdsTest(unittest.TestCase):
+    """G1 fix (Copilot review 2026-11-11, Finding B part 2):
+    ``eval._origin_outlier_lot_ids`` must recompute the median/MAD test
+    from ONLY pre-origin data -- reusing the exact fixture shape
+    already proven (in test_loader_roundtrip.py) to flag exactly one
+    lot (5 normal prices + 1 extreme 9000.0), then adding enough
+    POST-origin 9000.0 rows to the SAME group that a FULL-history
+    recompute would flip the verdict: the original pre-origin outlier
+    stops looking extreme once it is just one more member of a
+    now-dominant 9000.0 cluster. ``_origin_outlier_lot_ids`` must still
+    flag it -- a real point-in-time system could not have known about
+    those future sales."""
+
+    def setUp(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.executescript(build_db.SCHEMA)
+        self.builder = build_db.Builder(self.conn)
+        self.aid = self.builder.add_auction(
+            "koppe", "1", "x", None, "EUR", "HAMMER")
+        self._n = 0
+
+    def tearDown(self):
+        self.conn.close()
+
+    def _lot(self, price, lot_date):
+        self._n += 1
+        lot_id = self.builder.add_lot(self.aid, {
+            "lot_no": str(self._n), "wine": "w", "vintage": 2017,
+            "wine_ref_id": 3, "lot_date": lot_date})
+        self.conn.execute(
+            "UPDATE lots SET price_per_bottle_eur=?, lot_kind='SINGLE',"
+            " vintage_status='STRUCTURED', vintage_final=2017 WHERE id=?",
+            (price, lot_id))
+        return lot_id
+
+    def test_pre_origin_outlier_still_flagged_despite_later_data(self):
+        origin = "2022-01-01"
+        pre_origin_date = "2021-06-01"
+        normal_ids = [self._lot(40.0 + i, pre_origin_date) for i in range(5)]
+        extreme_id = self._lot(9000.0, pre_origin_date)
+
+        # 20 post-origin sales clustered near the same extreme price --
+        # enough to dominate a full-history median/MAD for this group.
+        # Slightly different prices (9000..9019), not 20 IDENTICAL
+        # ones: an exactly-identical majority would make the new
+        # cluster's own MAD exactly 0, which _outlier_lot_ids skips
+        # entirely (nothing to measure against) -- that would prove
+        # nothing about this fix, just hit an unrelated guard.
+        for i in range(20):
+            self._lot(9000.0 + i, "2023-06-01")
+
+        # Sanity check: the FULL-history recompute (the already-shipped
+        # build_db._flag_price_outliers) now flags the 5 ORIGINAL
+        # "normal" lots instead, not the original extreme one -- proof
+        # this fixture really does flip the verdict, not just add noise.
+        build_db._flag_price_outliers(self.conn)
+        full_history_flagged = {
+            row[0] for row in self.conn.execute(
+                "SELECT id FROM lots WHERE instr(COALESCE(ppb_flags,''),"
+                " 'OUTLIER') > 0")}
+        self.assertTrue(full_history_flagged & set(normal_ids))
+        self.assertNotIn(extreme_id, full_history_flagged)
+
+        origin_flagged = feval._origin_outlier_lot_ids(self.conn, origin)
+        self.assertEqual(origin_flagged, {extreme_id})
+
+
 class PairedComparisonTest(unittest.TestCase):
     """Copilot review, Finding 3 (Low): ``eval.paired_comparison``
     restricts every model's rows to the target lots EVERY model in the
     comparison actually scored."""
 
-    def _row(self, series_key, origin, horizon, target_date, q05):
+    def _row(self, series_key, origin, horizon, target_date, q05,
+            extrapolation_flag=False):
         return {
             "series_key": series_key, "origin": origin, "horizon": horizon,
             "target_date": target_date, "y_true": 0.0,
-            "extrapolation_flag": False,
+            "extrapolation_flag": extrapolation_flag,
             "q0.025": q05 - 2, "q0.1": q05 - 1, "q0.25": q05 - 0.5,
             "q0.5": q05, "q0.75": q05 + 0.5, "q0.9": q05 + 1,
             "q0.975": q05 + 2,
@@ -598,6 +789,41 @@ class PairedComparisonTest(unittest.TestCase):
 
     def test_empty_input_is_an_empty_dict(self):
         self.assertEqual(feval.paired_comparison({}), {})
+
+    def test_model_specific_exclusion_is_applied_before_pairing(self):
+        # Copilot review, Finding A (Medium, 2026-11-11): intersecting
+        # RAW keys before each model's own extrapolation_exclusion_mask
+        # could report the same n_paired for two models whose PAIRED
+        # pinball average is in fact computed over different rows --
+        # here, model "a" flags the shared key as EXTRAPOLATION (so its
+        # own pinball_loss would silently drop it), model "b" does not.
+        shared_key = ("w", pd.Timestamp("2022-01-01"), HORIZON_NEXT,
+                     pd.Timestamp("2022-02-01"))
+        other_key = ("w", pd.Timestamp("2022-07-01"), HORIZON_NEXT,
+                    pd.Timestamp("2022-08-01"))
+        rows_a = pd.DataFrame([
+            self._row(*shared_key, q05=0.0, extrapolation_flag=True),
+            self._row(*other_key, q05=1.0),
+        ])
+        rows_b = pd.DataFrame([
+            self._row(*shared_key, q05=2.0, extrapolation_flag=False),
+            self._row(*other_key, q05=3.0),
+        ])
+
+        result = feval.paired_comparison({"a": rows_a, "b": rows_b})
+
+        # The flagged shared_key must not count for EITHER model, even
+        # though model "b" never flagged it itself -- a true pairing
+        # needs every model to have actually SCORED a target, not just
+        # attempted it.
+        self.assertEqual(result["a"]["n_paired"], 1)
+        self.assertEqual(result["b"]["n_paired"], 1)
+        self.assertAlmostEqual(
+            result["a"]["pinball_q0.5_paired"],
+            feval.pinball_loss(rows_a.iloc[[1]], 0.5), places=9)
+        self.assertAlmostEqual(
+            result["b"]["pinball_q0.5_paired"],
+            feval.pinball_loss(rows_b.iloc[[1]], 0.5), places=9)
 
 
 class WriteBaselineReportPairedSectionTest(unittest.TestCase):
