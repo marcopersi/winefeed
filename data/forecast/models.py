@@ -19,6 +19,14 @@ QUANTILE_LEVELS = [0.025, 0.10, 0.25, 0.50, 0.75, 0.90, 0.975]
 # concern decided by backtest (2.1), not hardcoded here.
 MIN_OBS = 2
 
+# D15's "series active, last observation <= 36 months old" window
+# (build_db.py's ``forecast_input`` view hardcodes the same "-36
+# months" relative to "now" in SQL; this is the same threshold reused,
+# origin-relative instead of now-relative, by ``_load_fe_frame``'s
+# ``cutoff`` path and by ``forecast/eval.py``'s own per-origin recency
+# check -- Copilot review 2026-11-11, Finding B).
+RECENCY_MONTHS = 36
+
 # D3: "next observation" (one step, irregular spacing) and "+12 months".
 HORIZON_NEXT = "next"
 HORIZON_12M = "12m"
@@ -35,7 +43,7 @@ MAX_BACKTEST_STEPS = 50
 # 1.3 -- Haus-/Los-Effekte
 # --------------------------------------------------------------------------- #
 
-def _load_fe_frame(conn, cutoff=None):
+def _load_fe_frame(conn, cutoff=None, exclude_lot_ids=None):
     """All of ``forecast_input`` plus ``quantity``/``size_assumed`` from
     ``lots``, for the fixed-effects regression below.
 
@@ -44,6 +52,47 @@ def _load_fe_frame(conn, cutoff=None):
     fitting -- lets ``fit_provider_effects`` be refit as-of a rolling
     origin instead of only ever on the full table (see that function's
     own docstring for why this matters).
+
+    ``exclude_lot_ids`` (Copilot review 2026-11-11, Finding B): an
+    additional set of lot_ids to drop once ``cutoff`` is given --
+    ``forecast/eval.py``'s ``_origin_outlier_lot_ids`` passes the
+    lot_ids that WOULD be ``OUTLIER``-flagged using only pre-``cutoff``
+    data. ``forecast_input``'s own OUTLIER flag
+    (``build_db._flag_price_outliers``) computes its median/MAD per
+    (wine_ref_id, vintage) group over the ENTIRE history, not just
+    pre-``cutoff`` data -- a sale AFTER ``cutoff`` can shift that
+    group's median/MAD enough to change whether a PRE-``cutoff`` row is
+    flagged, so ``cutoff`` alone (date-filtering only) does not fully
+    close this leak.
+
+    Also recomputes D15's "series active, last observation <= 36
+    months old" recency check RELATIVE TO ``cutoff`` instead of "now"
+    (``forecast_input``'s own check, in ``build_db.py``, is always
+    now-relative) -- a series only looks active today because of a
+    sale AFTER ``cutoff`` would otherwise still contribute its
+    pre-``cutoff`` rows to this regression, even though no real
+    point-in-time system could have known, as of ``cutoff``, that this
+    series would ever sell again. Confirmed material on the live DB
+    (see ``eval.py``'s own measurement): up to 10.7% of series at the
+    earliest rolling origin only qualify this way. Computed from the
+    group's RAW max pre-cutoff date (before ``exclude_lot_ids`` is
+    applied) -- same ordering convention as ``eval.py``'s
+    ``_is_active_as_of`` (code-review finding, 2026-11-12: the two are
+    separate implementations over differently-shaped data, not one
+    shared helper, so keep this ordering in sync by hand if either
+    changes).
+
+    Known residual gap (code-review finding, 2026-11-12, documented
+    not fixed): this "RAW max date" is only raw relative to
+    ``exclude_lot_ids`` -- ``df`` itself already came from
+    ``forecast_input``'s OUTPUT, which has already dropped OUTLIER/
+    QTY_SUSPECT/DUP_CANDIDATE rows at the SQL view level (unlike that
+    view's own internal ``series_last_obs``, which does see them, D15's
+    own comment). 1.05% of series have their forecast_input-visible
+    last-sale understated for exactly this reason (live DB measurement,
+    see ``eval.py``'s ``_is_active_as_of``) -- conservative direction,
+    not fixed this round (would require bypassing ``forecast_input``
+    for this check).
 
     Re-applies two already-established Gate-G0 conventions rather than
     inventing new ones: ``quantity IS NULL`` (QTY_ASSUMED, 63,170 live
@@ -57,30 +106,42 @@ def _load_fe_frame(conn, cutoff=None):
     implicit "not assumed" value.
     """
     rows = conn.execute("""
-        SELECT fi.wine_ref_id, fi.vintage, fi.size_class, p.name,
-               l.quantity, l.size_assumed, fi.price_per_bottle_eur,
+        SELECT fi.lot_id, fi.wine_ref_id, fi.vintage, fi.size_class,
+               p.name, l.quantity, l.size_assumed, fi.price_per_bottle_eur,
                fi.lot_date
         FROM forecast_input fi
         JOIN lots l ON l.id = fi.lot_id
         JOIN providers p ON p.id = fi.provider_id
         """).fetchall()
     df = pd.DataFrame(rows, columns=[
-        "wine_ref_id", "vintage", "size_class", "provider",
+        "lot_id", "wine_ref_id", "vintage", "size_class", "provider",
         "quantity", "size_assumed", "price", "lot_date"])
+    df["group"] = (df["wine_ref_id"].astype(str) + "|"
+                   + df["vintage"].astype(str) + "|"
+                   + df["size_class"].astype(str))
     if cutoff is not None:
         df["lot_date"] = pd.to_datetime(df["lot_date"])
-        df = df[df["lot_date"] < pd.Timestamp(cutoff)]
+        cutoff_ts = pd.Timestamp(cutoff)
+        df = df[df["lot_date"] < cutoff_ts]
+        # Recency judged on the RAW pre-exclusion max date (own
+        # docstring above, mirroring eval.py's _is_active_as_of): if a
+        # group's only within-window row is also its only
+        # exclude_lot_ids hit, excluding it FIRST would make the whole
+        # group look stale and drop it entirely instead of just that
+        # one row (code-review finding, 2026-11-12).
+        max_date = df.groupby("group")["lot_date"].transform("max")
+        df = df[max_date
+               >= cutoff_ts - pd.DateOffset(months=RECENCY_MONTHS)]
+        if exclude_lot_ids:
+            df = df[~df["lot_id"].isin(exclude_lot_ids)]
     df["quantity"] = df["quantity"].fillna(1).astype(float)
     df["size_assumed"] = df["size_assumed"].fillna(0).astype(float)
     df["y"] = np.log(df["price"].astype(float))
     df["log_qty"] = np.log(df["quantity"])
-    df["group"] = (df["wine_ref_id"].astype(str) + "|"
-                   + df["vintage"].astype(str) + "|"
-                   + df["size_class"].astype(str))
     return df
 
 
-def fit_provider_effects(conn, cutoff=None):
+def fit_provider_effects(conn, cutoff=None, exclude_lot_ids=None):
     """``y ~ wine_ref_id*vintage*size_class (absorbed) + provider +
     log(qty) + size_assumed``, by the within (demeaning) estimator.
 
@@ -99,6 +160,13 @@ def fit_provider_effects(conn, cutoff=None):
     on data truncated to 12 months before ``as_of`` moved several
     providers' offsets by 3-25 percentage points (correlation with the
     full-data fit only 0.90) -- not a rounding error.
+
+    ``exclude_lot_ids`` (Copilot review 2026-11-11, Finding B): forwarded
+    to ``_load_fe_frame`` unchanged -- see its own docstring. Closes the
+    remaining leak ``cutoff`` alone does not: ``forecast_input``'s
+    OUTLIER flag and recency check are both computed relative to "now",
+    not to ``cutoff``, so a sale AFTER ``cutoff`` can still change which
+    PRE-``cutoff`` rows reach this regression even with ``cutoff`` set.
 
     FE group = the full series key (``wine_ref_id``, ``vintage``,
     ``size_class``), not just ``wine*vintage`` as the plan prose says --
@@ -137,7 +205,7 @@ def fit_provider_effects(conn, cutoff=None):
     that (clientele, condition grading, reputation, ...), a different
     thing than what the plan's own cross-check line describes.
     """
-    df = _load_fe_frame(conn, cutoff=cutoff)
+    df = _load_fe_frame(conn, cutoff=cutoff, exclude_lot_ids=exclude_lot_ids)
     sizes = df.groupby("group").size()
     df = df[df["group"].isin(sizes[sizes >= 2].index)].copy()
     empty_report = {"var_within_before": float("nan"),

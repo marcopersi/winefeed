@@ -19,18 +19,24 @@ own returned column too -- not redundant: ``forecast/eval.py``'s
 rolling-origin harness needs to UNDO this full-data offset and reapply
 a point-in-time one per origin (G1 fix, Copilot review 2026-11-11), and
 can only do that if ``y + house_offset`` recovers the raw log price.
+
+``lot_id`` (Copilot review 2026-11-11, Finding B) is also its own
+returned column: ``forecast/eval.py`` needs to identify and exclude
+specific rows that would be ``OUTLIER``-flagged using only pre-origin
+data (``_origin_outlier_lot_ids``), and a lot_id is the only
+unambiguous way to do that (date/provider/price can collide).
 """
 import numpy as np
 import pandas as pd
 
-_COLUMNS = ["date", "y", "provider", "qty", "house_offset"]
+_COLUMNS = ["date", "y", "provider", "qty", "house_offset", "lot_id"]
 
 
 def load_series(conn, wine_ref_id, vintage, size_class):
     """Load one ``(wine_ref_id, vintage, size_class)`` series as a
-    DataFrame with columns ``date, y, provider, qty, house_offset``
-    (D2/D8: ``y = ln(price_per_bottle_eur) - house_offset``, see this
-    module's own docstring).
+    DataFrame with columns ``date, y, provider, qty, house_offset,
+    lot_id`` (D2/D8: ``y = ln(price_per_bottle_eur) - house_offset``,
+    see this module's own docstring).
 
     Sorted by ``(date, lot_id)`` for a deterministic row order (G5):
     ``date`` alone repeats within a series whenever two lots sold on the
@@ -49,7 +55,7 @@ def load_series(conn, wine_ref_id, vintage, size_class):
     rows = conn.execute(
         """
         SELECT fi.lot_date, fi.price_per_bottle_eur, p.name, l.quantity,
-               COALESCE(pe.offset, 0) AS house_offset
+               COALESCE(pe.offset, 0) AS house_offset, fi.lot_id
         FROM forecast_input fi
         JOIN lots l ON l.id = fi.lot_id
         JOIN providers p ON p.id = fi.provider_id
@@ -61,7 +67,8 @@ def load_series(conn, wine_ref_id, vintage, size_class):
     ).fetchall()
 
     df = pd.DataFrame(
-        rows, columns=["date", "price", "provider", "qty", "house_offset"])
+        rows, columns=["date", "price", "provider", "qty", "house_offset",
+                       "lot_id"])
     df["date"] = pd.to_datetime(df["date"])
     df["y"] = np.log(df["price"].astype(float)) - df["house_offset"]
     df["qty"] = df["qty"].astype("Int64")

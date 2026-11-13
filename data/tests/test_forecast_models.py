@@ -172,6 +172,7 @@ class FitProviderEffectsCutoffTest(unittest.TestCase):
             "UPDATE lots SET lot_kind='SINGLE', vintage_status='STRUCTURED',"
             " vintage_final=2015, price_per_bottle_eur=? WHERE id=?",
             (price, lot_id))
+        return lot_id
 
     # forecast_input (D15) only admits a series whose own most recent
     # observation is <= 36 months old -- these must all be RELATIVE to
@@ -232,6 +233,85 @@ class FitProviderEffectsCutoffTest(unittest.TestCase):
         default = models.fit_provider_effects(self.conn)[0]
         explicit_none = models.fit_provider_effects(self.conn, cutoff=None)[0]
         pd.testing.assert_frame_equal(default, explicit_none)
+
+    def test_exclude_lot_ids_drops_specific_rows_before_fitting(self):
+        # Copilot review 2026-11-11, Finding B part 2: two balanced
+        # pre-cutoff groups, gap=+0.2 and gap=-0.3 -- the full fit's gap
+        # would be their average, -0.05. Excluding group 2's langtons
+        # lot leaves group 2 a SINGLETON (koppe only), which the
+        # existing "drop singleton groups" rule removes entirely -- the
+        # result must then match group 1 ALONE, hand-computable as
+        # exactly 0.2.
+        self._add_row(self.koppe_id, 1, 100.0, self.BEFORE)
+        self._add_row(self.langtons_id, 1, 100.0 * math.exp(0.2),
+                      self.BEFORE)
+        self._add_row(self.koppe_id, 2, 100.0, self.BEFORE)
+        excluded_id = self._add_row(
+            self.langtons_id, 2, 100.0 * math.exp(-0.3), self.BEFORE)
+
+        offsets, _ = models.fit_provider_effects(
+            self.conn, cutoff=self.CUTOFF, exclude_lot_ids={excluded_id})
+        got = dict(zip(offsets["provider"], offsets["offset"]))
+        self.assertAlmostEqual(got["langtons"] - got["koppe"], 0.2, places=6)
+
+    def test_recency_excludes_a_series_only_active_due_to_a_later_sale(self):
+        # Copilot review 2026-11-11, Finding B part 1: group 1's normal
+        # pre-cutoff pair, gap=+0.2, always included.
+        self._add_row(self.koppe_id, 1, 100.0, self.BEFORE)
+        self._add_row(self.langtons_id, 1, 100.0 * math.exp(0.2),
+                      self.BEFORE)
+
+        # Group 2's only PRE-cutoff pair is dated more than 36 months
+        # before CUTOFF (gap=-0.6) -- it only shows up in
+        # forecast_input's own now-relative D15 window at all because
+        # of a LATER (post-cutoff) sale for each provider; without that
+        # later sale, forecast_input would already exclude this group
+        # today, pre-fix or post-fix alike, proving nothing new.
+        very_stale = (datetime.date.today()
+                     - datetime.timedelta(days=1500)).isoformat()
+        self._add_row(self.koppe_id, 2, 100.0, very_stale)
+        self._add_row(self.langtons_id, 2, 100.0 * math.exp(-0.6),
+                      very_stale)
+        self._add_row(self.koppe_id, 2, 999.0, self.AFTER)
+        self._add_row(self.langtons_id, 2, 999.0, self.AFTER)
+
+        offsets, _ = models.fit_provider_effects(
+            self.conn, cutoff=self.CUTOFF)
+        got = dict(zip(offsets["provider"], offsets["offset"]))
+        # Group 2's pre-cutoff pair is excluded despite being "active"
+        # by forecast_input's own now-relative check -- if this fix
+        # weren't applied, the result would instead be the average of
+        # +0.2 and -0.6, i.e. -0.2.
+        self.assertAlmostEqual(got["langtons"] - got["koppe"], 0.2, places=6)
+
+    def test_recency_is_judged_before_exclude_lot_ids_is_applied(self):
+        # code-review finding, 2026-11-12: group 2's RAW max pre-cutoff
+        # date is recent (near_id, within 36 months of CUTOFF) -- but
+        # near_id is ALSO the one row excluded via exclude_lot_ids.
+        # Computing max_date AFTER dropping near_id would see only the
+        # very_stale pair, judge group 2 dormant, and drop it entirely
+        # (wrongly losing its still-valid very_stale pair too); the
+        # fix computes max_date from the raw group before exclusion.
+        self._add_row(self.koppe_id, 1, 100.0, self.BEFORE)
+        self._add_row(self.langtons_id, 1, 100.0 * math.exp(0.2),
+                      self.BEFORE)
+
+        very_stale = (datetime.date.today()
+                     - datetime.timedelta(days=1500)).isoformat()
+        self._add_row(self.koppe_id, 2, 100.0, very_stale)
+        self._add_row(self.langtons_id, 2, 100.0 * math.exp(-0.6),
+                      very_stale)
+        near_cutoff = (self.CUTOFF - pd.Timedelta(days=60)).date().isoformat()
+        near_id = self._add_row(self.koppe_id, 2, 500.0, near_cutoff)
+
+        offsets, _ = models.fit_provider_effects(
+            self.conn, cutoff=self.CUTOFF, exclude_lot_ids={near_id})
+        got = dict(zip(offsets["provider"], offsets["offset"]))
+        # Group 2's very_stale pair (gap=-0.6) survives alongside
+        # group 1 (gap=0.2) -- the buggy order would drop group 2
+        # entirely and leave only group 1's 0.2.
+        self.assertAlmostEqual(
+            got["langtons"] - got["koppe"], (0.2 + -0.6) / 2, places=6)
 
 
 if __name__ == "__main__":
