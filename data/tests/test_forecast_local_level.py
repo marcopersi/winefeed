@@ -1,6 +1,7 @@
-"""2.2-2.4: forecast.models.local_level_forecast -- UnobservedComponents
-('local level') on a monthly-aggregated grid, its prediction-interval
-quantiles, and the FIT_FAILED variance-floor/convergence guards.
+"""2.1-2.6: forecast.models.local_level_forecast/local_linear_trend_forecast
+-- _LocalLevelTrend (level, optional damped slope) on a monthly-aggregated
+grid with per-month observation-variance weighting, their prediction-
+interval quantiles, and the FIT_FAILED variance-floor/convergence guards.
 """
 # pylint: disable=protected-access
 import unittest
@@ -8,8 +9,6 @@ import unittest.mock
 
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-from scipy.stats import norm
 
 from forecast import models
 from forecast.models import HORIZON_NEXT, HORIZON_12M, QUANTILE_LEVELS
@@ -47,6 +46,20 @@ class MonthlySeriesTest(unittest.TestCase):
         self.assertAlmostEqual(monthly.iloc[2], 5.0)
 
 
+class MonthlyWeightsTest(unittest.TestCase):
+    def test_counts_lots_per_month_aligned_to_monthly_series(self):
+        df = _series([
+            ("2020-01-05", 1.0, "koppe", 1),
+            ("2020-01-20", 3.0, "koppe", 1),
+            ("2020-01-25", 4.0, "koppe", 1),
+            ("2020-03-10", 5.0, "koppe", 1),
+        ])
+        monthly = models._monthly_series(df)
+        weights = models._monthly_weights(df)
+        self.assertEqual(len(weights), len(monthly))
+        self.assertEqual(list(weights), [3.0, 1.0, 1.0])  # Feb: placeholder
+
+
 class MonthsBetweenTest(unittest.TestCase):
     def test_counts_calendar_months_not_days(self):
         self.assertEqual(
@@ -57,17 +70,18 @@ class MonthsBetweenTest(unittest.TestCase):
             models._months_between("2023-01-15", "2023-02-01"), 1)
 
 
-class LocalLevelRecoversKnownVarianceTest(unittest.TestCase):
+class LocalLevelTrendRecoversKnownVarianceTest(unittest.TestCase):
     def test_sigma2_estimates_within_30_percent(self):
         # Fixed seed (G5), >= 200 months -- a short series won't recover
-        # within 30% (MLE sampling noise dominates). Verified empirically
-        # before writing this assertion, not assumed: seed=0 converges
-        # with both ratios comfortably inside [0.7, 1.3].
+        # within 30% (MLE sampling noise dominates). One lot per month
+        # (weights all 1) isolates this from the weighting mechanism,
+        # same synthetic shape 2.2's original test used.
         sigma_eta, sigma_eps = 0.08, 0.15
         df = _random_walk_series(240, sigma_eta, sigma_eps, seed=0)
         monthly = models._monthly_series(df)
-        res = sm.tsa.UnobservedComponents(
-            monthly, level="local level").fit(disp=False)
+        weights = models._monthly_weights(df)
+        mod = models._LocalLevelTrend(monthly, weights, trend=False)
+        res = mod.fit(disp=False)
         self.assertTrue(res.mle_retvals.get("converged"))
         est_eta = res.params["sigma2.level"] ** 0.5
         est_eps = res.params["sigma2.irregular"] ** 0.5
@@ -75,90 +89,59 @@ class LocalLevelRecoversKnownVarianceTest(unittest.TestCase):
         self.assertAlmostEqual(est_eps / sigma_eps, 1.0, delta=0.3)
 
 
+class PerMonthWeightingTest(unittest.TestCase):
+    """2.1/2.6 fix (2026-11-13): sigma2.irregular is divided by each
+    month's own lot count k_t, replacing the additive within-month-
+    variance correction this model used to need -- confirm the weight
+    actually changes the fitted sigma2.irregular, not just that it's
+    accepted without error."""
+
+    def test_weighting_changes_the_fitted_irregular_variance(self):
+        rng = np.random.default_rng(7)
+        n = 120
+        weights = rng.integers(1, 10, n).astype(float)
+        true_level = np.cumsum(rng.normal(0, 0.005 ** 0.5, n))
+        y = true_level + rng.normal(0, (0.25 / weights) ** 0.5, n)
+        idx = pd.date_range("2010-01-01", periods=n, freq="MS")
+        monthly = pd.Series(y, index=idx)
+
+        res_weighted = models._LocalLevelTrend(
+            monthly, weights, trend=False).fit(disp=False)
+        res_unweighted = models._LocalLevelTrend(
+            monthly, np.ones(n), trend=False).fit(disp=False)
+
+        diff = abs(res_weighted.params["sigma2.irregular"]
+                   - res_unweighted.params["sigma2.irregular"])
+        self.assertGreater(diff, 0.01)
+
+    def test_zero_lot_months_get_a_placeholder_weight_not_a_crash(self):
+        df = _series([
+            ("2020-01-05", 1.0, "koppe", 1),
+            ("2020-03-10", 5.0, "koppe", 1),
+        ])
+        monthly = models._monthly_series(df)
+        weights = models._monthly_weights(df)
+        mod = models._LocalLevelTrend(monthly, weights, trend=False)
+        res = mod.fit(disp=False)
+        self.assertTrue(np.isfinite(res.llf))
+
+
 class PredictionIntervalIncludesMeasurementNoiseTest(unittest.TestCase):
-    def test_forecast_variance_is_at_least_the_observation_noise_variance(
+    def test_forecast_variance_is_at_least_the_per_lot_observation_noise(
             self):
         # 2.4's own mandated test: "Prädiktions- nicht Konfidenz-
-        # intervall (Messrauschen einrechnen!)". Confirmed empirically
-        # (not assumed from statsmodels docs) that
-        # get_forecast(h).var_pred_mean already equals filtered state
-        # variance PLUS sigma2.irregular -- this pins that fact down as
-        # a regression test, since local_level_forecast relies on it
-        # without adding sigma2.irregular manually anywhere.
+        # intervall (Messrauschen einrechnen!)". One lot per month
+        # (weights all 1), so sigma2.irregular directly IS the per-lot
+        # noise variance the forecast must include at minimum.
         df = _random_walk_series(200, sigma_eta=0.0, sigma_eps=0.2, seed=1)
         monthly = models._monthly_series(df)
-        res = sm.tsa.UnobservedComponents(
-            monthly, level="local level").fit(disp=False)
+        weights = models._monthly_weights(df)
+        mod = models._LocalLevelTrend(monthly, weights, trend=False)
+        res = mod.fit(disp=False)
         sigma2_irregular = res.params["sigma2.irregular"]
         for h in (1, 6, 24):
             var = res.get_forecast(h).var_pred_mean.iloc[-1]
             self.assertGreaterEqual(var, sigma2_irregular)
-
-
-class WithinMonthLotVarianceTest(unittest.TestCase):
-    """Copilot review, Finding 2 (2026-11-11): _monthly_series averages
-    away within-month lot scatter before the Kalman model ever sees
-    it, understating the prediction interval for an individual lot.
-    ``_within_month_lot_variance`` recovers it from ``train`` itself
-    when there's enough of it, falling back to a global constant
-    otherwise (most series: median size 2, so almost never)."""
-
-    def test_fallback_used_when_too_few_multi_lot_months(self):
-        df = _random_walk_series(24, sigma_eta=0.05, sigma_eps=0.1, seed=3)
-        variance, used_fallback = models._within_month_lot_variance(df)
-        self.assertTrue(used_fallback)
-        self.assertEqual(variance, models._WITHIN_MONTH_LOT_VARIANCE_FALLBACK)
-
-    def test_uses_pooled_variance_from_train_when_enough_multi_lot_months(
-            self):
-        # 3 months, 2 lots each, every cell hand-picked to have
-        # variance exactly 1.0 (ddof=0: deviations +-1.0 from the
-        # cell's own mean) -- the pooled estimate must be exactly 1.0
-        # too, not the fallback constant.
-        rows = []
-        for month, (a, b) in enumerate(
-                [(0.0, 2.0), (1.0, 3.0), (5.0, 7.0)], start=1):
-            date = f"2020-{month:02d}-01"
-            rows.append((date, a, "koppe", 1))
-            rows.append((date, b, "koppe", 1))
-        df = _series(rows)
-        variance, used_fallback = models._within_month_lot_variance(df)
-        self.assertFalse(used_fallback)
-        self.assertAlmostEqual(variance, 1.0, places=9)
-
-
-class LocalLevelForecastIncludesWithinMonthVarianceTest(unittest.TestCase):
-    """Confirms local_level_forecast actually ADDS
-    _within_month_lot_variance's result to the model's own
-    var_pred_mean before building quantiles -- not just that the
-    helper function computes the right number in isolation."""
-
-    def test_interval_width_matches_model_variance_plus_within_month_term(
-            self):
-        df = _random_walk_series(60, 0.05, 0.1, seed=2, freq="30D",
-                                 start="2018-01-01")
-        origin = pd.Timestamp(
-            df["date"].iloc[-1].year, df["date"].iloc[-1].month,
-            1) + pd.DateOffset(months=1)
-
-        with unittest.mock.patch.object(
-                models, "_within_month_lot_variance",
-                return_value=(0.5, False)):
-            quantiles, flags = models.local_level_forecast(
-                df, origin, HORIZON_NEXT)
-        self.assertFalse(flags["within_month_variance_fallback"])
-
-        # Independently recompute the model's OWN forecast variance --
-        # same style as PredictionIntervalIncludesMeasurementNoiseTest.
-        monthly = models._monthly_series(df)
-        res = sm.tsa.UnobservedComponents(
-            monthly, level="local level").fit(disp=False)
-        h = models._months_between(monthly.index[-1], origin)
-        model_var = float(res.get_forecast(h).var_pred_mean.iloc[-1])
-
-        expected_sd = (model_var + 0.5) ** 0.5
-        actual_sd = (quantiles[0.9] - quantiles[0.1]) / (2 * norm.ppf(0.9))
-        self.assertAlmostEqual(actual_sd, expected_sd, places=6)
 
 
 class LocalLevelForecastTest(unittest.TestCase):
@@ -214,7 +197,7 @@ class LocalLevelForecastTest(unittest.TestCase):
                                  start="2018-01-01")
         origin = self._origin_after(df)
         with unittest.mock.patch.object(
-                sm.tsa.UnobservedComponents, "fit",
+                models._LocalLevelTrend, "fit",
                 side_effect=ValueError("boom")):
             self.assertEqual(
                 models.local_level_forecast(df, origin, HORIZON_NEXT),
@@ -264,6 +247,103 @@ class LocalLevelForecastTest(unittest.TestCase):
         self.assertGreater(
             far_q[0.9] - far_q[0.1], near_q[0.9] - near_q[0.1])
 
+    def test_multi_lot_months_narrow_the_forecast_vs_a_single_lot_month(
+            self):
+        # 2.1/2.6 fix's whole point: a month with several lots should
+        # pull the forecast's observation-noise contribution down
+        # relative to an otherwise-identical series with one lot per
+        # month, since sigma2.irregular/k_t shrinks with k_t.
+        rng = np.random.default_rng(9)
+        n = 36
+        dates = pd.date_range("2018-01-01", periods=n, freq="MS")
+        level = np.cumsum(rng.normal(0, 0.02, n))
+        base_rows = []
+        many_rows = []
+        for i, d in enumerate(dates):
+            y = level[i] + rng.normal(0, 0.2)
+            base_rows.append((d.isoformat(), float(y), "koppe", 1))
+            many_rows.append((d.isoformat(), float(y), "koppe", 1))
+            if i % 3 == 0:
+                for _ in range(5):
+                    many_rows.append(
+                        (d.isoformat(),
+                         float(level[i] + rng.normal(0, 0.2)), "koppe", 1))
+        df_base = _series(base_rows)
+        df_many = _series(many_rows)
+        origin = pd.Timestamp(dates[-1].year, dates[-1].month,
+                              1) + pd.DateOffset(months=1)
+        q_base, _ = models.local_level_forecast(df_base, origin,
+                                                 HORIZON_NEXT)
+        q_many, _ = models.local_level_forecast(df_many, origin,
+                                                 HORIZON_NEXT)
+        self.assertLess(q_many[0.9] - q_many[0.1],
+                        q_base[0.9] - q_base[0.1])
+
+
+class LocalLinearTrendForecastTest(unittest.TestCase):
+    """2.6: local_linear_trend_forecast -- same contract as
+    local_level_forecast, plus the mandatory damped slope."""
+
+    def _origin_after(self, df):
+        last = df["date"].iloc[-1]
+        return pd.Timestamp(last.year, last.month, 1) + pd.DateOffset(
+            months=1)
+
+    def test_too_few_months_returns_none(self):
+        df = _series([("2020-01-15", 1.0, "koppe", 1)])
+        origin = self._origin_after(df)
+        self.assertIsNone(
+            models.local_linear_trend_forecast(df, origin, HORIZON_NEXT))
+
+    def test_quantiles_are_monotone(self):
+        rng = np.random.default_rng(13)
+        n = 60
+        dates = pd.date_range("2015-01-01", periods=n, freq="MS")
+        level = np.linspace(0, 2, n) + rng.normal(0, 0.05, n)
+        df = _series([(d.isoformat(), float(v), "koppe", 1)
+                      for d, v in zip(dates, level)])
+        origin = self._origin_after(df)
+        result = models.local_linear_trend_forecast(df, origin, HORIZON_NEXT)
+        self.assertIsNotNone(result)
+        self.assertNotEqual(result, "FIT_FAILED")
+        quantiles, _clamped = result
+        values = [quantiles[q] for q in QUANTILE_LEVELS]
+        self.assertEqual(values, sorted(values))
+
+    def test_damping_keeps_the_12m_forecast_from_running_away(self):
+        # 2.6's own mandatory requirement: an undamped trend extrapolated
+        # 12 months out could produce fantasy prices. Compare the
+        # trend-only forward move (median minus the last observed
+        # level) against what an UNDAMPED linear extrapolation of the
+        # same fitted slope would give over the same horizon -- the
+        # damped forecast must move distinctly less.
+        rng = np.random.default_rng(17)
+        n = 48
+        dates = pd.date_range("2016-01-01", periods=n, freq="MS")
+        slope = 0.15
+        level = slope * np.arange(n) + rng.normal(0, 0.03, n)
+        df = _series([(d.isoformat(), float(v), "koppe", 1)
+                      for d, v in zip(dates, level)])
+        origin = self._origin_after(df)
+        result = models.local_linear_trend_forecast(df, origin, HORIZON_12M)
+        self.assertIsNotNone(result)
+        self.assertNotEqual(result, "FIT_FAILED")
+        quantiles, _clamped = result
+        undamped_move = slope * 13  # 12m horizon + the 1 "next" step
+        actual_move = quantiles[0.5] - level[-1]
+        self.assertLess(actual_move, undamped_move)
+
+    def test_fit_exception_is_fit_failed(self):
+        df = _random_walk_series(60, 0.05, 0.1, seed=2, freq="30D",
+                                 start="2018-01-01")
+        origin = self._origin_after(df)
+        with unittest.mock.patch.object(
+                models._LocalLevelTrend, "fit",
+                side_effect=ValueError("boom")):
+            self.assertEqual(
+                models.local_linear_trend_forecast(df, origin, HORIZON_NEXT),
+                "FIT_FAILED")
+
 
 class MakeLocalLevelForecasterTest(unittest.TestCase):
     def test_counters_track_calls_insufficient_and_fit_failed_separately(
@@ -303,21 +383,6 @@ class MakeLocalLevelForecasterTest(unittest.TestCase):
         self.assertEqual(forecaster.counters["n_sigma2_irregular_clamped"], 1)
         self.assertEqual(forecaster.counters["n_sigma2_level_clamped"], 0)
 
-    def test_within_month_fallback_counter_increments_on_a_sparse_series(
-            self):
-        # The common case: every month in this fixture has exactly one
-        # lot, so the fallback constant is always used.
-        forecaster = models.make_local_level_forecaster()
-        df = _random_walk_series(60, 0.05, 0.1, seed=2, freq="30D",
-                                 start="2018-01-01")
-        origin = pd.Timestamp(
-            df["date"].iloc[-1].year, df["date"].iloc[-1].month,
-            1) + pd.DateOffset(months=1)
-        result = forecaster(df, origin, HORIZON_NEXT)
-        self.assertIsInstance(result, dict)
-        self.assertEqual(
-            forecaster.counters["n_within_month_variance_fallback"], 1)
-
     def test_never_returns_the_fit_failed_sentinel_itself(self):
         forecaster = models.make_local_level_forecaster()
         dates = pd.date_range("2018-01-01", periods=24, freq="MS")
@@ -327,6 +392,36 @@ class MakeLocalLevelForecasterTest(unittest.TestCase):
                             HORIZON_NEXT)
         self.assertIsNone(result)
         self.assertNotEqual(result, "FIT_FAILED")
+
+
+class MakeLocalLinearTrendForecasterTest(unittest.TestCase):
+    def test_counters_track_calls_and_insufficient_months(self):
+        forecaster = models.make_local_linear_trend_forecaster()
+        too_short_df = _series([("2020-01-15", 1.0, "koppe", 1)])
+        good_df = _random_walk_series(60, 0.05, 0.1, seed=2, freq="30D",
+                                      start="2018-01-01")
+        origin_short = pd.Timestamp("2020-02-01")
+        origin_good = pd.Timestamp(
+            good_df["date"].iloc[-1].year,
+            good_df["date"].iloc[-1].month, 1) + pd.DateOffset(months=1)
+
+        r1 = forecaster(too_short_df, origin_short, HORIZON_NEXT)
+        r2 = forecaster(good_df, origin_good, HORIZON_NEXT)
+
+        self.assertIsNone(r1)
+        self.assertIsInstance(r2, dict)
+        self.assertEqual(forecaster.counters["n_calls"], 2)
+        self.assertEqual(forecaster.counters["n_insufficient_months"], 1)
+
+    def test_counters_are_independent_per_forecaster_instance(self):
+        # Same trap the local_level wrapper's own module comment in
+        # run.py documents: counters must not leak across instances.
+        f1 = models.make_local_linear_trend_forecaster()
+        f2 = models.make_local_linear_trend_forecaster()
+        too_short_df = _series([("2020-01-15", 1.0, "koppe", 1)])
+        f1(too_short_df, pd.Timestamp("2020-02-01"), HORIZON_NEXT)
+        self.assertEqual(f1.counters["n_calls"], 1)
+        self.assertEqual(f2.counters["n_calls"], 0)
 
 
 if __name__ == "__main__":

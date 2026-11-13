@@ -15,12 +15,13 @@ from . import eval as feval
 from . import models as fmodels
 
 # 1.4's four naive baselines -- see models.BASELINES. Stufe 2 adds
-# local_level (2.2-2.4) alongside them, never replacing them (G2: every
-# later model must keep beating these on the same report). local_level
-# is NOT in the default set below -- a statsmodels MLE fit is far
-# slower than a baseline's microseconds-per-call, so including it by
-# default would silently turn an ordinary baseline-only report run
-# into a much longer one. Select it explicitly with --models.
+# local_level (2.1-2.4) and local_linear_trend (2.6) alongside them,
+# never replacing them (G2: every later model must keep beating these
+# on the same report). Neither is in the default set below -- a Kalman
+# MLE fit is far slower than a baseline's microseconds-per-call, so
+# including either by default would silently turn an ordinary
+# baseline-only report run into a much longer one. Select them
+# explicitly with --models.
 #
 # Only NAMES live at module level, not forecaster instances -- senior-
 # review finding: an earlier version built
@@ -32,12 +33,15 @@ from . import models as fmodels
 # notebook, a future scheduler) -- counts would silently accumulate
 # across runs instead of resetting. Each ``main()`` call now builds its
 # own fresh forecaster instances instead.
-_MODEL_NAMES = list(fmodels.BASELINES) + ["local_level"]
+_MODEL_NAMES = (list(fmodels.BASELINES)
+               + ["local_level", "local_linear_trend"])
 
 
 def _build_forecasters():
     forecasters = dict(fmodels.BASELINES)
     forecasters["local_level"] = fmodels.make_local_level_forecaster()
+    forecasters["local_linear_trend"] = (
+        fmodels.make_local_linear_trend_forecaster())
     return forecasters
 
 

@@ -437,7 +437,7 @@ BASELINES = {
 
 
 # --------------------------------------------------------------------------- #
-# 2.2-2.4 -- Local-Level-Modell (Kalman)
+# 2.1-2.6 -- Local-Level/Local-Linear-Trend-Modell (Kalman)
 # --------------------------------------------------------------------------- #
 
 # Technical floor only (>= 2 non-NaN monthly points, or nothing at all is
@@ -489,47 +489,174 @@ _SIGMA2_FLOORS = {
     "sigma2.level": _SIGMA2_LEVEL_FLOOR,
 }
 
-# Copilot review finding (2026-11-11, Finding 2, confirmed empirically
-# on the live DB, not assumed): _monthly_series averages every lot in
-# a calendar month to one point before the Kalman model ever sees it,
-# so sigma2.irregular (and therefore get_forecast's var_pred_mean) only
-# captures the MONTHLY MEAN's own noise -- not an individual lot's.
-# evaluate_series scores individual lots, not monthly means, so this
-# silently makes every prediction interval too narrow whenever a
-# month actually held more than one lot. Measured: 52% of all
-# forecast_input rows fall in a (series, month) cell with >= 2 lots;
-# the pooled within-month variance of those cells is ~0.091 -- ~9x the
-# sigma2.irregular floor above and a sizeable fraction of the typical
-# ~0.206 total residual variance (fit_provider_effects' own
-# var_residual_after). This plausibly explains the "next"-horizon
-# coverage shortfall already on record (74.0% vs the [77, 83] target)
-# that the first version of this model's own review had deferred to
-# Stufe 4 as an unexplained calibration gap -- it is instead a missing
-# variance term in 2.4 itself.
-_WITHIN_MONTH_LOT_VARIANCE_FALLBACK = 0.09
-# A series' OWN within-month scatter is preferred when there's enough
-# of it to trust (most series can't: median series size is 2 total
-# observations, so most calendar months hold exactly one lot and this
-# never triggers) -- same "own evidence over a global prior, only once
-# there's enough of it" shape as LOCAL_LEVEL_MIN_MONTHS/MIN_OBS above.
-_WITHIN_MONTH_MIN_CELLS = 3
+# Update 2026-11-13 (User-Entscheid nach Copilot-Review-Nachbesserung,
+# §8-Eintrag "2.1/2.6 Pro-Monat-Gewichtung"): die additive
+# ``_within_month_lot_variance``-Korrektur oben (Copilot-Review
+# 2026-11-11, Finding 2) behob die zu enge "next"-Coverage, überkorrigierte
+# aber auf 84,5-89,4% in JEDER Dichteklasse (durchgängig über dem
+# [77,83]-Zielband -- live gemessen, nicht geraten). Ursache: additiv
+# aufgeschlagene Varianz zählt den Teil des Lot-Rauschens, den
+# ``sigma2.irregular`` bei vielen Serien (Median-Seriengrösse = 2
+# Beobachtungen, die meisten Kalendermonate also ohnehin nur 1 Los) schon
+# selbst mitträgt, streckenweise doppelt. Ersetzt durch die statistisch
+# exakte Variante (2.2's eigene "Option A mit Gewicht"-Alternative, für
+# v1 bewusst zurückgestellt): ``sigma2.irregular`` wird PRO MONAT durch
+# die Los-Anzahl ``k_t`` dieses Monats gewichtet (Varianz des Mittels aus
+# ``k`` i.i.d. Losen ist ``sigma2.irregular / k`` -- keine Näherung,
+# sondern exakt), nicht mehr nachträglich addiert. Dafür reicht
+# ``UnobservedComponents`` nicht mehr aus (kein Hook für pro-Periode
+# ``obs_cov``) -- ``_LocalLevelTrend`` ist ein eigenes, kleines
+# ``MLEModel``.
 
 
-def _within_month_lot_variance(train):
-    """Pooled variance of ``y`` around each calendar month's own mean,
-    over months in ``train`` with >= 2 lots -- the within-month scatter
-    ``_monthly_series`` discards. Returns ``(variance, used_fallback)``;
-    falls back to ``_WITHIN_MONTH_LOT_VARIANCE_FALLBACK`` (an absolute,
-    empirically-derived constant, same convention as ``_SIGMA2_FLOORS``)
-    when ``train`` has fewer than ``_WITHIN_MONTH_MIN_CELLS`` such
-    months to estimate this from reliably."""
-    groups = train.groupby(train["date"].dt.to_period("M"))["y"]
-    cells = [g for _, g in groups if len(g) >= 2]
-    if len(cells) < _WITHIN_MONTH_MIN_CELLS:
-        return _WITHIN_MONTH_LOT_VARIANCE_FALLBACK, True
-    total_obs = sum(len(g) for g in cells)
-    pooled = sum(float(g.var(ddof=0)) * len(g) for g in cells) / total_obs
-    return pooled, False
+DAMPING_MAX = 0.98
+
+
+class _LocalLevelTrend(sm.tsa.statespace.MLEModel):
+    """Level (+ optionale gedämpfte Steigung) mit PRO-MONAT-
+    Beobachtungsvarianz ``sigma2.irregular / k_t`` (``k_t`` = Los-Anzahl
+    in diesem Monat) statt des unten stehenden Kommentars' additiver
+    Korrektur -- siehe diesen für die Begründung und Live-Messung.
+
+    Gegen synthetische Daten mit bekannten Parametern validiert, bevor
+    hier verwendet (Wiedergewinnung von sigma2.irregular/sigma2.level
+    innerhalb derselben ±30%-Toleranz wie 2.2's eigener
+    ``UnobservedComponents``-Test; NaN-Lücken-Handling; gedämpfte
+    Trend-Prognose-Zuwächse schrumpfen statt zu explodieren über einen
+    12-Monats-Horizont) -- Prototyp-Skript im 2.1/2.6-Review-Log-Eintrag
+    referenziert.
+
+    ``trend=True`` fügt einen zweiten Zustand (Steigung) hinzu,
+    Übergang ``slope_t = damping * slope_{t-1} + eta_slope`` --
+    ``damping`` wird über einen skalierten Sigmoid auf ``(0,
+    DAMPING_MAX)`` abgebildet, nie den unbeschränkten Random-Walk, den
+    ein ungedämpfter lokaler LINEARER Trend erlauben würde (2.6's eigene
+    Pflicht-Dämpfung: eine ungedämpfte, 12 Monate extrapolierte Steigung
+    kann Fantasiepreise liefern)."""
+
+    def __init__(self, endog, weights, trend=False):
+        self.trend = trend
+        k_states = 2 if trend else 1
+        super().__init__(endog, k_states=k_states, k_posdef=k_states,
+                         initialization="approximate_diffuse")
+        w = np.asarray(weights, dtype=float).copy()
+        # Platzhalter für NaN-Monate (dort wird obs_cov vom Kalman-Filter
+        # ohnehin nie gelesen -- die Beobachtung fehlt) und für die
+        # Out-of-Sample-Erweiterung in clone() (dito, keine echte
+        # Beobachtung dort).
+        w[~np.isfinite(w) | (w <= 0)] = 1.0
+        self._weights = w
+        self["design"] = (np.array([[1.0, 0.0]]) if trend
+                          else np.array([[1.0]]))
+        self["transition"] = (np.array([[1.0, 1.0], [0.0, 1.0]]) if trend
+                              else np.array([[1.0]]))
+        self["selection"] = np.eye(k_states)
+        self["obs_cov"] = np.zeros((1, 1, self.nobs))
+
+    @property
+    def param_names(self):
+        """statsmodels' own hook: parameter names, in fit order."""
+        names = ["sigma2.irregular", "sigma2.level"]
+        if self.trend:
+            names += ["sigma2.slope", "damping"]
+        return names
+
+    @property
+    def start_params(self):
+        """MLE starting point. statsmodels treats this as CONSTRAINED
+        (``fit`` calls ``untransform_params(start_params)`` internally,
+        confirmed against ``MLEModel.fit``'s own source, not assumed --
+        an earlier version of this passed ``1.5`` meaning "the
+        UNCONSTRAINED pre-sigmoid value", which statsmodels instead read
+        as a constrained damping of 1.5 > ``DAMPING_MAX``, silently
+        clipped to the cap, starting the optimizer already AT the
+        boundary): variances at the series' own scale, damping (when
+        ``trend``) at a middling, non-degenerate 0.80.
+
+        ``resid_var`` falls back to ``1.0`` for zero OR non-finite
+        variance -- not just ``... or 1.0`` (code-review finding,
+        2026-11-13: ``nan`` is truthy in Python, so ``nan or 1.0``
+        silently evaluates to ``nan``, not the intended fallback). The
+        production path (``_llt_forecast``'s ``monthly.notna().sum() <
+        LOCAL_LEVEL_MIN_MONTHS`` guard) never reaches this with an
+        all-NaN ``endog``, but this class is also instantiated
+        directly (tests already do), where nothing else enforces
+        that."""
+        resid_var = float(np.nanvar(self.endog))
+        if not np.isfinite(resid_var) or resid_var == 0:
+            resid_var = 1.0
+        params = [resid_var, resid_var * 0.01]
+        if self.trend:
+            params += [resid_var * 0.001, 0.80]
+        return np.array(params)
+
+    def transform_params(self, unconstrained):
+        """Unconstrained optimizer space -> constrained model space:
+        variances via squaring (always >= 0), damping via a scaled
+        sigmoid into the OPEN interval ``(0, DAMPING_MAX)`` -- see the
+        class docstring for why ``DAMPING_MAX < 1`` is load-bearing,
+        not cosmetic."""
+        constrained = unconstrained.copy()
+        constrained[0] = unconstrained[0] ** 2
+        constrained[1] = unconstrained[1] ** 2
+        if self.trend:
+            constrained[2] = unconstrained[2] ** 2
+            constrained[3] = DAMPING_MAX / (1 + np.exp(-unconstrained[3]))
+        return constrained
+
+    def untransform_params(self, constrained):
+        """Inverse of ``transform_params`` (statsmodels needs both
+        directions: e.g. to re-enter the optimizer from a given
+        constrained start)."""
+        unconstrained = constrained.copy()
+        unconstrained[0] = constrained[0] ** 0.5
+        unconstrained[1] = constrained[1] ** 0.5
+        if self.trend:
+            unconstrained[2] = constrained[2] ** 0.5
+            ratio = np.clip(constrained[3] / DAMPING_MAX, 1e-6, 1 - 1e-6)
+            unconstrained[3] = np.log(ratio / (1 - ratio))
+        return unconstrained
+
+    def clone(self, endog, exog=None, **kwargs):  # pylint: disable=unused-argument
+        """statsmodels' required hook for out-of-sample extension
+        (``get_forecast`` calls this with ``endog`` = dummy zeros for
+        JUST the new periods, to read off design/transition/selection
+        there). ``exog`` is unused -- this model has none, the
+        parameter only exists to match statsmodels' call signature.
+
+        The ``weights=1`` default is NOT a safe placeholder that
+        happens not to matter (code-review finding, 2026-11-13,
+        confirmed empirically -- ``obs_cov`` for the extension IS read
+        by ``get_forecast``/``get_prediction`` and changes
+        ``var_pred_mean``: patching this to ``weights=3`` instead
+        measurably shrank a test forecast's variance). ``1`` is the
+        deliberately correct value, not an arbitrary default:
+        ``evaluate_series`` scores one INDIVIDUAL future lot per
+        target row, never a monthly mean, so the forecast variance
+        must be ``sigma2.irregular / 1`` regardless of how many lots
+        the real future month turns out to hold -- exactly the
+        per-lot noise the 2026-11-13 per-month-weighting fix (this
+        class's own docstring) exists to get right. A future change
+        that estimates a "more realistic" future ``k_t > 1`` here
+        (e.g. from recent average lot counts) would silently shrink
+        the forecast back toward per-monthly-mean variance and
+        reintroduce the under-coverage bug that fix was written to
+        eliminate -- do not "improve" this without re-reading that
+        docstring first."""
+        weights = kwargs.pop("weights", np.ones(len(endog)))
+        return self.__class__(endog, weights, trend=self.trend)
+
+    def update(self, params, **kwargs):
+        """statsmodels' own hook: push fitted/candidate ``params`` into
+        the state-space matrices -- here, the per-month-weighted
+        ``obs_cov`` and (when ``trend``) the damped slope's own
+        transition/variance."""
+        params = super().update(params, **kwargs)
+        self["obs_cov", 0, 0, :] = params[0] / self._weights
+        self["state_cov", 0, 0] = params[1]
+        if self.trend:
+            self["transition", 1, 1] = params[3]
+            self["state_cov", 1, 1] = params[2]
 
 
 def _monthly_series(train):
@@ -538,10 +665,23 @@ def _monthly_series(train):
     NaN for months with zero lots. statsmodels' Kalman filter treats a
     NaN ``endog`` entry as "skip this measurement update" -- exactly
     2.2's "Lücken korrekt behandeln, Varianz wächst" requirement, with
-    no extra code needed. Same-month weighting by lot count (the
-    alternative 2.2 also names) is deliberately NOT done for v1 -- see
-    ``local_level_forecast``'s own docstring."""
+    no extra code needed. The per-month LOT COUNT (2.2's "Gewicht nach
+    Anzahl" alternative) is a separate, aligned array -- see
+    ``_monthly_weights``, consumed by ``_LocalLevelTrend`` as a
+    per-period observation-variance weight, not folded into this mean
+    itself."""
     return train.set_index("date")["y"].resample("MS").mean()
+
+
+def _monthly_weights(train):
+    """Lot count per calendar month, aligned to ``_monthly_series``'s
+    own index -- the ``k_t`` weight ``_LocalLevelTrend`` divides
+    ``sigma2.irregular`` by (variance of a mean of ``k`` i.i.d. lots is
+    ``sigma2.irregular / k``). Zero-lot months (NaN in
+    ``_monthly_series``) get a placeholder of 1 -- irrelevant, the
+    Kalman filter never reads ``obs_cov`` for a missing observation."""
+    counts = train.set_index("date")["y"].resample("MS").count()
+    return counts.replace(0, 1).to_numpy(dtype=float)
 
 
 def _months_between(start, end):
@@ -550,64 +690,41 @@ def _months_between(start, end):
     return (end.year - start.year) * 12 + (end.month - start.month)
 
 
-def local_level_forecast(train, origin, horizon):
-    """2.2-2.4: ``UnobservedComponents(endog, level="local level")`` on
-    the monthly grid from ``_monthly_series``, forecast ``h`` months
-    ahead to the real target (``origin`` for "next", ``origin + 12M``
-    for "12m" -- ``h >= 1`` always, since ``train`` is strictly
-    ``< origin`` and every origin is itself a calendar-month start).
+# 2.6 (live-DB diagnostic, 2026-11-13, confirmed not guessed): the
+# trend variant's FIT_FAILED rate stayed at ~13-14% even at n_train>=10
+# -- NOT a model mis-specification. Every one of 145 sampled
+# non-converged fits hit statsmodels' own ``fit()`` default
+# ``maxiter=50`` EXACTLY (``mle_retvals["iterations"] == 50`` every
+# time), with ``damping`` crawling toward the open boundary 0 (true
+# optimum: "no real trend", legitimate, see ``DAMPING_MAX``'s own
+# docstring for why the interval is open -- an optimizer can never
+# fully REACH an open boundary, so it keeps inching closer instead of
+# satisfying the convergence tolerance). Re-fitting the same failing
+# cases with more headroom converged every one of them within 50-54
+# iterations (19/19 on a targeted re-test, up from 14/19 at the
+# default cap) -- a convergence-REPORTING problem, not a real failure,
+# same shape as 2.3's own "Untergrenzen... CLAMP, not reject" finding,
+# just for ``damping`` instead of a ``sigma2``. ``local_level`` itself
+# never needed this (97.5%+ convergence at the default already -- 2
+# params converge fast) but raising the cap is harmless there too.
+_FIT_MAXITER = 200
 
-    Returns ``None`` (too few months, or ``h < 1``), the string
+
+def _fit_local_level_trend(monthly, weights, trend):
+    """Shared fit/convergence/floor-clamp path for
+    ``local_level_forecast``/``local_linear_trend_forecast``. Returns
     ``"FIT_FAILED"`` (non-convergence, an exception, or a non-finite
-    forecast -- an actually broken fit, see ``_SIGMA2_FLOORS``'s own
-    docstring for why a floored sigma^2 is NOT this), or
-    ``(quantiles, clamped)``: ``quantiles`` is the ``eval.Forecaster``-
-    standard dict (one value per ``QUANTILE_LEVELS``, Gaussian in
-    log-y space: ``mean + norm.ppf(q) * sd``, monotone in ``q`` by
-    construction); ``clamped`` is ``{"sigma2.irregular": bool,
-    "sigma2.level": bool}``, for the wrapper's own per-parameter clamp
-    counters (``make_local_level_forecaster``) -- 2.3's AC is a rate,
-    so both how often FIT_FAILED fires and how often each floor had to
-    bind are tracked, not just a single pass/fail flag.
-
-    2.4's own test requirement -- "Prädiktions- nicht Konfidenz-
-    intervall (Messrauschen einrechnen!)" -- needed ONE more term added
-    manually, past what statsmodels gives for free (Copilot review,
-    Finding 2): confirmed empirically that ``res.get_forecast(h).
-    var_pred_mean`` already equals the filtered state variance PLUS
-    ``sigma2.irregular`` (the MONTHLY-MEAN observation-noise variance)
-    to float precision, i.e. statsmodels' own forecast variance for the
-    monthly series already is that series' own prediction variance, not
-    its latent state's confidence interval. But ``evaluate_series``
-    scores individual LOTS, not monthly means, and ``_monthly_series``
-    already averaged away whatever within-month lot-to-lot scatter
-    existed -- see ``_within_month_lot_variance``'s own docstring for
-    why that is added on top here, additively (the two noise sources
-    are independent: a lot's deviation from ITS OWN month's mean,
-    plus that month's mean's own forecast error). This still holds
-    after clamping, since the clamped forecast is read off
-    ``mod.smooth(...)`` with the SAME ``UnobservedComponents`` model,
-    just fixed parameters.
-
-    Same-month lot weighting ("Mittel + Gewicht nach Anzahl", the 2.2
-    alternative to a plain mean): deliberately left as a plain,
-    unweighted mean for v1 -- not forgotten, just not pre-emptively
-    built. 2.5's own empirical coverage check (80% in [77, 83]) is the
-    test the plan itself names for whether this needs revisiting; it is
-    not guessed at here."""
-    monthly = _monthly_series(train)
-    if monthly.notna().sum() < LOCAL_LEVEL_MIN_MONTHS:
-        return None
-    target_date = (origin if horizon == HORIZON_NEXT
-                   else origin + pd.DateOffset(months=12))
-    h = _months_between(monthly.index[-1], target_date)
-    if h < 1:
-        return None
+    parameter -- an actually broken fit, see ``_SIGMA2_FLOORS``'s own
+    docstring for why a floored sigma^2 is NOT this) or ``(res,
+    clamped)``: ``clamped`` only ever has the two ``_SIGMA2_FLOORS``
+    keys -- ``sigma2.slope``/``damping`` (when ``trend``) are bounded
+    by construction via ``transform_params`` (see ``_LocalLevelTrend``'s
+    own docstring), so they need no floor, only a finiteness check."""
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            mod = sm.tsa.UnobservedComponents(monthly, level="local level")
-            res = mod.fit(disp=False)
+            mod = _LocalLevelTrend(monthly, weights, trend=trend)
+            res = mod.fit(disp=False, maxiter=_FIT_MAXITER)
     except Exception:
         return "FIT_FAILED"
     if not res.mle_retvals.get("converged", False):
@@ -621,52 +738,108 @@ def local_level_forecast(train, origin, horizon):
         clamped[name] = value < floor
         if clamped[name]:
             params[name] = floor
+    if trend:
+        for name in ("sigma2.slope", "damping"):
+            value = params.get(name)
+            if value is None or not np.isfinite(value):
+                return "FIT_FAILED"
     if any(clamped.values()):
         res = mod.smooth(params.to_numpy())
+    return res, clamped
+
+
+def _llt_forecast(train, origin, horizon, trend):
+    """Shared body of ``local_level_forecast``/
+    ``local_linear_trend_forecast`` -- see those for the public
+    contract (return shape, ``FIT_FAILED``/``None`` semantics)."""
+    monthly = _monthly_series(train)
+    if monthly.notna().sum() < LOCAL_LEVEL_MIN_MONTHS:
+        return None
+    target_date = (origin if horizon == HORIZON_NEXT
+                   else origin + pd.DateOffset(months=12))
+    h = _months_between(monthly.index[-1], target_date)
+    if h < 1:
+        return None
+    fit = _fit_local_level_trend(monthly, _monthly_weights(train), trend)
+    if fit == "FIT_FAILED":
+        return "FIT_FAILED"
+    res, clamped = fit
     fc = res.get_forecast(h)
     mean = float(fc.predicted_mean.iloc[-1])
     var = float(fc.var_pred_mean.iloc[-1])
     if not np.isfinite(mean) or not np.isfinite(var) or var <= 0:
         return "FIT_FAILED"
-    within_month_var, used_fallback = _within_month_lot_variance(train)
-    clamped["within_month_variance_fallback"] = used_fallback
-    sd = (var + within_month_var) ** 0.5
-    quantiles = {q: mean + norm.ppf(q) * sd for q in QUANTILE_LEVELS}
+    quantiles = {q: mean + norm.ppf(q) * var ** 0.5 for q in QUANTILE_LEVELS}
     return quantiles, clamped
 
 
-def make_local_level_forecaster():
-    """Wraps ``local_level_forecast`` into the plain ``Forecaster``
-    contract (``-> dict | None``), counting on the returned closure's
-    own ``.counters`` instead of threading a second return channel
-    through ``eval.py``:
+def local_level_forecast(train, origin, horizon):
+    """2.1-2.4: level-only ``_LocalLevelTrend`` (``trend=False``) on the
+    monthly grid from ``_monthly_series``/``_monthly_weights``, forecast
+    ``h`` months ahead to the real target (``origin`` for "next",
+    ``origin + 12M`` for "12m" -- ``h >= 1`` always, since ``train`` is
+    strictly ``< origin`` and every origin is itself a calendar-month
+    start).
+
+    Returns ``None`` (too few months, or ``h < 1``), the string
+    ``"FIT_FAILED"``, or ``(quantiles, clamped)``: ``quantiles`` is the
+    ``eval.Forecaster``-standard dict (one value per ``QUANTILE_LEVELS``,
+    Gaussian in log-y space: ``mean + norm.ppf(q) * sd``, monotone in
+    ``q`` by construction); ``clamped`` is ``{"sigma2.irregular": bool,
+    "sigma2.level": bool}``, for the wrapper's own per-parameter clamp
+    counters (``make_local_level_forecaster``) -- 2.3's AC is a rate, so
+    both how often FIT_FAILED fires and how often each floor had to bind
+    are tracked, not just a single pass/fail flag.
+
+    2.4's own test requirement -- "Prädiktions- nicht Konfidenz-
+    intervall (Messrauschen einrechnen!)" -- is satisfied by
+    ``_LocalLevelTrend`` itself now, no manual addition needed: its
+    per-month ``obs_cov = sigma2.irregular / k_t`` already makes
+    ``res.get_forecast(h).var_pred_mean`` the prediction variance for an
+    INDIVIDUAL lot in the target month (not a monthly mean's), since the
+    model never sees an unweighted monthly mean in the first place --
+    see the module comment above this class for why the earlier,
+    additive correction (Copilot review 2026-11-11, Finding 2)
+    overcorrected coverage and was replaced."""
+    return _llt_forecast(train, origin, horizon, trend=False)
+
+
+def local_linear_trend_forecast(train, origin, horizon):
+    """2.6: as ``local_level_forecast``, but with a damped slope state
+    (``_LocalLevelTrend(trend=True)``) -- see that class's own
+    docstring for why the damping is mandatory and bounded by
+    construction. Only adopted as the production model if it beats
+    ``local_level`` on Gate G2's own criteria once both are compared
+    (plan's own "nur übernehmen, wenn nach G2 besser")."""
+    return _llt_forecast(train, origin, horizon, trend=True)
+
+
+def _make_llt_forecaster(forecast_fn):
+    """Shared ``Forecaster``-contract wrapper for
+    ``make_local_level_forecaster``/``make_local_linear_trend_forecaster``
+    -- counts on the returned closure's own ``.counters`` instead of
+    threading a second return channel through ``eval.py``:
 
     - ``n_calls``: every invocation.
     - ``n_insufficient_months``: too few monthly points to fit at all
-      (``local_level_forecast`` returned ``None``) -- NOT a 2.3
-      concern (no fit was ever attempted), but needed as the
-      denominator for the other two rates (``n_calls -
-      n_insufficient_months`` = fits actually attempted).
+      (the wrapped function returned ``None``) -- NOT a 2.3 concern (no
+      fit was ever attempted), but needed as the denominator for the
+      other two rates (``n_calls - n_insufficient_months`` = fits
+      actually attempted).
     - ``n_fit_failed``: an actually broken fit (2.3's own AC is this
       rate, ">5% of attempted fits ⇒ Review" -- compute it against
       ``n_calls - n_insufficient_months``, not ``n_calls``).
     - ``n_sigma2_irregular_clamped`` / ``n_sigma2_level_clamped``: a
       successful fit where that one variance floor had to bind (see
-      ``_SIGMA2_FLOORS``) -- informational, not itself a failure.
-    - ``n_within_month_variance_fallback``: a successful fit where
-      ``train`` had too few multi-lot months to estimate its own
-      within-month lot variance, so the global fallback constant was
-      used instead (see ``_within_month_lot_variance``) -- also
-      informational, expected to be the common case."""
+      ``_SIGMA2_FLOORS``) -- informational, not itself a failure."""
     counters = {
         "n_calls": 0, "n_insufficient_months": 0, "n_fit_failed": 0,
         "n_sigma2_irregular_clamped": 0, "n_sigma2_level_clamped": 0,
-        "n_within_month_variance_fallback": 0,
     }
 
     def forecaster(train, origin, horizon):
         counters["n_calls"] += 1
-        result = local_level_forecast(train, origin, horizon)
+        result = forecast_fn(train, origin, horizon)
         if result is None:
             counters["n_insufficient_months"] += 1
             return None
@@ -678,9 +851,21 @@ def make_local_level_forecaster():
             counters["n_sigma2_irregular_clamped"] += 1
         if clamped["sigma2.level"]:
             counters["n_sigma2_level_clamped"] += 1
-        if clamped["within_month_variance_fallback"]:
-            counters["n_within_month_variance_fallback"] += 1
         return quantiles
 
     forecaster.counters = counters
     return forecaster
+
+
+def make_local_level_forecaster():
+    """Wraps ``local_level_forecast`` into the plain ``Forecaster``
+    contract -- see ``_make_llt_forecaster`` for the counters this
+    exposes."""
+    return _make_llt_forecaster(local_level_forecast)
+
+
+def make_local_linear_trend_forecaster():
+    """2.6: wraps ``local_linear_trend_forecast`` into the plain
+    ``Forecaster`` contract -- see ``_make_llt_forecaster`` for the
+    counters this exposes."""
+    return _make_llt_forecaster(local_linear_trend_forecast)
