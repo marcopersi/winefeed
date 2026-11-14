@@ -53,7 +53,7 @@ keinen Code — es ist die Review-Stufe vor jeder Umsetzung.
 | D2 Zugriffsstufen | ✅ entschieden 2026-11-13 |
 | D3 Öffentliches API? | ✅ entschieden 2026-11-13: nein, nur eigene UI |
 | D4 Edge/WAF-Anbieter | 🟡 Tendenz genannt (Supabase Cloud + Cloudflare/netcup), nicht final |
-| D5 Rechtliche Durchsetzung | 🟡 Eigentümer geklärt (Nutzer), Inhalt erläutert, Entwurfs-Unterstützung noch offen |
+| D5 Rechtliche Durchsetzung | 🟡 Eigentümer geklärt (Nutzer); 6.1.1 (`docs/database-investment-memo.md`) + 6.1.2 (`docs/tos-anti-scraping-clause.md`, v0.1) erledigt, Rechtsberatungs-Review (6.1.4) offen |
 | Stufe 0 (vendor-agnostischer Teil)/2/3/4 | ⬜ können beginnen, sobald 0.1 (Supabase-Audit) + 0.3 abgeschlossen sind |
 | Stufe 1.2 (WAF) + Deployment | ⬜ blockiert auf finale D4-Entscheidung |
 
@@ -141,7 +141,7 @@ Fähigkeiten bestehen, nicht gegen einen naiven `requests.get`-Scraper.
 | D2 | Zugriffsstufen | **Entschieden (2026-11-13):** mind. 3 Stufen: anonym / registriert / paid (+ intern für eigene Dienste) | Ohne Stufen ist Daten-Shaping (Stufe 4) nicht entscheidbar — jede Stufe braucht eine eigene Granularitäts-Grenze |
 | D3 | Öffentliches API-Produkt? | **Entschieden (2026-11-13): NEIN — nur die eigene UI (`price-service-ui`) ist Konsument, es gibt kein Dritt-Kunden-API-Produkt.** | Vereinfacht Stufe 2 erheblich: Identität ist Login-Session der eigenen Nutzer, kein Self-Service-API-Key-Issuing, keine B2B-Verträge/SLAs nötig |
 | D4 | Edge/WAF-Anbieter | **Noch offen, Tendenz genannt (2026-11-13):** DB vermutlich Supabase Cloud, Applikation vermutlich Cloudflare und/oder ein eigener Mini-Server bei netcup — noch nicht final entschieden | Kostenpflichtige/vertragliche Entscheidung, hier nicht vorwegzunehmen. **Wichtig:** falls Supabase Cloud tatsächlich die Produktions-DB wird, macht das 0.1's RLS-Policy-Audit zur Pflicht-Voraussetzung, nicht zur Kann-Prüfung (siehe 0.1) |
-| D5 | Rechtliche Durchsetzung | **Eigentümerfrage geklärt: Nutzer selbst.** Inhaltliche Klärung siehe Chat-Antwort 2026-11-13 (ToS-Anti-Scraping-Klausel, DMCA-Takedown bei US-Hosting, UWG + Schweizer/EU-Datenbankschutzrecht sui generis als vermutlich stärkster Hebel für diesen Fall). **Noch offen:** will der Nutzer einen Claude/deepseek-Entwurf der ToS-Klausel als Startpunkt, oder bleibt Stufe 6 komplett getrennt von diesem technischen Plan? | Braucht ggf. Rechtsberatung für die finale Fassung, aber ein erster Entwurf ist kein Blocker für Stufe 1–5 |
+| D5 | Rechtliche Durchsetzung | **Eigentümerfrage geklärt: Nutzer selbst.** Inhaltliche Klärung siehe Chat-Antwort 2026-11-13 (ToS-Anti-Scraping-Klausel, DMCA-Takedown bei US-Hosting, UWG + Schweizer/EU-Datenbankschutzrecht sui generis als vermutlich stärkster Hebel für diesen Fall). **Geklärt (2026-11-14):** Claude liefert den ersten ToS-Klausel-Entwurf als Startpunkt — erstellt als `docs/tos-anti-scraping-clause.md` (v0.1), markiert als nicht rechtsverbindlich. | Braucht Rechtsberatung für die finale Fassung (6.1.4); der Entwurf selbst ist kein Blocker für Stufe 1–5 |
 
 **D1–D3 sind entschieden, D4/D5 teilweise offen — Gate G0 ist dadurch
 NICHT mehr vollständig blockiert:** die vendor-agnostischen Teile
@@ -402,7 +402,46 @@ D1/D2)
 
 **6.1 ToS mit Anti-Scraping-/Anti-Training-Klausel** (operativ) — der
 Kern-Baustein, auch ohne öffentliches API-Produkt relevant, weil die
-eigene Web-UI das Angriffsziel ist.
+eigene Web-UI das Angriffsziel ist. Wirkt nicht präventiv, sondern erst
+NACH einer Detektion (Stufe 3) als rechtliche Grundlage für Sperre/
+Abmahnung/Klage — Zustimmung muss Clickwrap sein (aktive Checkbox bei
+Registrierung), nicht Browsewrap (reine Nutzung), da nur Clickwrap
+beweisbare Zustimmung liefert. Zerlegt in:
+
+- **6.1.1 Investitions-Dokumentation** (S, operativ) — internes Memo mit
+  konkreten Zahlen (Stunden, Anzahl Häuser/Lots, Pipeline-Komplexität)
+  als Beleg für die "wesentliche Investition", die das EU/CH
+  sui-generis-Datenbankschutzrecht voraussetzt. AC: Memo vorhanden,
+  referenzierbar für eine spätere Rechtsberatung. **✅ erledigt
+  2026-11-14** — `docs/database-investment-memo.md`: alle Umfangs-/
+  Komplexitätszahlen live gegen die Produktions-DB und das Repo
+  verifiziert (24 Provider, 9'078 Auktionen, 4'297'347 Lose, 3'232'827
+  bereinigte Preisbeobachtungen, 51 Tage/105 Commits Entwicklung);
+  Stundenaufwand/direkte Kosten als offene Punkte markiert (nur vom
+  Nutzer selbst zu beziffern).
+- **6.1.2 Klausel-Entwurf** (M, operativ, Autor: Claude als Startpunkt)
+  — Pflichtbestandteile: Definition "automatisierter Zugriff"/
+  "Scraping"; separates, explizites Trainings-Nutzungsverbot (inkl.
+  abgeleiteter/aggregierter Daten); Anti-Umgehungs-Klausel (Verbot, die
+  technischen Schutzmassnahmen aus Stufe 1–5 zu umgehen); expliziter
+  Vorbehalt des Datenbankschutzrechts; Rechtsfolgen bei Verstoss
+  (Sperre, Schadensersatzvorbehalt); anwendbares Recht/Gerichtsstand.
+  AC: Entwurf vorhanden, alle genannten Elemente enthalten, ausdrücklich
+  als "nicht rechtsverbindlich, Entwurf für Rechtsberatung" markiert.
+  **✅ erledigt 2026-11-14** — Entwurf in
+  `docs/tos-anti-scraping-clause.md` (v0.1, inkl. Vollständigkeits-Check
+  gegen dieses AC als Anhang); nächster Schritt 6.1.4 (Rechtsberatung,
+  Owner: Nutzer).
+- **6.1.3 Clickwrap-Integration** (S, Code, an Stufe 2/Login gekoppelt)
+  — Pflicht-Checkbox bei Registrierung, kein Vorab-Haken. AC: ohne
+  aktive Zustimmung keine Account-Erstellung möglich.
+- **6.1.4 Rechtsberatungs-Review** (Aufwand offen, operativ, Owner laut
+  D5: Nutzer) — AC: Anwalt/Rechtsberatung (Jurisdiktion CH, ggf.
+  zusätzlich EU bei EU-Nutzern) hat 6.1.2 freigegeben.
+- **6.1.5 Publikation + Versionierung** (S, Code) — eigene Route,
+  sichtbares Datum/Versionsnummer, Änderungsprotokoll. AC: live,
+  versioniert — für spätere Beweisführung "galt zum Zeitpunkt X".
+
 **6.2 API-Nutzungsvertrag für Dritt-Kunden** — **entfällt (D3: kein
 öffentliches API-Produkt, nur eigene UI).**
 **6.3 `robots.txt` + `llms.txt`** (S, Code) — **Fact, nicht Annahme:**
@@ -457,6 +496,9 @@ Adversarial-Check → Review-Log hier in §7). Ergänzend für diesen Plan:
 |---|---|---|---|---|
 | 2026-11-13 | Plan-Erstellung | Claude (Code-Inventur: `api/main.py`, `price-service-ui`, `priceservice`, `priceData/supabase`, `.github/workflows`; Architektur-Gegenprüfung via `advisor`) | Live-Exposure vollständig ungeschützt (kein Auth/Rate-Limit, sequentielle IDs, volle Rohdaten-Ausgabe), aber **noch nicht öffentlich deployed** — kein Dockerfile/fly.toml/vercel.json/docker-compose gefunden. `priceData/supabase`-Live-Status (echtes Remote-Projekt mit Daten? RLS-Policy des `anon`-Keys?) aus dem Repo allein nicht klärbar — als offener Punkt in 0.1 markiert statt geraten. `priceservice` ist ein reiner lokaler Importer, kein öffentlicher Server. | Plan erstellt, D1–D5 dem Nutzer zur Entscheidung vorgelegt (§3), Gate G0 blockiert jeden Code bis zur Klärung. Noch keine Umsetzung. |
 | 2026-11-13 | D1–D5 Nutzer-Entscheid | Nutzer (per Chat) | D1 bestätigt, mit Zusatz: vollständige Enumeration ist technisch nicht zu 100% verhinderbar, muss aber zuverlässig per Rate-Limit/User/IP FESTGESTELLT werden (Prävention + Detektion, nicht Prävention allein) — in D1-Zeile (§3) und Stufe 3 reflektiert. D2 bestätigt unverändert. **D3 entschieden: kein öffentliches API-Produkt, nur die eigene UI** — vereinfacht Stufe 2 grundlegend (Login-Session statt extern ausgegebener API-Keys; 2.1/2.2 umgeschrieben, Terminologie-Hinweis "Key = interne Identität" vor Stufe 2 ergänzt, 6.2 als entfallend markiert). D4 noch offen, Tendenz genannt (Supabase Cloud als DB, Cloudflare und/oder netcup-Mini-Server als Applikation) — macht 0.1's Supabase-RLS-Audit dringlicher, nicht mehr nur hypothetisch. D5: Eigentümerfrage geklärt (Nutzer selbst), ToS/DMCA/UWG-Begriffe im Chat erläutert (Datenbankschutzrecht sui generis als vermutlich stärkster Hebel für diesen Fall); offen, ob ein erster ToS-Klausel-Entwurf gewünscht ist. | D1–D3 als entschieden markiert (§3, §1a). Gate G0 nicht mehr vollständig blockiert: vendor-agnostische Teile (Stufe 0/2/3/4) können nach Abschluss von 0.1/0.3 beginnen; nur Stufe 1.2 (WAF) und Deployment-Spezifisches warten weiter auf die finale D4-Entscheidung. Plan-Dokument entsprechend aktualisiert, noch keine Code-Umsetzung. |
+| 2026-11-13 | 6.1 Zerlegung | Claude (per Chat: Erklärung ToS/Anti-Scraping/Anti-Training-Klausel, Zusammenspiel mit DMCA/UWG/sui-generis-Datenbankschutzrecht) | 6.1 war ein Einzeiler ohne Umsetzungs-Struktur. Zerlegt in 6.1.1 Investitions-Dokumentation (Beleg für sui-generis-Schutz), 6.1.2 Klausel-Entwurf (Claude als Startpunkt, kein Rechtsrat), 6.1.3 Clickwrap-Integration (Code, an Stufe 2 gekoppelt), 6.1.4 Rechtsberatungs-Review (Owner: Nutzer), 6.1.5 Publikation+Versionierung (Code). | 6.1.1–6.1.5 im Plan ergänzt. 6.1.2 (der eigentliche Klausel-Entwurf) noch nicht geschrieben — nächster Schritt auf Nutzer-Anfrage. |
+| 2026-11-14 | 6.1.2 Klausel-Entwurf | Claude (Autor gemäss Plan; auf Nutzer-Anfrage "Bauplan implementieren") | Erster Entwurf der ToS-Klausel erstellt: alle Pflichtbestandteile des 6.1.2-AC enthalten (Scraping-Definition, separates Trainingsnutzungsverbot inkl. abgeleiteter Daten, Anti-Umgehungs-Klausel, Datenbankschutzrechts-Vorbehalt, Rechtsfolgen, Recht/Gerichtsstand), als nicht rechtsverbindlich markiert, mit Vollständigkeits-Check als Anhang. Keine Rechtsberatung — bewusst als Arbeitsgrundlage für 6.1.4 angelegt. | Entwurf in `docs/tos-anti-scraping-clause.md` (v0.1) abgelegt; Fortschritts-Übersicht (§1a D5) und D5-Zeile (§3) aktualisiert. Nächster Schritt: 6.1.4 Rechtsberatungs-Review (Owner: Nutzer); 6.1.3 (Clickwrap) + 6.1.5 (Versionierung) sind Code und gehen an deepseek, gekoppelt an Stufe 2. |
+| 2026-11-14 | 6.1.1 Investitions-Dokumentation | Claude (Zahlen live gegen Produktions-DB `/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite` und Repo verifiziert, nicht geraten) | Umfangs-/Komplexitätszahlen ermittelt (24 Provider, 9'078 Auktionen, 4'297'347 Lose, 3'232'827 bereinigte Preisbeobachtungen, 269'884 Wein-Referenzen, 1998–2026 Abdeckung, 3.47 GB; 22 Fetcher-Module/3'848 Zeilen + 5'473 Zeilen Build-Pipeline, 51 Tage/105 Commits Entwicklung; Sothebys camoufox/Residential-IP/Turnstile als Beleg für Nicht-Trivialität). Stundenaufwand/direkte Kosten NICHT aus dem Repo ableitbar — als offene Punkte markiert statt geraten. | Memo in `docs/database-investment-memo.md` abgelegt, 6.1.1 als erledigt markiert (§1a, §5). Offene Punkte (Stunden/Kosten) warten auf Nutzer-Angabe, sind aber kein Blocker für 6.1.4. |
 
 ---
 
