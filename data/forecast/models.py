@@ -507,6 +507,18 @@ _SIGMA2_FLOORS = {
 # ``UnobservedComponents`` nicht mehr aus (kein Hook für pro-Periode
 # ``obs_cov``) -- ``_LocalLevelTrend`` ist ein eigenes, kleines
 # ``MLEModel``.
+#
+# Update 2026-11-14 (Copilot-Review-Follow-up): die Pro-Monat-Gewichtung
+# modelliert die Varianz des MonatsMITTELS korrekt, aber eine Likelihood
+# nur über Monatsmittel SIEHT die Streuung der Lose UM ihr Monatsmittel
+# nie -- bei driftendem Level und mehreren Losen pro Monat treibt der
+# Optimierer ``sigma2.irregular`` auf den Floor, obwohl die echte
+# Lot-Streuung gross bleibt (synthetisch bestätigt: Lot-SD 0.3, Level-
+# Drift 0.4, 5 Lose/Monat -> ``sigma2.irregular`` ~0.0004 statt 0.09).
+# ``_monthly_within_scatter`` berechnet die Within-Month-SSE und
+# ``_LocalLevelTrend.loglike`` addiert ihren Gauß-Beitrag zurück -- die
+# exakte Vervollständigung der Pro-Lot-Likelihood, keine additive
+# Korrektur wie der 2026-11-13 verworfene Ansatz.
 
 
 DAMPING_MAX = 0.98
@@ -517,6 +529,16 @@ class _LocalLevelTrend(sm.tsa.statespace.MLEModel):
     Beobachtungsvarianz ``sigma2.irregular / k_t`` (``k_t`` = Los-Anzahl
     in diesem Monat) statt des unten stehenden Kommentars' additiver
     Korrektur -- siehe diesen für die Begründung und Live-Messung.
+
+    Zweiter, unabhängiger Beitrag zu ``sigma2.irregular`` (Update
+    2026-11-14, siehe Modul-Kommentar oben): die Monatsmittel allein
+    sehen die Streuung der einzelnen Lose UM ihr eigenes Monatsmittel
+    nie, wodurch der Optimierer ``sigma2.irregular`` bei driftendem
+    Level und mehreren Losen pro Monat auf den Floor treiben kann,
+    obwohl die reale Lot-Streuung gross bleibt. ``loglikeobs`` (nicht
+    ``loglike`` allein -- siehe dessen eigenen Docstring) addiert dafür
+    pro Monat die Within-Month-Scatter-Likelihood aus
+    ``_monthly_within_scatter`` zurück.
 
     Gegen synthetische Daten mit bekannten Parametern validiert, bevor
     hier verwendet (Wiedergewinnung von sigma2.irregular/sigma2.level
@@ -534,7 +556,8 @@ class _LocalLevelTrend(sm.tsa.statespace.MLEModel):
     Pflicht-Dämpfung: eine ungedämpfte, 12 Monate extrapolierte Steigung
     kann Fantasiepreise liefern)."""
 
-    def __init__(self, endog, weights, trend=False):
+    def __init__(self, endog, weights, trend=False, within_sse=None,
+                 within_df=None, within_positions=None):
         self.trend = trend
         k_states = 2 if trend else 1
         super().__init__(endog, k_states=k_states, k_posdef=k_states,
@@ -546,6 +569,48 @@ class _LocalLevelTrend(sm.tsa.statespace.MLEModel):
         # Beobachtung dort).
         w[~np.isfinite(w) | (w <= 0)] = 1.0
         self._weights = w
+        # Within-month scatter (see _monthly_within_scatter): the per-lot
+        # observation-noise evidence the monthly aggregation discards,
+        # re-added to the likelihood by loglikeobs() at ``_within_
+        # positions`` (the specific time indices with >= 2 lots -- SHORT
+        # arrays covering ONLY those months, not a full-length array
+        # zero-padded for the rest: a month with no scatter evidence
+        # never even enters this computation, rather than relying on
+        # ``df=0``'s arithmetic no-op, which ``log(2*pi*sigma2)`` can
+        # turn into ``0 * -inf == nan`` once ``sigma2`` nears 0 -- see
+        # loglikeobs's own docstring, this was tried and empirically
+        # broke the optimizer). ``None`` (the default) when there is no
+        # scatter evidence at all -- direct test instantiation and
+        # clone()'s out-of-sample extension (no real lots to scatter)
+        # both take this path.
+        self._within_positions = None
+        self._within_sse = None
+        self._within_df = None
+        self._within_log_k = None
+        if within_sse is not None and len(within_sse):
+            wsse = np.asarray(within_sse, dtype=float).copy()
+            wdf = np.asarray(within_df, dtype=float).copy()
+            wpos = np.asarray(within_positions, dtype=int).copy()
+            # Same non-finite/invalid guard as ``weights`` above: a bad
+            # entry is simply dropped (not just zeroed -- zeroing ``df``
+            # here would re-introduce exactly the full-array no-op this
+            # short representation exists to avoid).
+            bad = (~np.isfinite(wsse) | ~np.isfinite(wdf) | (wdf <= 0)
+                  | (wpos < 0))
+            wsse = wsse[~bad]
+            wdf = wdf[~bad]
+            wpos = wpos[~bad]
+            if len(wsse):
+                self._within_positions = wpos
+                self._within_sse = wsse
+                self._within_df = wdf
+                # log(k_t) = log(df + 1), a parameter-free constant --
+                # computed once here, not on every optimizer call
+                # (code-review finding, 2026-11-14: statsmodels
+                # numerically differentiates loglike, so this ran
+                # hundreds of times per fit() before).
+                self._within_log_k = np.log(wdf + 1.0)
+        self._sigma2_irregular = None
         self["design"] = (np.array([[1.0, 0.0]]) if trend
                           else np.array([[1.0]]))
         self["transition"] = (np.array([[1.0, 1.0], [0.0, 1.0]]) if trend
@@ -654,9 +719,95 @@ class _LocalLevelTrend(sm.tsa.statespace.MLEModel):
         params = super().update(params, **kwargs)
         self["obs_cov", 0, 0, :] = params[0] / self._weights
         self["state_cov", 0, 0] = params[1]
+        # Constrained (squared) sigma2.irregular, for loglike()'s
+        # within-month scatter term -- read off here because update() is
+        # the one place statsmodels guarantees the constrained params.
+        self._sigma2_irregular = params[0]
         if self.trend:
             self["transition", 1, 1] = params[3]
             self["state_cov", 1, 1] = params[2]
+
+    def _within_scatter_correction(self):
+        """The within-month scatter likelihood correction (see
+        ``_monthly_within_scatter``'s docstring for the statistics), as
+        ``(positions, per_month_correction)`` -- shared by ``loglike``
+        and ``loglikeobs`` so BOTH apply the exact same numbers (fixing
+        a code-review finding, 2026-11-14: an earlier version computed
+        the correction only inside ``loglike``, silently breaking the
+        ``loglike() == sum(loglikeobs())`` identity statsmodels' OPG
+        covariance -- ``bse``/``pvalues``/``.summary()`` -- and
+        ``aic``/``bic`` all rely on). ``None`` when there is no scatter
+        evidence at all.
+
+        ``loglike``/``loglikeobs`` each still call their OWN ``super()``
+        method independently rather than one delegating to the other
+        (``loglike() = sum(loglikeobs())`` was tried and reverted,
+        2026-11-14): the two base implementations are numerically
+        IDENTICAL at any single point (confirmed to machine precision),
+        but not bit-for-bit through every intermediate step, and that
+        tiny difference is exactly what a finite-difference optimizer's
+        gradient estimate amplifies -- empirically, delegating changed
+        a 240-month recovery test's result from within 4% of the true
+        variance to off by 10x, with no scatter correction active at
+        all. Two independent ``super()`` calls, each adjusted by this
+        SAME correction, keep both the identity (to the same tolerance
+        the base classes already rely on elsewhere) and the original,
+        validated optimizer behavior.
+
+        Returns a correction that is a severe but FINITE penalty
+        (rather than ``log(sigma2)`` itself) when ``sigma2 <= 0`` --
+        reachable even restricted to real scatter months: statsmodels'
+        own numerical score/Hessian differentiation probes ``sigma2`` on
+        both sides of a near-zero estimate for its finite-difference
+        step, which can land slightly negative, and ``log(negative) ==
+        nan`` (IEEE 754) was empirically confirmed to send the
+        optimizer's iterate to ~1e10 in magnitude within a dozen calls,
+        never recovering, before this guard was added."""
+        if self._within_sse is None:
+            return None
+        sigma2 = self._sigma2_irregular
+        if sigma2 > 0:
+            # Exact completion of the per-lot likelihood: the joint
+            # density of k lots factorizes into the monthly mean's (what
+            # the Kalman filter already logs) times the (k-1)-dim
+            # within-month scatter density -- (k-1)log(2*pi*sigma2) +
+            # SSE/sigma2 + log(k).
+            correction = (self._within_df * np.log(2 * np.pi * sigma2)
+                         + self._within_sse / sigma2
+                         + self._within_log_k)
+        else:
+            correction = np.full_like(self._within_df, 1e10)
+        return self._within_positions, correction
+
+    def loglike(self, params, *args, **kwargs):
+        """Base Kalman log-likelihood over the monthly means PLUS the
+        within-month scatter's Gaussian contribution -- see
+        ``_within_scatter_correction``'s docstring for why this calls
+        ``super().loglike()`` directly rather than ``sum(loglikeobs())``,
+        and ``_monthly_within_scatter``'s for the statistics."""
+        llf = super().loglike(params, *args, **kwargs)
+        term = self._within_scatter_correction()
+        if term is not None:
+            _pos, correction = term
+            llf = llf - 0.5 * np.sum(correction)
+        return llf
+
+    def loglikeobs(self, params, *args, **kwargs):
+        """Per-period Kalman log-likelihood, with the within-month
+        scatter correction added at each scatter-active month's own
+        position -- see ``_within_scatter_correction``'s docstring for
+        why this independently calls ``super().loglikeobs()`` rather
+        than deriving ``loglike``'s value, and ``_monthly_within_
+        scatter``'s for why only scatter-active months are touched
+        (no-op by construction for the rest, not by relying on an
+        arithmetic identity that breaks once ``sigma2`` nears 0)."""
+        llf_obs = super().loglikeobs(params, *args, **kwargs)
+        term = self._within_scatter_correction()
+        if term is not None:
+            pos, correction = term
+            llf_obs = llf_obs.copy()
+            llf_obs[pos] -= 0.5 * correction
+        return llf_obs
 
 
 def _monthly_series(train):
@@ -682,6 +833,64 @@ def _monthly_weights(train):
     Kalman filter never reads ``obs_cov`` for a missing observation."""
     counts = train.set_index("date")["y"].resample("MS").count()
     return counts.replace(0, 1).to_numpy(dtype=float)
+
+
+def _monthly_within_scatter(train, index):
+    """Within-month sums of squared residuals (SSE) and residual degrees
+    of freedom (``k_t - 1``) for every calendar month with >= 2 lots, as
+    two SHORT arrays plus a third, ``positions``: each entry's integer
+    position within ``index`` -- the SAME calendar-month grid
+    ``_monthly_series``/``_monthly_weights`` already use (call with
+    ``index=monthly.index``, i.e. ``_monthly_series(train).index``). One
+    shared grid, not two independent "what's a calendar month" idioms
+    (code-review finding, 2026-11-14: an earlier version grouped via its
+    own ``.dt.to_period("M")`` instead of reusing this index -- harmless
+    while both happen to agree, but a latent desync if the bucketing
+    rule ever changes in just one place) -- ``positions`` is what lets
+    ``_LocalLevelTrend.loglikeobs`` attribute each correction to the
+    exact right per-period entry without a full-length array.
+
+    This is the exact completion of the per-month-weighting fix (module
+    comment above ``_LocalLevelTrend``): ``obs_cov = sigma2.irregular /
+    k_t`` models the monthly MEAN's variance correctly, but a likelihood
+    built on means alone never sees the scatter of the individual lots
+    AROUND their own mean. With a drifting level (sigma2.level large) and
+    several lots per month, the means alone are tight enough to let the
+    optimizer drive ``sigma2.irregular`` to its floor while the real
+    per-lot scatter stays large -- confirmed empirically (synthetic:
+    per-lot SD 0.3, level drift 0.4, 5 lots/month fitted
+    ``sigma2.irregular`` at ~0.0004 against a true 0.09). The within-month
+    SSE is a second, independent, level-free observation of
+    ``sigma2.irregular`` (its expectation is ``(k_t - 1) * sigma2``), so
+    ``_LocalLevelTrend.loglikeobs`` adds its Gaussian contribution back
+    in, per month -- see that method's own docstring for why this lives
+    in ``loglikeobs`` and not only ``loglike``.
+
+    Months with < 2 lots -- including zero-lot months, absent entirely
+    from ``train`` -- simply never appear in the returned arrays: a
+    single lot already IS its own mean (no scatter to speak of), and
+    SKIPPING it is deliberate, not an optimization -- see
+    ``loglikeobs``'s own docstring for why a would-be ``df=0`` no-op
+    entry is a real numerical hazard once ``sigma2`` nears 0, not a
+    harmless arithmetic identity (the current
+    ``test_sigma2_estimates_within_30_percent`` shape, one lot per
+    month, relies on getting empty arrays back here, not zero-filled
+    ones)."""
+    s = train.set_index("date")["y"]
+    month = s.index.to_period("M")
+    dev = s - s.groupby(month).transform("mean")
+    sse = (dev ** 2).groupby(month).sum()
+    count = s.groupby(month).count()
+    multi = count[count >= 2]
+    sse = sse.reindex(multi.index)
+    sse.index = sse.index.to_timestamp()
+    multi = multi.copy()
+    multi.index = multi.index.to_timestamp()
+    positions = index.get_indexer(sse.index)
+    valid = positions >= 0
+    return (positions[valid],
+           sse.to_numpy(dtype=float)[valid],
+           (multi.to_numpy(dtype=float)[valid] - 1.0))
 
 
 def _months_between(start, end):
@@ -710,7 +919,8 @@ def _months_between(start, end):
 _FIT_MAXITER = 200
 
 
-def _fit_local_level_trend(monthly, weights, trend):
+def _fit_local_level_trend(monthly, weights, trend, within_sse=None,
+                           within_df=None, within_positions=None):
     """Shared fit/convergence/floor-clamp path for
     ``local_level_forecast``/``local_linear_trend_forecast``. Returns
     ``"FIT_FAILED"`` (non-convergence, an exception, or a non-finite
@@ -719,11 +929,17 @@ def _fit_local_level_trend(monthly, weights, trend):
     clamped)``: ``clamped`` only ever has the two ``_SIGMA2_FLOORS``
     keys -- ``sigma2.slope``/``damping`` (when ``trend``) are bounded
     by construction via ``transform_params`` (see ``_LocalLevelTrend``'s
-    own docstring), so they need no floor, only a finiteness check."""
+    own docstring), so they need no floor, only a finiteness check.
+
+    ``within_sse``/``within_df``/``within_positions`` (from
+    ``_monthly_within_scatter``) are forwarded to ``_LocalLevelTrend``
+    to complete the likelihood -- see that helper's own docstring."""
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            mod = _LocalLevelTrend(monthly, weights, trend=trend)
+            mod = _LocalLevelTrend(monthly, weights, trend=trend,
+                                   within_sse=within_sse, within_df=within_df,
+                                   within_positions=within_positions)
             res = mod.fit(disp=False, maxiter=_FIT_MAXITER)
     except Exception:
         return "FIT_FAILED"
@@ -760,7 +976,11 @@ def _llt_forecast(train, origin, horizon, trend):
     h = _months_between(monthly.index[-1], target_date)
     if h < 1:
         return None
-    fit = _fit_local_level_trend(monthly, _monthly_weights(train), trend)
+    within_positions, within_sse, within_df = _monthly_within_scatter(
+        train, monthly.index)
+    fit = _fit_local_level_trend(monthly, _monthly_weights(train), trend,
+                                 within_sse=within_sse, within_df=within_df,
+                                 within_positions=within_positions)
     if fit == "FIT_FAILED":
         return "FIT_FAILED"
     res, clamped = fit
