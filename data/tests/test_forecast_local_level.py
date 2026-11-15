@@ -20,14 +20,38 @@ def _series(rows):
     return df
 
 
+def _level_path(n, sigma_eta, rng):
+    """A random-walk level path: ``n`` steps, innovation SD ``sigma_eta``,
+    drawn from ``rng`` -- the shared level-generation step
+    ``_random_walk_series``/``_multi_lot_series`` both build on, so a
+    future change to the level-path model only needs editing once."""
+    return np.cumsum(rng.normal(0, sigma_eta, n))
+
+
 def _random_walk_series(n, sigma_eta, sigma_eps, seed, freq="MS",
                         start="2000-01-01"):
     rng = np.random.default_rng(seed)
     dates = pd.date_range(start, periods=n, freq=freq)
-    level = np.cumsum(rng.normal(0, sigma_eta, n))
+    level = _level_path(n, sigma_eta, rng)
     y = level + rng.normal(0, sigma_eps, n)
     return _series([(d.isoformat(), float(v), "koppe", 1)
                     for d, v in zip(dates, y)])
+
+
+def _multi_lot_series(n, k, sigma_eta, sigma_eps, seed, start="2000-01-01"):
+    """``n`` calendar months, ``k`` lots each, level drift ``sigma_eta``
+    and per-lot observation noise ``sigma_eps`` -- the shape where
+    monthly aggregation discards real within-month scatter."""
+    rng = np.random.default_rng(seed)
+    dates = pd.date_range(start, periods=n, freq="MS")
+    level = _level_path(n, sigma_eta, rng)
+    rows = []
+    for i, d in enumerate(dates):
+        for _ in range(k):
+            rows.append((d.isoformat(),
+                         float(level[i] + rng.normal(0, sigma_eps)),
+                         "koppe", 1))
+    return _series(rows)
 
 
 class MonthlySeriesTest(unittest.TestCase):
@@ -126,6 +150,141 @@ class PerMonthWeightingTest(unittest.TestCase):
         self.assertTrue(np.isfinite(res.llf))
 
 
+class WithinMonthScatterTest(unittest.TestCase):
+    """2.1/2.6 follow-up (Copilot review, 2026-11-14): fitting only
+    monthly means and counts discards the within-month lot scatter,
+    letting ``sigma2.irregular`` collapse to its floor whenever a
+    drifting level plus several lots per month make the means alone
+    tight. The within-month SSE is now re-added to the likelihood."""
+
+    def test_sigma2_irregular_recovers_per_lot_noise_with_multi_lot_months(
+            self):
+        # 5 lots/month, per-lot SD 0.3 (variance 0.09), strong level
+        # drift (0.4/month): the monthly means alone drive
+        # sigma2.irregular below its 0.01 floor, so the within-month
+        # scatter must be what recovers it.
+        df = _multi_lot_series(60, 5, sigma_eta=0.4, sigma_eps=0.3, seed=42)
+        monthly = models._monthly_series(df)
+        weights = models._monthly_weights(df)
+        within_positions, within_sse, within_df = (
+            models._monthly_within_scatter(df, monthly.index))
+        mod = models._LocalLevelTrend(
+            monthly, weights, trend=False, within_sse=within_sse,
+            within_df=within_df, within_positions=within_positions)
+        res = mod.fit(disp=False)
+        self.assertTrue(res.mle_retvals.get("converged"))
+        est = float(res.params["sigma2.irregular"])
+        self.assertAlmostEqual(est / 0.09, 1.0, delta=0.3)
+
+    def test_loglike_equals_sum_of_loglikeobs_with_within_month_scatter(
+            self):
+        # Code-review finding, 2026-11-14: an earlier version only
+        # overrode loglike(), silently breaking the loglike() ==
+        # sum(loglikeobs()) identity statsmodels' OPG covariance
+        # (bse/pvalues/.summary()) and aic/bic rely on.
+        df = _multi_lot_series(60, 5, sigma_eta=0.4, sigma_eps=0.3, seed=42)
+        monthly = models._monthly_series(df)
+        weights = models._monthly_weights(df)
+        within_positions, within_sse, within_df = (
+            models._monthly_within_scatter(df, monthly.index))
+        self.assertGreater(len(within_df), 0)  # the correction is live
+        mod = models._LocalLevelTrend(
+            monthly, weights, trend=False, within_sse=within_sse,
+            within_df=within_df, within_positions=within_positions)
+        params = mod.transform_params(mod.start_params)
+        llf = mod.loglike(params, transformed=True)
+        llf_sum = float(np.sum(mod.loglikeobs(params, transformed=True)))
+        self.assertAlmostEqual(llf, llf_sum, places=9)
+
+    def test_scatter_positions_skip_singleton_and_empty_months_correctly(
+            self):
+        # Copilot review finding, 2026-11-15: every other test here uses
+        # the SAME lot count in every consecutive month, so a bucketing
+        # bug that misaligns `positions` once a singleton or empty month
+        # intervenes would go undetected. Jan/Apr have 3 lots each
+        # (scatter-active); Feb is a singleton (count=1, excluded by
+        # `_monthly_within_scatter`'s own `count >= 2` rule); March has
+        # no lots at all, so it's absent from the input entirely but
+        # still appears as a NaN row in the monthly grid (resample("MS")
+        # bridges the gap) -- the thing under test is that `positions`
+        # still points April at its OWN index position (3), not shifted
+        # by the missing March row.
+        df = _series([
+            ("2020-01-05", 1.0, "koppe", 1),
+            ("2020-01-15", 2.0, "koppe", 1),
+            ("2020-01-25", 3.0, "koppe", 1),
+            ("2020-02-10", 5.0, "koppe", 1),
+            ("2020-04-05", 10.0, "koppe", 1),
+            ("2020-04-15", 11.0, "koppe", 1),
+            ("2020-04-25", 15.0, "koppe", 1),
+        ])
+        monthly = models._monthly_series(df)
+        self.assertEqual(len(monthly), 4)  # Jan, Feb, Mar (NaN), Apr
+        positions, sse, dfree = models._monthly_within_scatter(
+            df, monthly.index)
+        np.testing.assert_array_equal(positions, [0, 3])
+        # Jan: mean 2.0, residuals [-1, 0, 1] -> SSE 2.0, df 2.
+        # Apr: mean 12.0, residuals [-2, -1, 3] -> SSE 14.0, df 2.
+        np.testing.assert_allclose(sse, [2.0, 14.0])
+        np.testing.assert_allclose(dfree, [2.0, 2.0])
+
+        weights = models._monthly_weights(df)
+        with_scatter = models._LocalLevelTrend(
+            monthly, weights, trend=False, within_sse=sse,
+            within_df=dfree, within_positions=positions)
+        without_scatter = models._LocalLevelTrend(monthly, weights,
+                                                   trend=False)
+        params = with_scatter.transform_params(with_scatter.start_params)
+        obs_with = with_scatter.loglikeobs(params, transformed=True)
+        obs_without = without_scatter.loglikeobs(params, transformed=True)
+        changed = np.flatnonzero(obs_with != obs_without)
+        np.testing.assert_array_equal(changed, [0, 3])
+
+    def test_full_forecast_path_does_not_floor_sigma2_irregular(self):
+        # Same scenario through the real local_level_forecast entry
+        # point, checking the wiring actually forwards the within-month
+        # scatter: before the fix, this exact shape hit the 0.01 floor
+        # and clamped sigma2.irregular.
+        df = _multi_lot_series(60, 5, sigma_eta=0.4, sigma_eps=0.3, seed=42)
+        origin = (pd.Timestamp(df["date"].iloc[-1].year,
+                               df["date"].iloc[-1].month, 1)
+                  + pd.DateOffset(months=1))
+        result = models.local_level_forecast(df, origin, HORIZON_NEXT)
+        self.assertNotEqual(result, "FIT_FAILED")
+        self.assertIsNotNone(result)
+        _quantiles, clamped = result
+        self.assertFalse(clamped["sigma2.irregular"])
+
+    def test_llt_forecast_forwards_within_scatter_when_trend_is_true(self):
+        # Same wiring check as above, for the trend=True path -- both
+        # share _llt_forecast, but nothing previously confirmed the
+        # within-month-scatter forwarding survives that path too
+        # (code-review finding, 2026-11-14). Checked via loglike()
+        # directly rather than a full local_linear_trend_forecast(...)
+        # .fit(): the trend=True optimizer's own ~13-14% non-convergence
+        # rate (see _FIT_MAXITER's docstring) is a separate, already-
+        # documented, platform-sensitive (BLAS-dependent optimizer
+        # trajectory) issue unrelated to this wiring question -- an
+        # earlier version of this test asserted on that convergence and
+        # passed locally but hit FIT_FAILED on CI's Linux runner for
+        # this exact seed.
+        df = _multi_lot_series(60, 5, sigma_eta=0.4, sigma_eps=0.3, seed=42)
+        monthly = models._monthly_series(df)
+        weights = models._monthly_weights(df)
+        within_positions, within_sse, within_df = (
+            models._monthly_within_scatter(df, monthly.index))
+        self.assertGreater(len(within_df), 0)  # the correction is live
+        with_scatter = models._LocalLevelTrend(
+            monthly, weights, trend=True, within_sse=within_sse,
+            within_df=within_df, within_positions=within_positions)
+        without_scatter = models._LocalLevelTrend(monthly, weights,
+                                                   trend=True)
+        params = with_scatter.transform_params(with_scatter.start_params)
+        llf_with = with_scatter.loglike(params, transformed=True)
+        llf_without = without_scatter.loglike(params, transformed=True)
+        self.assertNotEqual(llf_with, llf_without)
+
+
 class PredictionIntervalIncludesMeasurementNoiseTest(unittest.TestCase):
     def test_forecast_variance_is_at_least_the_per_lot_observation_noise(
             self):
@@ -142,6 +301,25 @@ class PredictionIntervalIncludesMeasurementNoiseTest(unittest.TestCase):
         for h in (1, 6, 24):
             var = res.get_forecast(h).var_pred_mean.iloc[-1]
             self.assertGreaterEqual(var, sigma2_irregular)
+
+    def test_forecast_variance_equals_state_variance_plus_full_noise(self):
+        # Fixed-parameter case with training weights greater than 1
+        # (Copilot review, 2026-11-14): the forecast scores ONE
+        # individual lot, so its variance must be the propagated state
+        # variance plus the FULL sigma2.irregular -- not sigma2.irregular
+        # / k_t, which a clone() mistakenly reusing a training weight > 1
+        # would return. sigma2.level=0 leaves the level exactly known,
+        # so the state variance is ~0 and the forecast variance collapses
+        # to the full sigma2.irregular.
+        sigma2_irregular = 0.25
+        df = _multi_lot_series(120, 5, sigma_eta=0.0,
+                               sigma_eps=sigma2_irregular ** 0.5, seed=11)
+        monthly = models._monthly_series(df)
+        weights = models._monthly_weights(df)
+        mod = models._LocalLevelTrend(monthly, weights, trend=False)
+        res = mod.smooth(np.array([sigma2_irregular, 0.0]))
+        var = float(res.get_forecast(1).var_pred_mean.iloc[-1])
+        self.assertAlmostEqual(var, sigma2_irregular, places=2)
 
 
 class LocalLevelForecastTest(unittest.TestCase):
