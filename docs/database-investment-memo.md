@@ -2,19 +2,30 @@
 
 > **Zweck:** Beleg der "wesentlichen Investition" in Beschaffung, Überprüfung,
 > Bereinigung und Darstellung der Auktionspreis-Datenbank — Tatbestandsmerkmal
-> des EU/CH-Datenbankherstellerrechts (sui generis, Richtlinie 96/9/EG Art. 7).
-> Referenziert von `docs/tos-anti-scraping-clause.md` Ziffer 6(1) und von
+> des EU-Datenbankherstellerrechts (sui generis, Richtlinie 96/9/EG Art. 7).
+> **Korrektur, Copilot-Review 2026-11-15:** die Schweiz kennt KEIN
+> eigenständiges sui-generis-Datenbankherstellerrecht (Richtlinie 96/9/EG
+> nie übernommen) — eine frühere Fassung dieses Dokuments behauptete das
+> fälschlich ("EU/CH"-Recht). Für die Schweiz ist dieses Memo allenfalls
+> Beleg für Urheberrechtsschutz (Art. 4 URG, falls die Datenbank eigene
+> Originalität in Auswahl/Anordnung aufweist) und für das UWG; für das
+> EU-Recht gilt zudem die Berechtigten-Voraussetzung nach Art. 11 der
+> Richtlinie (Sitz/Staatsangehörigkeit des Betreibers in der EU/EWR, nicht
+> die Existenz von EU-Nutzern) — von 6.1.4 zu prüfen, s.
+> `docs/tos-anti-scraping-clause.md` Ziffer 6(2). Referenziert von
+> `docs/tos-anti-scraping-clause.md` Ziffer 6(1) und von
 > `docs/data-api-security-plan.md` Schritt 6.1.1. Arbeitsgrundlage für die
-> Rechtsberatung (6.1.4), keine rechtliche Bewertung. Stand: 2026-11-14.
+> Rechtsberatung (6.1.4), keine rechtliche Bewertung. Stand: 2026-11-15.
 
-## 1. Umfang der Datenbank (verifiziert gegen die Produktions-DB, 2026-11-14)
+## 1. Umfang der Datenbank (verifiziert 2026-11-14/-15, s. Zeilen unten)
 
 | Kennzahl | Wert |
 |---|---|
 | Auktionshäuser/Provider | 24 |
 | Auktionen | 9'078 |
 | Rohdaten-Lose | 4'297'347 |
-| Bereinigte, prognosefähige Preisbeobachtungen (`single_wine_prices`) | 3'232'827 |
+| Bereinigte, aufgelöste Einzelwein-Lose (`single_wine_prices` — `lot_kind='SINGLE'`, Wein-Referenz aufgelöst, Jahrgang sauber; **nicht** bereits prognosefähig, s. Korrektur unten) | 3'232'827 |
+| Davon tatsächlich prognosefähig (`forecast_input` — zusätzlich `sold=1`, Preis/Datum vorhanden, kein OUTLIER/QTY_SUSPECT/DUP_CANDIDATE, Serie aktiv) | 970'984 |
 | Aufgelöste, eindeutige Wein-Referenzen | 269'884 |
 | Zeitliche Abdeckung | 1998-01-31 – 2026-11-20 (28 Jahre) |
 | Datenbankgrösse (SQLite, Samsung-Disk) | 3.47 GB |
@@ -23,7 +34,7 @@
 
 | Kennzahl | Wert |
 |---|---|
-| Eigene Fetcher-Module (ein Modul pro Haus) | 22 (`ingest/fetchers/*.py`) + idealwine (eigener Delta-Mechanismus) + christies (eigener Backfill) |
+| Eigene Fetcher-Module | 22 Python-Module (`ingest/fetchers/*.py`), bedienen 23 der 24 Provider -- **Korrektur, Copilot-Review 2026-11-15:** "ein Modul pro Haus" war ungenau (`WeinauktionFetcher` bedient steinfels UND weinboerse gemeinsam) und idealwine/christies sind bereits in diesen 22 Modulen enthalten (eigener Delta- bzw. Backfill-Mechanismus INNERHALB ihres jeweiligen Fetcher-Moduls), nicht zusätzlich dazu. 2 der 24 DB-Provider (`wermuth-sa`, `zacky`) haben keinen aktiven Fetcher-Modul -- historische/manuelle Importe. |
 | Code-Umfang Fetcher allein | 3'848 Zeilen |
 | Code-Umfang Build-/Ingest-Orchestrierung (`data/build_db.py`, `data/run_ingest.py`) | 5'473 Zeilen |
 | Entwicklungszeitraum (erster Ingest-Commit → heute) | 2026-09-24 – 2026-11-14 (51 Tage durchgehend) |

@@ -141,7 +141,7 @@ Fähigkeiten bestehen, nicht gegen einen naiven `requests.get`-Scraper.
 | D2 | Zugriffsstufen | **Entschieden (2026-11-13):** mind. 3 Stufen: anonym / registriert / paid (+ intern für eigene Dienste) | Ohne Stufen ist Daten-Shaping (Stufe 4) nicht entscheidbar — jede Stufe braucht eine eigene Granularitäts-Grenze |
 | D3 | Öffentliches API-Produkt? | **Entschieden (2026-11-13): NEIN — nur die eigene UI (`price-service-ui`) ist Konsument, es gibt kein Dritt-Kunden-API-Produkt.** | Vereinfacht Stufe 2 erheblich: Identität ist Login-Session der eigenen Nutzer, kein Self-Service-API-Key-Issuing, keine B2B-Verträge/SLAs nötig |
 | D4 | Edge/WAF-Anbieter | **Noch offen, Tendenz genannt (2026-11-13):** DB vermutlich Supabase Cloud, Applikation vermutlich Cloudflare und/oder ein eigener Mini-Server bei netcup — noch nicht final entschieden | Kostenpflichtige/vertragliche Entscheidung, hier nicht vorwegzunehmen. **Wichtig:** falls Supabase Cloud tatsächlich die Produktions-DB wird, macht das 0.1's RLS-Policy-Audit zur Pflicht-Voraussetzung, nicht zur Kann-Prüfung (siehe 0.1) |
-| D5 | Rechtliche Durchsetzung | **Eigentümerfrage geklärt: Nutzer selbst.** Inhaltliche Klärung siehe Chat-Antwort 2026-11-13 (ToS-Anti-Scraping-Klausel, DMCA-Takedown bei US-Hosting, UWG + Schweizer/EU-Datenbankschutzrecht sui generis als vermutlich stärkster Hebel für diesen Fall). **Geklärt (2026-11-14):** Claude liefert den ersten ToS-Klausel-Entwurf als Startpunkt — erstellt als `docs/tos-anti-scraping-clause.md` (v0.1), markiert als nicht rechtsverbindlich. | Braucht Rechtsberatung für die finale Fassung (6.1.4); der Entwurf selbst ist kein Blocker für Stufe 1–5 |
+| D5 | Rechtliche Durchsetzung | **Eigentümerfrage geklärt: Nutzer selbst.** Inhaltliche Klärung siehe Chat-Antwort 2026-11-13 (ToS-Anti-Scraping-Klausel, DMCA-Takedown bei US-Hosting, UWG + Datenbankschutzrecht sui generis als vermutlich stärkster Hebel für diesen Fall). **Geklärt (2026-11-14):** Claude liefert den ersten ToS-Klausel-Entwurf als Startpunkt — erstellt als `docs/tos-anti-scraping-clause.md` (v0.1), markiert als nicht rechtsverbindlich. **Korrektur (Copilot-Review, 2026-11-15):** das sui-generis-Datenbankschutzrecht existiert nur EU-rechtlich (Richtlinie 96/9/EG), NICHT nach Schweizer Recht — die Schweiz hat die Richtlinie nie übernommen. In der Schweiz trägt stattdessen das Urheberrecht (Art. 4 URG, falls originell) + UWG; das EU-Recht gilt nur, wenn der Betreiber die Art.-11-Berechtigten-Voraussetzung erfüllt (Sitz/Staatsangehörigkeit in der EU/EWR, nicht blosse EU-Nutzer). Details s. `docs/tos-anti-scraping-clause.md` Ziffer 6(2). | Braucht Rechtsberatung für die finale Fassung (6.1.4); der Entwurf selbst ist kein Blocker für Stufe 1–5 |
 
 **D1–D3 sind entschieden, D4/D5 teilweise offen — Gate G0 ist dadurch
 NICHT mehr vollständig blockiert:** die vendor-agnostischen Teile
@@ -410,15 +410,19 @@ beweisbare Zustimmung liefert. Zerlegt in:
 
 - **6.1.1 Investitions-Dokumentation** (S, operativ) — internes Memo mit
   konkreten Zahlen (Stunden, Anzahl Häuser/Lots, Pipeline-Komplexität)
-  als Beleg für die "wesentliche Investition", die das EU/CH
-  sui-generis-Datenbankschutzrecht voraussetzt. AC: Memo vorhanden,
-  referenzierbar für eine spätere Rechtsberatung. **✅ erledigt
-  2026-11-14** — `docs/database-investment-memo.md`: alle Umfangs-/
+  als Beleg für die "wesentliche Investition", die das EU-sui-generis-
+  Datenbankschutzrecht voraussetzt (für die Schweiz selbst: Urheberrecht/
+  UWG, s. 6.1.2-Korrektur). AC: Memo vorhanden, referenzierbar für eine
+  spätere Rechtsberatung. **✅ erledigt 2026-11-14, korrigiert 2026-11-15
+  (Copilot-Review)** — `docs/database-investment-memo.md`: alle Umfangs-/
   Komplexitätszahlen live gegen die Produktions-DB und das Repo
   verifiziert (24 Provider, 9'078 Auktionen, 4'297'347 Lose, 3'232'827
-  bereinigte Preisbeobachtungen, 51 Tage/105 Commits Entwicklung);
-  Stundenaufwand/direkte Kosten als offene Punkte markiert (nur vom
-  Nutzer selbst zu beziffern).
+  aufgelöste Einzelwein-Lose — davon 970'984 tatsächlich prognosefähig
+  nach `forecast_input`s zusätzlichen Eligibility-Filtern, nicht alle
+  3'232'827 — 51 Tage/105 Commits Entwicklung); Fetcher-Modulzahl
+  (22 Module/23 Provider, idealwine+christies bereits darin enthalten)
+  und die CH/EU-Rechtslage korrigiert. Stundenaufwand/direkte Kosten als
+  offene Punkte markiert (nur vom Nutzer selbst zu beziffern).
 - **6.1.2 Klausel-Entwurf** (M, operativ, Autor: Claude als Startpunkt)
   — Pflichtbestandteile: Definition "automatisierter Zugriff"/
   "Scraping"; separates, explizites Trainings-Nutzungsverbot (inkl.
@@ -428,13 +432,26 @@ beweisbare Zustimmung liefert. Zerlegt in:
   (Sperre, Schadensersatzvorbehalt); anwendbares Recht/Gerichtsstand.
   AC: Entwurf vorhanden, alle genannten Elemente enthalten, ausdrücklich
   als "nicht rechtsverbindlich, Entwurf für Rechtsberatung" markiert.
-  **✅ erledigt 2026-11-14** — Entwurf in
-  `docs/tos-anti-scraping-clause.md` (v0.1, inkl. Vollständigkeits-Check
-  gegen dieses AC als Anhang); nächster Schritt 6.1.4 (Rechtsberatung,
-  Owner: Nutzer).
+  **✅ erledigt 2026-11-14, v0.2 nach Copilot-Review 2026-11-15** — Entwurf
+  in `docs/tos-anti-scraping-clause.md` (inkl. Vollständigkeits-Check
+  gegen dieses AC als Anhang). v0.2 behebt 3 Findings: (a) die Klausel
+  band wörtlich auch gewöhnliche UI-Requests als "automatisierten
+  Zugriff" ein, jetzt explizit ausgenommen (Ziffer 1(2)); (b) sie
+  beanspruchte Vertragswirkung auch gegenüber der Zugriffsstufe "anonym",
+  obwohl dort keine Zustimmungshandlung existiert — jetzt auf
+  registrierte/paid-Nutzer begrenzt, anonym bleibt via Datenbankrecht/UWG
+  abgedeckt (Ziffer 1(4)); (c) der Datenbankschutzrechts-Vorbehalt
+  behauptete fälschlich ein Schweizer sui-generis-Recht, jetzt auf
+  Urheberrecht/UWG (CH) bzw. EU-Recht mit Art.-11-Vorbehalt korrigiert
+  (Ziffer 6(2)). Nächster Schritt 6.1.4 (Rechtsberatung, Owner: Nutzer).
 - **6.1.3 Clickwrap-Integration** (S, Code, an Stufe 2/Login gekoppelt)
   — Pflicht-Checkbox bei Registrierung, kein Vorab-Haken. AC: ohne
-  aktive Zustimmung keine Account-Erstellung möglich.
+  aktive Zustimmung keine Account-Erstellung möglich, UND (Copilot-
+  Review-Finding, 2026-11-15) serverseitige, dauerhafte Aufzeichnung der
+  Zustimmung je Account — Account-ID, akzeptierte Klausel-Version,
+  Zeitstempel — mit dem akzeptierten Versionstext weiterhin abrufbar
+  (hängt an 6.1.5s Versionierung), nicht nur eine Checkbox + eine
+  separat versionierte ToS-Seite ohne Verknüpfung dazwischen.
 - **6.1.4 Rechtsberatungs-Review** (Aufwand offen, operativ, Owner laut
   D5: Nutzer) — AC: Anwalt/Rechtsberatung (Jurisdiktion CH, ggf.
   zusätzlich EU bei EU-Nutzern) hat 6.1.2 freigegeben.
@@ -499,6 +516,7 @@ Adversarial-Check → Review-Log hier in §7). Ergänzend für diesen Plan:
 | 2026-11-13 | 6.1 Zerlegung | Claude (per Chat: Erklärung ToS/Anti-Scraping/Anti-Training-Klausel, Zusammenspiel mit DMCA/UWG/sui-generis-Datenbankschutzrecht) | 6.1 war ein Einzeiler ohne Umsetzungs-Struktur. Zerlegt in 6.1.1 Investitions-Dokumentation (Beleg für sui-generis-Schutz), 6.1.2 Klausel-Entwurf (Claude als Startpunkt, kein Rechtsrat), 6.1.3 Clickwrap-Integration (Code, an Stufe 2 gekoppelt), 6.1.4 Rechtsberatungs-Review (Owner: Nutzer), 6.1.5 Publikation+Versionierung (Code). | 6.1.1–6.1.5 im Plan ergänzt. 6.1.2 (der eigentliche Klausel-Entwurf) noch nicht geschrieben — nächster Schritt auf Nutzer-Anfrage. |
 | 2026-11-14 | 6.1.2 Klausel-Entwurf | Claude (Autor gemäss Plan; auf Nutzer-Anfrage "Bauplan implementieren") | Erster Entwurf der ToS-Klausel erstellt: alle Pflichtbestandteile des 6.1.2-AC enthalten (Scraping-Definition, separates Trainingsnutzungsverbot inkl. abgeleiteter Daten, Anti-Umgehungs-Klausel, Datenbankschutzrechts-Vorbehalt, Rechtsfolgen, Recht/Gerichtsstand), als nicht rechtsverbindlich markiert, mit Vollständigkeits-Check als Anhang. Keine Rechtsberatung — bewusst als Arbeitsgrundlage für 6.1.4 angelegt. | Entwurf in `docs/tos-anti-scraping-clause.md` (v0.1) abgelegt; Fortschritts-Übersicht (§1a D5) und D5-Zeile (§3) aktualisiert. Nächster Schritt: 6.1.4 Rechtsberatungs-Review (Owner: Nutzer); 6.1.3 (Clickwrap) + 6.1.5 (Versionierung) sind Code und gehen an deepseek, gekoppelt an Stufe 2. |
 | 2026-11-14 | 6.1.1 Investitions-Dokumentation | Claude (Zahlen live gegen Produktions-DB `/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite` und Repo verifiziert, nicht geraten) | Umfangs-/Komplexitätszahlen ermittelt (24 Provider, 9'078 Auktionen, 4'297'347 Lose, 3'232'827 bereinigte Preisbeobachtungen, 269'884 Wein-Referenzen, 1998–2026 Abdeckung, 3.47 GB; 22 Fetcher-Module/3'848 Zeilen + 5'473 Zeilen Build-Pipeline, 51 Tage/105 Commits Entwicklung; Sothebys camoufox/Residential-IP/Turnstile als Beleg für Nicht-Trivialität). Stundenaufwand/direkte Kosten NICHT aus dem Repo ableitbar — als offene Punkte markiert statt geraten. | Memo in `docs/database-investment-memo.md` abgelegt, 6.1.1 als erledigt markiert (§1a, §5). Offene Punkte (Stunden/Kosten) warten auf Nutzer-Angabe, sind aber kein Blocker für 6.1.4. |
+| 2026-11-15 | GitHub-Copilot-PR-Review (PR #112, 6.1-Dokumente) | GitHub Copilot (automatisiert, 6 Findings, alle Low bis auf 1 Medium); Claude verifizierte jedes Finding empirisch (Live-DB-Query, Code-Lektüre, Websuche zur CH/EU-Rechtslage) statt die Einstufung blind zu übernehmen | **Alle 6 Findings verifiziert ECHT:** (1) Die ToS-Klausel beanspruchte Vertragswirkung auch gegenüber der Zugriffsstufe "anonym" (D2), obwohl dort nie eine Zustimmungshandlung stattfindet (2.1 erlaubt anonymen Zugriff ohne Registrierung). (2) 6.1.3s AC verlangte nur eine Checkbox + eine separat versionierte ToS-Seite, ohne serverseitige Verknüpfung welcher Account welche Version wann akzeptierte — nach einem ToS-Update nicht beweisbar. (3) `single_wine_prices` (`data/build_db.py` Zeilen 325–330) filtert nur `lot_kind='SINGLE'`/aufgelöste Referenz/sauberen Jahrgang, NICHT `sold=1`/Preis/Datum — Live-Messung: 3'232'827 Zeilen dort gegen nur 970'984 in `forecast_input` (den tatsächlich eligiblen Zeilen), das Memo nannte die grössere Zahl fälschlich "prognosefähig". (4) Die 22 Fetcher-Module (`ingest/fetchers/__init__.py`) enthalten idealwine UND christies bereits (Live-Code-Lektüre) — das Memo zählte sie fälschlich als zusätzlich zu den 22; zudem bedient `WeinauktionFetcher` zwei Provider (steinfels, weinboerse) gemeinsam, "ein Modul pro Haus" war ungenau (23 Provider/22 Module, live per DB-Query bestätigt; 2 der 24 DB-Provider (`wermuth-sa`, `zacky`) haben gar kein aktives Fetcher-Modul). (5) Die Scraping-Definition (Ziffer 1(2)) erfasste wörtlich auch gewöhnliche React-UI-Requests (`price-service-ui/src/lib/api.js`, axios.get) als "automatisierten Zugriff" — Widerspruch zur erlaubten Plattform-Nutzung (Ziffer 2(1)). (6) **Websuche bestätigt (mehrere unabhängige Quellen, u.a. IGE):** die Schweiz hat die Richtlinie 96/9/EG nie übernommen und kennt KEIN eigenständiges sui-generis-Datenbankherstellerrecht — frühere Fassungen aller drei 6.1-Dokumente behaupteten das fälschlich ("EU/CH"-Recht); zusätzlich bezieht sich die EU-Berechtigten-Voraussetzung (Art. 11 der Richtlinie) auf Sitz/Staatsangehörigkeit des Betreibers, nicht auf die Existenz von EU-Nutzern. | Alle 6 Findings gefixt: `tos-anti-scraping-clause.md` → v0.2 (neue Ziffer 1(4) Vertragsreichweite nach Zugriffsstufe, UI-Ausnahme in Ziffer 1(2), CH/EU-Korrektur in Ziffer 6(2), "Offene Punkte" um Art.-11-Prüfung ergänzt); `database-investment-memo.md` (Header-Korrektur, `single_wine_prices`-Zeile umbenannt + neue `forecast_input`-Zeile mit echter Zahl, Fetcher-Modul-Zeile korrigiert); `data-api-security-plan.md` (D5-Zeile, 6.1.1/6.1.2/6.1.3-ACs). Keine Code-Änderung, reine Dokument-Korrektur. |
 
 ---
 
