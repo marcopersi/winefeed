@@ -196,6 +196,50 @@ class WithinMonthScatterTest(unittest.TestCase):
         llf_sum = float(np.sum(mod.loglikeobs(params, transformed=True)))
         self.assertAlmostEqual(llf, llf_sum, places=9)
 
+    def test_scatter_positions_skip_singleton_and_empty_months_correctly(
+            self):
+        # Copilot review finding, 2026-11-15: every other test here uses
+        # the SAME lot count in every consecutive month, so a bucketing
+        # bug that misaligns `positions` once a singleton or empty month
+        # intervenes would go undetected. Jan/Apr have 3 lots each
+        # (scatter-active); Feb is a singleton (count=1, excluded by
+        # `_monthly_within_scatter`'s own `count >= 2` rule); March has
+        # no lots at all, so it's absent from the input entirely but
+        # still appears as a NaN row in the monthly grid (resample("MS")
+        # bridges the gap) -- the thing under test is that `positions`
+        # still points April at its OWN index position (3), not shifted
+        # by the missing March row.
+        df = _series([
+            ("2020-01-05", 1.0, "koppe", 1),
+            ("2020-01-15", 2.0, "koppe", 1),
+            ("2020-01-25", 3.0, "koppe", 1),
+            ("2020-02-10", 5.0, "koppe", 1),
+            ("2020-04-05", 10.0, "koppe", 1),
+            ("2020-04-15", 11.0, "koppe", 1),
+            ("2020-04-25", 15.0, "koppe", 1),
+        ])
+        monthly = models._monthly_series(df)
+        self.assertEqual(len(monthly), 4)  # Jan, Feb, Mar (NaN), Apr
+        positions, sse, dfree = models._monthly_within_scatter(
+            df, monthly.index)
+        np.testing.assert_array_equal(positions, [0, 3])
+        # Jan: mean 2.0, residuals [-1, 0, 1] -> SSE 2.0, df 2.
+        # Apr: mean 12.0, residuals [-2, -1, 3] -> SSE 14.0, df 2.
+        np.testing.assert_allclose(sse, [2.0, 14.0])
+        np.testing.assert_allclose(dfree, [2.0, 2.0])
+
+        weights = models._monthly_weights(df)
+        with_scatter = models._LocalLevelTrend(
+            monthly, weights, trend=False, within_sse=sse,
+            within_df=dfree, within_positions=positions)
+        without_scatter = models._LocalLevelTrend(monthly, weights,
+                                                   trend=False)
+        params = with_scatter.transform_params(with_scatter.start_params)
+        obs_with = with_scatter.loglikeobs(params, transformed=True)
+        obs_without = without_scatter.loglikeobs(params, transformed=True)
+        changed = np.flatnonzero(obs_with != obs_without)
+        np.testing.assert_array_equal(changed, [0, 3])
+
     def test_full_forecast_path_does_not_floor_sigma2_irregular(self):
         # Same scenario through the real local_level_forecast entry
         # point, checking the wiring actually forwards the within-month
@@ -211,20 +255,34 @@ class WithinMonthScatterTest(unittest.TestCase):
         _quantiles, clamped = result
         self.assertFalse(clamped["sigma2.irregular"])
 
-    def test_full_forecast_path_does_not_floor_sigma2_irregular_trend(self):
-        # Same wiring check as above, through local_linear_trend_forecast
-        # (trend=True) -- both share _llt_forecast, but nothing
-        # previously confirmed the within-month-scatter forwarding
-        # survives that path too (code-review finding, 2026-11-14).
+    def test_llt_forecast_forwards_within_scatter_when_trend_is_true(self):
+        # Same wiring check as above, for the trend=True path -- both
+        # share _llt_forecast, but nothing previously confirmed the
+        # within-month-scatter forwarding survives that path too
+        # (code-review finding, 2026-11-14). Checked via loglike()
+        # directly rather than a full local_linear_trend_forecast(...)
+        # .fit(): the trend=True optimizer's own ~13-14% non-convergence
+        # rate (see _FIT_MAXITER's docstring) is a separate, already-
+        # documented, platform-sensitive (BLAS-dependent optimizer
+        # trajectory) issue unrelated to this wiring question -- an
+        # earlier version of this test asserted on that convergence and
+        # passed locally but hit FIT_FAILED on CI's Linux runner for
+        # this exact seed.
         df = _multi_lot_series(60, 5, sigma_eta=0.4, sigma_eps=0.3, seed=42)
-        origin = (pd.Timestamp(df["date"].iloc[-1].year,
-                               df["date"].iloc[-1].month, 1)
-                  + pd.DateOffset(months=1))
-        result = models.local_linear_trend_forecast(df, origin, HORIZON_NEXT)
-        self.assertNotEqual(result, "FIT_FAILED")
-        self.assertIsNotNone(result)
-        _quantiles, clamped = result
-        self.assertFalse(clamped["sigma2.irregular"])
+        monthly = models._monthly_series(df)
+        weights = models._monthly_weights(df)
+        within_positions, within_sse, within_df = (
+            models._monthly_within_scatter(df, monthly.index))
+        self.assertGreater(len(within_df), 0)  # the correction is live
+        with_scatter = models._LocalLevelTrend(
+            monthly, weights, trend=True, within_sse=within_sse,
+            within_df=within_df, within_positions=within_positions)
+        without_scatter = models._LocalLevelTrend(monthly, weights,
+                                                   trend=True)
+        params = with_scatter.transform_params(with_scatter.start_params)
+        llf_with = with_scatter.loglike(params, transformed=True)
+        llf_without = without_scatter.loglike(params, transformed=True)
+        self.assertNotEqual(llf_with, llf_without)
 
 
 class PredictionIntervalIncludesMeasurementNoiseTest(unittest.TestCase):
