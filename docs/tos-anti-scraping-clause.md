@@ -6,7 +6,10 @@
 > Rechtsberatungs-Review (6.1.4, Owner: Nutzer) — die finale, rechtsverbindliche
 > Fassung entsteht erst NACH dieser Review und wird gemäss 6.1.5 versioniert
 > publiziert. Autor: Claude. Jurisdiktion: CH (bei EU-Nutzern ggf. zusätzlich
-> EU-Recht — in 6.1.4 zu klären). Version 0.1, Stand 2026-11-14.
+> EU-Recht — in 6.1.4 zu klären). Version 0.2, Stand 2026-11-15 (GitHub-
+> Copilot-Review auf v0.1: anonymer-Zugriff-Vertragslücke, UI-Ausnahme,
+> CH-sui-generis-Korrektur — siehe `docs/data-api-security-plan.md` §7
+> für den vollen Befund).
 
 ---
 
@@ -25,12 +28,33 @@ Sammeln, Spiegeln, Archivieren oder sonstige systematische Extrahieren der Daten
 — insbesondere durch Skripte, Bots, Crawler, Spider, Headless-Browser,
 Browser-Automation, die Umgehung technischer Schutzmassnahmen oder die
 systematische Enumeration von Kennungen — unabhängig vom eingesetzten Mittel
-und unabhängig davon, ob ein gültiges Benutzerkonto besteht.
+und unabhängig davon, ob ein gültiges Benutzerkonto besteht. Nicht erfasst
+sind einzelne Anfragen, die im Rahmen der normalen, interaktiven
+Nutzung der vom Betreiber selbst bereitgestellten Clients (Web-Oberfläche,
+mobile App) anfallen — etwa ein einzelner API-Aufruf, den die Web-
+Oberfläche beim Anklicken einer Schaltfläche durch eine Person auslöst.
+Massgeblich ist die systematische, skriptgesteuerte oder bulk-artige
+Natur des Zugriffs, nicht der technische Umstand, dass auch normale
+Interaktion über denselben Client Netzwerk-Anfragen erzeugt (Copilot-
+Review-Finding, 2026-11-15: ohne diese Ausnahme hätte Abs. (2) wörtlich
+auch jeden gewöhnlichen UI-Request erfasst, Widerspruch zu Ziffer 2(1)).
 
 (3) «Training von KI-/ML-Modellen» bezeichnet jede Verwendung der Daten für das
 Trainieren, Feintunen (Fine-Tuning), Evaluieren, Retrieval-Augmentieren oder
 sonstige Nutzen der Daten im Zusammenhang mit maschinellen Lernmodellen,
 künstlicher Intelligenz, generativen Modellen oder ähnlichen Systemen.
+
+(4) **Vertragliche Reichweite nach Zugriffsstufe** (Copilot-Review-Finding,
+2026-11-15): Diese Klausel entfaltet VERTRAGLICHE Wirkung nur gegenüber
+Nutzern, die ihr durch eine aktive Zustimmungshandlung (Clickwrap gemäss
+Schritt 6.1.3 des Sicherheitsplans) beigetreten sind — das betrifft die
+Zugriffsstufen «registriert» und «paid», nicht die Zugriffsstufe «anonym»
+(Zugriff ohne Benutzerkonto, s. Sicherheitsplan D2), da dort keine
+Zustimmungshandlung vorliegt und eine blosse Nutzung (Browsewrap) keine
+beweisbare Zustimmung begründet. Gegenüber rein anonymem, automatisiertem
+Zugriff stützt sich die Durchsetzung ausschliesslich auf Ziffer 6
+(Datenbankschutzrecht) sowie auf das von dieser Klausel unabhängige
+UWG-Instrumentarium, nicht auf einen Vertragsbruch dieser Klausel.
 
 ### 2. Zulässige Nutzung
 
@@ -94,12 +118,26 @@ ihrer Beschaffung, Überprüfung, Bereinigung, Aufbereitung und Darstellung
 wesentlichen Investition dar (der Nachweis hierzu wird in der
 Investitions-Dokumentation gemäss Schritt 6.1.1 geführt).
 
-(2) Der Betreiber behält sich ausdrücklich sämtliche Rechte an dieser Datenbank
-vor, einschliesslich des Rechts des Datenbankherstellers (Schutzrecht sui
-generis) nach schweizerischem und — soweit anwendbar — europäischem Recht
-(Richtlinie 96/9/EG), insbesondere das Recht, die Entnahme und/oder
-Weiterverwendung der Gesamtheit oder eines in qualitativer oder quantitativer
-Hinsicht wesentlichen Teils des Datenbankinhalts zu untersagen.
+(2) Der Betreiber behält sich ausdrücklich sämtliche an dieser Datenbank
+bestehenden Rechte vor. **Korrektur, Copilot-Review 2026-11-15:** die
+Schweiz hat die Richtlinie 96/9/EG nie übernommen und kennt KEIN
+eigenständiges Datenbankherstellerrecht (sui generis) schweizerischen
+Rechts — frühere Fassungen dieses Dokuments, die ein solches Recht "nach
+schweizerischem ... Recht" behaupteten, waren insoweit falsch. In der
+Schweiz stützt sich dieser Vorbehalt stattdessen auf das Urheberrecht
+(sofern die Datenbank nach Art. 4 URG durch Auswahl oder Anordnung ihres
+Inhalts eine geistige Schöpfung mit individuellem Charakter darstellt)
+sowie auf das UWG. Das europäische Datenbankherstellerrecht sui generis
+(Art. 7 Richtlinie 96/9/EG) wird zusätzlich vorbehalten, soweit und
+sobald der Betreiber die Berechtigten-Voraussetzung nach Art. 11 der
+Richtlinie erfüllt — diese stellt auf die Staatsangehörigkeit bzw. den
+Sitz/die Hauptverwaltung des DATENBANKHERSTELLERS in einem EU-/EWR-Staat
+ab, NICHT auf die blosse Existenz von Nutzern aus der EU; die Prüfung
+dieser Voraussetzung ist Teil von Schritt 6.1.4. Vorbehalten bleibt in
+jedem Fall, nach dem jeweils einschlägigen Schutzrecht, das Recht, die
+Entnahme und/oder Weiterverwendung der Gesamtheit oder eines in
+qualitativer oder quantitativer Hinsicht wesentlichen Teils des
+Datenbankinhalts zu untersagen.
 
 (3) Ziffern 3 und 4 dieses Abschnitts gelten ausdrücklich auch als Ausübung und
 Sicherung dieses Vorbehalts.
@@ -143,4 +181,10 @@ Zuständigkeit der gesetzlichen Gerichtsstände vorbehalten.
 > Offene Punkte für die Rechtsberatung (6.1.4): Jurisdiktion für EU-Nutzer,
 > konkreter Gerichtsstand/Sitz, Abstimmung der Rechtsfolgen mit
 > anwendbarem Verbraucherrecht, Verhältnis zu `robots.txt`/`llms.txt`
-> (6.3) und zum DMCA-/UWG-Durchsetzungsprozess (6.4).
+> (6.3) und zum DMCA-/UWG-Durchsetzungsprozess (6.4); zusätzlich (Copilot-
+> Review, 2026-11-15): Prüfung der Art.-11-Berechtigten-Voraussetzung für
+> das EU-Datenbankherstellerrecht (Sitz/Staatsangehörigkeit des Betreibers,
+> s. Ziffer 6(2)), und ob eine Zustimmungs-/Zugangsbeschränkung auch für
+> die Zugriffsstufe "anonym" eingeführt werden soll (s. Ziffer 1(4)) oder
+> die Durchsetzung dort bewusst allein auf das Datenbankschutzrecht/UWG
+> gestützt bleibt.
