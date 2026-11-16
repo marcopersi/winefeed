@@ -51,7 +51,7 @@ jobs:
 
       - name: Download previous archive
         id: download_archive
-        uses: dawidd6/action-download-artifact@v27
+        uses: dawidd6/action-download-artifact@v28
         with:
           workflow: ingest.yml
           name: auction-archive
