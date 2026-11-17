@@ -37,8 +37,9 @@ jobs:
           # since no prior commit touching these files had ever actually
           # run through this Lint job (confirmed via the GitHub API: zero
           # check-runs existed for the commits that introduced them).
-          # Prettier, which agrees with the real style, stays enabled.
-          VALIDATE_JAVASCRIPT_STANDARD: false
+          # Omitted (not set to false: super-linter rejects mixing
+          # explicit true/false VALIDATE_* values in one run). Prettier,
+          # which agrees with the real style, stays enabled.
           VALIDATE_JAVASCRIPT_PRETTIER: true
           VALIDATE_PYTHON_PYLINT: true
           FILTER_REGEX_EXCLUDE: ".*archive/.*|.*price-service-ui/dist/.*"
