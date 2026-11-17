@@ -31,10 +31,18 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_JAVASCRIPT_ES: true
-          VALIDATE_JAVASCRIPT_STANDARD: true
+          # STANDARD (no semicolons, single quotes) conflicts with the
+          # actual, consistently-used house style across price-service-ui
+          # (semicolons, double quotes) -- discovered while fixing #119,
+          # since no prior commit touching these files had ever actually
+          # run through this Lint job (confirmed via the GitHub API: zero
+          # check-runs existed for the commits that introduced them).
+          # Omitted (not set to false: super-linter rejects mixing
+          # explicit true/false VALIDATE_* values in one run). Prettier,
+          # which agrees with the real style, stays enabled.
           VALIDATE_JAVASCRIPT_PRETTIER: true
           VALIDATE_PYTHON_PYLINT: true
-          FILTER_REGEX_EXCLUDE: ".*archive/.*"
+          FILTER_REGEX_EXCLUDE: ".*archive/.*|.*price-service-ui/dist/.*"
           DEFAULT_BRANCH: "master"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
