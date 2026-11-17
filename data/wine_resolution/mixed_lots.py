@@ -14,8 +14,28 @@ KIND_SINGLE = "SINGLE"
 KIND_MIXED = "MIXED"
 KIND_UNKNOWN = "UNKNOWN"
 
-_KEYWORD = re.compile(r"\b(mixed\s+lot|mixed\s+case|assortment|selection)\b",
-                      re.IGNORECASE)
+_KEYWORD = re.compile(
+    r"\b(mixed\s+lots?|mixed\s+cases?|assortments?|selections?)\b",
+    re.IGNORECASE)
+
+# Catalog-style bundled lots (Christie's "--Vintage"/French "--Millésime/
+# Vintage" sub-lot separator) repeat the separator once per bundled item --
+# a single occurrence is just one wine's own vintage marker, but two or more
+# means several distinct sub-lots were concatenated into one raw record.
+_VINTAGE_SEPARATOR = re.compile(r"--\s*(?:mill[ée]sime\s*/\s*)?vintage",
+                                re.IGNORECASE)
+
+
+def has_repeated_vintage_separator(text):
+    return len(_VINTAGE_SEPARATOR.findall(text or "")) >= 2
+
+
+def lot_text(wine, description):
+    return " ".join(x for x in (wine or "", description or "") if x)
+
+
+def matches_keyword(text):
+    return bool(_KEYWORD.search(text or ""))
 
 
 def classify_group(lots):
@@ -32,9 +52,7 @@ def classify_group(lots):
 
     # 2. Keyword evidence across the whole group.
     for l in lots:
-        text = " ".join(x for x in (l.get("wine") or "",
-                                    l.get("description") or "") if x)
-        if _KEYWORD.search(text):
+        if matches_keyword(lot_text(l.get("wine"), l.get("description"))):
             return KIND_MIXED, "keyword-evidence", "keyword-evidence"
 
     # 3. Distinct valid wine keys in the group.
