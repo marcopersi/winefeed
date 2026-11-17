@@ -15,8 +15,9 @@ import os
 from wine_resolution import NORMALIZER_VERSION, RESOLVER_VERSION
 from wine_resolution.normalize import normalize, is_valid_name
 from wine_resolution.vintage import resolve_vintage
-from wine_resolution.mixed_lots import classify_group, KIND_SINGLE, KIND_MIXED, \
-    KIND_UNKNOWN
+from wine_resolution.mixed_lots import classify_group, \
+    has_repeated_vintage_separator, lot_text, matches_keyword, \
+    KIND_SINGLE, KIND_MIXED, KIND_UNKNOWN
 from wine_resolution.resolver import resolve_group, stable_key, \
     STATUS_RESOLVED, STATUS_AMBIGUOUS
 
@@ -302,16 +303,66 @@ def _exclude_spirits(conn):
          for (lot_id,) in updates])
 
 
+def _apply_text_rule(conn, prefilter_sql, predicate, reason, rule_id):
+    """Classify every not-yet-classified lot whose own wine/description
+    text satisfies ``predicate`` as MIXED.
+
+    ``prefilter_sql`` is only a cheap SQL LIKE narrowing step (no word
+    boundaries, so e.g. "%mixed%" also matches "intermixed") -- ``predicate``
+    makes the real decision, so it must never be looser than the SQL filter.
+
+    Classifies by ``source_lot_key``, not by individual row id: a bundled
+    catalog lot's text evidence can land on just one of several sibling
+    rows sharing that key (#93 senior-review finding), and the
+    group-classification pass below only sees -- and would otherwise
+    silently fall through to SINGLE for -- siblings still lot_kind IS NULL.
+    """
+    candidates = conn.execute(
+        "SELECT source_lot_key, wine, description FROM lots"
+        " WHERE lot_kind IS NULL AND (" + prefilter_sql + ")").fetchall()
+    matched_keys = {source_lot_key for source_lot_key, wine, description
+                    in candidates if predicate(lot_text(wine, description))}
+    _mark_mixed_by_source_lot_key(conn, matched_keys, reason, rule_id)
+
+
+def _mark_mixed_by_source_lot_key(conn, keys, reason, rule_id):
+    if keys:
+        conn.executemany(
+            "UPDATE lots SET lot_kind=?, mixed_reason=?, mixed_rule_id=?"
+            " WHERE source_lot_key=? AND lot_kind IS NULL",
+            [(KIND_MIXED, reason, rule_id, k) for k in keys])
+
+
 def _classify_lots(conn):
     _exclude_spirits(conn)
     conn.execute("UPDATE lots SET lot_kind=?, mixed_reason=?, mixed_rule_id=?"
                  " WHERE mixed_lot=1",
                  (KIND_MIXED, "provider-flag", "provider-flag"))
-    for kw in ("%mixed lot%", "%mixed case%", "%assortment%", "%selection%"):
-        conn.execute(
-            "UPDATE lots SET lot_kind=?, mixed_reason=?, mixed_rule_id=?"
-            " WHERE lot_kind IS NULL AND (wine LIKE ? OR description LIKE ?)",
-            (KIND_MIXED, "keyword-evidence", "keyword-evidence", kw, kw))
+    # Propagate to siblings sharing the same source_lot_key: the provider
+    # flag can land on only one row of a bundled lot (same fall-through
+    # gap _apply_text_rule's docstring describes, confirmed by
+    # senior-review reproduction for this rule too).
+    flagged_keys = {k for (k,) in conn.execute(
+        "SELECT DISTINCT source_lot_key FROM lots WHERE mixed_lot=1")}
+    _mark_mixed_by_source_lot_key(conn, flagged_keys, "provider-flag",
+                                  "provider-flag")
+    _apply_text_rule(
+        conn,
+        "wine LIKE '%mixed%' OR description LIKE '%mixed%'"
+        " OR wine LIKE '%assortment%' OR description LIKE '%assortment%'"
+        " OR wine LIKE '%selection%' OR description LIKE '%selection%'",
+        matches_keyword, "keyword-evidence", "keyword-evidence")
+
+    # Catalog-style bundled lots arrive as ONE raw row whose own wine/
+    # description text concatenates several sub-lots (e.g. several
+    # Chateaux, each with its own "--Vintage YYYY (n)" marker) -- no
+    # sibling row exists to reveal this via the group-based checks below,
+    # so it needs its own text-only pass across every not-yet-classified
+    # lot (#93 Nebenfund: these were silently kept as SINGLE).
+    _apply_text_rule(
+        conn, "wine LIKE '%--%' OR description LIKE '%--%'",
+        has_repeated_vintage_separator, "repeated-vintage-separator",
+        "repeated-vintage-separator")
 
     # multi-lot groups need per-group classification
     multi = [r[0] for r in conn.execute(
