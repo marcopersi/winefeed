@@ -6,6 +6,9 @@ the sibling-comparison checks in classify_group() (distinct wine keys,
 distinct vintages) never see it -- only a text-only pass across every
 not-yet-classified row can catch it.
 """
+# pylint: disable=protected-access
+# -- protected-access: exercising build_wines's internal _classify_lots
+# directly, same pattern as test_loader_roundtrip.py/test_fx_rates.py.
 import os
 import sqlite3
 import sys
