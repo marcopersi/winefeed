@@ -267,6 +267,36 @@ code {
   font-size: 14px;
 }
 
+.vintage-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.vintage-picker-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.vintage-picker-select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  outline: none;
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.vintage-picker-select:focus {
+  border-color: var(--series-1);
+  box-shadow: 0 0 0 4px var(--focus-ring);
+}
+
 .chart-card {
   background: var(--surface-1);
   border: 1px solid var(--border);

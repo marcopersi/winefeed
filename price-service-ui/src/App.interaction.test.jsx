@@ -26,11 +26,15 @@ function mockAxios() {
       return Promise.resolve({
         data: {
           wine_id: 1,
+          vintage: 2015,
           prices: [
             { lot_date: "2020-01-01", price: 500, currency: "EUR", provider: "demo" },
           ],
         },
       });
+    }
+    if (url === "/wines/1/vintages") {
+      return Promise.resolve({ data: { wine_id: 1, vintages: [] } });
     }
     return Promise.resolve({ data: { results: [] } });
   });
