@@ -11,9 +11,9 @@ import main
 
 class TestSearch(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False)
-        self.tmp.close()
-        conn = sqlite3.connect(self.tmp.name)
+        with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
+            self.tmp_path = tmp.name
+        conn = sqlite3.connect(self.tmp_path)
         conn.executescript("""
             CREATE TABLE wines (
                 id INTEGER PRIMARY KEY, canonical_name TEXT,
@@ -61,11 +61,11 @@ class TestSearch(unittest.TestCase):
         """)
         conn.commit()
         conn.close()
-        main.DB_PATH = self.tmp.name
+        main.DB_PATH = self.tmp_path
         self.client = TestClient(main.app)
 
     def tearDown(self):
-        os.unlink(self.tmp.name)
+        os.unlink(self.tmp_path)
 
     def test_search_returns_matches(self):
         resp = self.client.get("/search", params={"q": "montrose"})
