@@ -27,6 +27,7 @@ Fetcher liefert), Buyer's Premium, Fees (Lotgebühr), MwSt/VAT, Quelle.
 | munich-wine-company | HAMMER | 15 % | € 5/Lot | USt | bestätigt |
 | winebarrel | — (Konsignations-Service, kein klassisches Aufgeld) | Seller-Provision 7,5–15 % (gestaffelt) | — | — | bestätigt |
 | sylvies | HAMMER | 20 % exkl. MwSt | — | zielland-abhängig, kein fixer Satz | bestätigt (sylvies.be Conditions of Sale) |
+| whiskyauction | HAMMER | 15 % flat, aktueller Satz auf alle Lots angewandt (keine Staffel, kein Wein/Whisky-Unterschied; ob der Satz für ältere Auktionen (vor 2026) schon galt, ist nicht verifiziert -- gleiche Approximation wie bei langtons/winefields) | — (£5 Registrierung ist Account-, nicht Lot-Gebühr) | zielland-abhängig (UK: +VAT; Rest: keine VAT auf Commission), kein fixer Satz | bestätigt (whisky.auction/our-fees, "Buyers Fees > Commission fee") |
 
 ## Preis-Quelle-Invariante (D1)
 

@@ -4994,6 +4994,15 @@ PREMIUM_POLICY = {
     # franzwermuth's own Auktionsbedingungen.pdf: "ein einheitliches
     # Aufgeld von 9 %" + a flat CHF 8.00 "Abwicklungsgebühr" per lot.
     "franzwermuth": {"rate": 0.09, "fees": 8.0},
+    # whisky.auction's own /our-fees page, "Buyers Fees > Commission fee":
+    # "15% (+VAT) of the hammer price" -- flat, no tiering and no wine/
+    # whisky split (confirmed: the tiered table on that page is the
+    # SELLER's commission, not this). The one-off GBP 5 buyer registration
+    # fee is account-level, not per-lot, so no `fees` entry here. VAT is
+    # destination-dependent (charged on UK-domestic orders only, per the
+    # same page) with no single numeric rate to derive, same as sylvies --
+    # left untracked rather than guessed.
+    "whiskyauction": {"rate": 0.15},
 }
 
 

@@ -85,6 +85,33 @@ PRODUCER_HTML = """
 </div>
 """
 
+CLOS_HTML = """
+<div id="lot_1" class="lot lotItem CR Met" data-winningbid="500.00"
+     data-enddate="2026-06-23 20:10:00">
+    <span class="lotName1 lot-title-main">Clos De La Roche Grand Cru</span>
+    <span class="lotName2 lot-title-sup">Domaine Armand Rousseau</span>
+    <span class="lotName3 lot-title-sup">75cl</span>
+</div>
+<div id="lot_2" class="lot lotItem CR Met" data-winningbid="600.00"
+     data-enddate="2026-06-23 20:10:00">
+    <span class="lotName1 lot-title-main">Clos Vougeot Grand Cru</span>
+    <span class="lotName2 lot-title-sup">Chateau De La Tour</span>
+    <span class="lotName3 lot-title-sup">75cl</span>
+</div>
+<div id="lot_3" class="lot lotItem CR Met" data-winningbid="700.00"
+     data-enddate="2026-06-23 20:10:00">
+    <span class="lotName1 lot-title-main">Clos Des Papes</span>
+    <span class="lotName2 lot-title-sup">Chateauneuf Du Pape</span>
+    <span class="lotName3 lot-title-sup">75cl</span>
+</div>
+<div id="lot_4" class="lot lotItem CR Met" data-winningbid="800.00"
+     data-enddate="2026-06-23 20:10:00">
+    <span class="lotName1 lot-title-main">Clos Du Marquis 2000</span>
+    <span class="lotName2 lot-title-sup">Saint-Julien</span>
+    <span class="lotName3 lot-title-sup">75cl</span>
+</div>
+"""
+
 EMPTY_HTML = "<div class='no-lots'></div>"
 
 
@@ -268,6 +295,36 @@ class TestWhiskyAuctionFetch(unittest.TestCase):
             ("https://whisky.auction/auctions/auction/198", 1): EMPTY_HTML,
         })
         self.assertIsNone(result.data["lots"][0]["producer"])
+
+    def test_producer_extracted_for_shared_clos_vineyard(self):
+        # "Clos De La Roche"/"Clos Vougeot" are Burgundy Grand Crus
+        # farmed by several different domaines (confirmed live-site
+        # crawl + data/reference/wines_by_producer.csv) -- unlike most
+        # "Clos ..." titles, lotName2 here really is a producer name,
+        # not appellation/classification text.
+        result, _ = self._fetch({
+            ("https://whisky.auction/auctions/auction/198", 0): CLOS_HTML,
+            ("https://whisky.auction/auctions/auction/198", 1): EMPTY_HTML,
+        })
+        lots = result.data["lots"]
+        self.assertEqual(lots[0]["producer"], "Domaine Armand Rousseau")
+        self.assertEqual(lots[1]["producer"], "Chateau De La Tour")
+
+    def test_producer_none_for_appellation_fronted_clos_title(self):
+        # "Clos Des Papes"/"Clos Du Marquis" each name a single estate;
+        # lotName2 there is the APPELLATION ("Chateauneuf Du Pape",
+        # "Saint-Julien"), not a producer -- must stay self-identifying
+        # even though neither appellation name contains a digit or a
+        # "cru"/"classe"/"appellation" keyword for _NOT_PRODUCER to
+        # catch (this is exactly the false-positive the narrow
+        # _SHARED_CLOS_VINEYARDS allowlist exists to avoid).
+        result, _ = self._fetch({
+            ("https://whisky.auction/auctions/auction/198", 0): CLOS_HTML,
+            ("https://whisky.auction/auctions/auction/198", 1): EMPTY_HTML,
+        })
+        lots = result.data["lots"]
+        self.assertIsNone(lots[2]["producer"])
+        self.assertIsNone(lots[3]["producer"])
 
 
 if __name__ == "__main__":
