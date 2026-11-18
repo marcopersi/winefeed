@@ -28,9 +28,29 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
   const [results, setResults] = useState([]);
   const [searchError, setSearchError] = useState(false);
   const [vintages, setVintages] = useState([]);
-  const [selectedVintage, setSelectedVintage] = useState(null);
+  // requestedVintage: the vintage the USER picked (null = "let the
+  // backend default"). resolvedVintage: the vintage the backend actually
+  // returned for the current prices response. Kept separate (review
+  // finding) so that adopting the backend's default into state doesn't
+  // itself change the prices-fetch effect's dependency and fire a
+  // second, redundant request for the series already on screen -- a
+  // request whose own failure would then clear an already-successfully-
+  // loaded chart.
+  const [requestedVintage, setRequestedVintage] = useState(null);
+  const [resolvedVintage, setResolvedVintage] = useState(null);
   const [prices, setPrices] = useState([]);
   const [pricesError, setPricesError] = useState(false);
+  // Review finding: clearing `prices` for an in-flight request (wine
+  // switch or vintage switch) left PriceChart's own "No price history
+  // found for this wine yet" empty-state showing while a request was
+  // merely pending, not actually empty -- misleading for as long as the
+  // request takes (up to the full axios timeout on a slow backend).
+  // Tracked here instead so that state can be told apart from "actually
+  // empty".
+  const [pricesLoading, setPricesLoading] = useState(!!selectedWine);
+  // The vintage picker's value/gate: the user's own pick once made,
+  // otherwise whatever the backend resolved for the open series.
+  const displayedVintage = requestedVintage ?? resolvedVintage;
 
   // Cross-tab navigation: the leaderboard can hand us a wine to open here.
   useEffect(() => {
@@ -77,7 +97,7 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
   // the previous wine's chart on screen under the new wine's heading
   // (senior-review finding). This runs during render, not in an effect:
   // an effect-based reset still lets the prices-fetch effect below read
-  // the stale `selectedVintage` from the previous wine in the same
+  // the stale `requestedVintage` from the previous wine in the same
   // render pass (effects run in declaration order against one render's
   // closed-over state), firing one wrong-vintage request for the new
   // wine before a later render corrects it (confirmed in review).
@@ -89,8 +109,10 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
     setResetForWineId(selectedWine?.wine_id ?? null);
     setPrices([]);
     setPricesError(false);
+    setPricesLoading(!!selectedWine);
     setVintages([]);
-    setSelectedVintage(null);
+    setRequestedVintage(null);
+    setResolvedVintage(null);
   }
 
   useEffect(() => {
@@ -118,31 +140,51 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
       return undefined;
     }
     let cancelled = false;
+    setPricesLoading(true);
     (async () => {
       try {
-        const resp = await fetchPrices(selectedWine.wine_id, selectedVintage);
+        const resp = await fetchPrices(selectedWine.wine_id, requestedVintage);
         if (cancelled) {
           return;
         }
         setPrices(resp.data.prices ?? []);
         setPricesError(false);
         // The backend defaults to the most-traded vintage when none is
-        // given; adopt it so the picker reflects what's actually shown.
-        if (selectedVintage == null && resp.data.vintage != null) {
-          setSelectedVintage(resp.data.vintage);
-        }
+        // requested; record it as `resolvedVintage` only (not
+        // `requestedVintage`) so the picker shows it without this same
+        // effect re-firing a redundant second request for the series
+        // that was just successfully loaded (review finding).
+        setResolvedVintage(resp.data.vintage ?? null);
       } catch (error) {
         console.error("prices error:", error);
         if (!cancelled) {
           setPrices([]);
           setPricesError(true);
         }
+      } finally {
+        if (!cancelled) {
+          setPricesLoading(false);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [selectedWine, selectedVintage]);
+  }, [selectedWine, requestedVintage]);
+
+  function changeVintage(vintage) {
+    // Cleared here, not in an effect: otherwise the old series (or a
+    // stale error) stays on screen -- looking current -- for as long as
+    // the new vintage's request is in flight (review finding; the same
+    // stale-chart risk the wine-switch reset above already guards).
+    // `pricesLoading` set here too (not left to the effect) so the UI
+    // shows "loading", never a one-frame "no price history" flash, the
+    // instant the user picks a vintage.
+    setPrices([]);
+    setPricesError(false);
+    setPricesLoading(true);
+    setRequestedVintage(vintage);
+  }
 
   function selectResult(result) {
     onSelectWine(result);
@@ -204,12 +246,12 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
               "Price history"}
           </p>
 
-          {/* Gated on selectedVintage too: vintages and the default-vintage
-              adoption from the prices fetch resolve independently, so
-              rendering the select as soon as vintages arrives could show
-              a controlled value with no matching option yet (review
-              finding). */}
-          {vintages.length > 1 && selectedVintage != null && (
+          {/* Gated on displayedVintage too: vintages and the default-
+              vintage adoption from the prices fetch resolve
+              independently, so rendering the select as soon as vintages
+              arrives could show a controlled value with no matching
+              option yet (review finding). */}
+          {vintages.length > 1 && displayedVintage != null && (
             <div className="vintage-picker">
               <label htmlFor="vintage-select" className="vintage-picker-label">
                 Vintage
@@ -217,8 +259,8 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
               <select
                 id="vintage-select"
                 className="vintage-picker-select"
-                value={selectedVintage}
-                onChange={(e) => setSelectedVintage(Number(e.target.value))}
+                value={displayedVintage}
+                onChange={(e) => changeVintage(Number(e.target.value))}
               >
                 {vintages.map((v) => (
                   <option key={v.vintage} value={v.vintage}>
@@ -229,7 +271,9 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
             </div>
           )}
 
-          {pricesError ? (
+          {pricesLoading ? (
+            <p className="empty-note">Loading price history…</p>
+          ) : pricesError ? (
             <p className="empty-note">Couldn't load the price history right now.</p>
           ) : (
             <PriceChart prices={prices} />
