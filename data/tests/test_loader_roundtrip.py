@@ -823,6 +823,73 @@ class TestLoaderRoundtrip(unittest.TestCase):
             "Koppe", "10.json", data, "load_koppe")
         self.assertEqual((count, hammer, wine), (1, 1, 1))
 
+    def test_whiskyauction(self):
+        data = {"auction": {"id": "198", "name": "June 2026 - Fine & "
+                            "Rare Wines", "date": "23 Jun 2026"},
+                "lots": [
+                    {"lot_no": "221959", "wine": "2001 Grands Echezeaux "
+                     "Magnum", "description": "Domaine De La Romanee "
+                     "Conti", "vintage": "2001", "quantity": 1,
+                     "bottle_size_cl": 150.0, "abv": 13.0, "sold": True,
+                     "hammer_price": 3500.0,
+                     "lot_date": "2026-06-23"},
+                    {"lot_no": "221600", "wine": "Laurent Perrier Cuvee "
+                     "Rose", "vintage": None, "quantity": 1,
+                     "bottle_size_cl": 75.0, "sold": False,
+                     "hammer_price": None, "lot_date": "2026-06-23"},
+                ]}
+        count, hammer, wine = _run_loader(
+            "WhiskyAuction", "198.json", data, "load_whiskyauction")
+        self.assertEqual((count, hammer, wine), (2, 1, 2))
+
+    def test_whiskyauction_fields(self):
+        """Vintage/bottle size/ABV/currency come out correctly; an
+        unsold lot's hammer_price stays NULL despite the site's own
+        highest-bid value never being passed through."""
+        data = {"auction": {"id": "198", "name": "Auktion", "date": None},
+                "lots": [
+                    {"lot_no": "1", "wine": "2001 Grands Echezeaux "
+                     "Magnum", "producer": "Domaine De La Romanee Conti",
+                     "description": "Domaine De La Romanee Conti",
+                     "vintage": "2001", "quantity": 1,
+                     "bottle_size_cl": 150.0, "abv": 13.0, "sold": True,
+                     "hammer_price": 3500.0, "lot_date": "2026-06-23"}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "WhiskyAuction"), exist_ok=True)
+            with open(os.path.join(d, "WhiskyAuction", "198.json"),
+                      "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_whiskyauction(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT vintage, bottle_size_dl, currency, price_basis,"
+                " sold, hammer_price, description, producer"
+                " FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row[:5], (2001, 15.0, "GBP", "HAMMER", 1))
+        self.assertEqual(row[5], 3500.0)
+        self.assertIn("13.0% ABV", row[6])
+        self.assertIn("Domaine De La Romanee Conti", row[6])
+        self.assertEqual(row[7], "Domaine De La Romanee Conti")
+
+    def test_whiskyauction_skips_file_with_no_auction_id(self):
+        # Senior-review finding: without this guard, a malformed file
+        # (empty/missing "auction" block) would become the literal
+        # auction_id "None", silently merging into any OTHER malformed
+        # file's lots under the same phantom auction instead of being
+        # skipped.
+        data = {"auction": {}, "lots": [{"lot_no": "1", "wine": "x"}]}
+        count, _, _ = _run_loader(
+            "WhiskyAuction", "broken.json", data, "load_whiskyauction")
+        self.assertEqual(count, 0)
+
     def test_weinboerse(self):
         # Real shape (not the old weinauktion-platform API this loader used
         # to assume): a paginated export where each page embeds its own

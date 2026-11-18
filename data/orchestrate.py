@@ -58,6 +58,7 @@ ARCHIVE_DIRS = {
     # just needs its own CamelCase directory like the others above.
     "bestwineauctions": "BestWineAuctions",
     "ackerwines": "Ackerwines",
+    "whiskyauction": "WhiskyAuction",
 }
 
 

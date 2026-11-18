@@ -20,6 +20,7 @@ from .munichwinecompany import MunichWineCompanyFetcher
 from .pandolfini import PandolfiniFetcher
 from .weinauktion import WeinauktionFetcher
 from .weinauktionator import WeinauktionatorFetcher
+from .whiskyauction import WhiskyAuctionFetcher
 from .winebarrel import WinebarrelFetcher
 from .winefields import WinefieldsFetcher
 
@@ -49,6 +50,7 @@ FETCHERS = {
     "denzauktionen": DenzauktionenFetcher(),
     "munich-wine-company": MunichWineCompanyFetcher(),
     "franzwermuth": FranzWermuthFetcher(),
+    "whiskyauction": WhiskyAuctionFetcher(),
 }
 
 
