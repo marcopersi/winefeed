@@ -89,7 +89,31 @@ _FORMAT = re.compile(
 # release text, not a producer -- confirmed: "2016 Chateau Cheval Blanc"
 # -> lotName2 "Saint Emilion 1er Grand Cru Classe A - 100 points".
 _SELF_IDENTIFYING_TITLE = re.compile(
-    r"^(?:\d{4}\s+)?(?:Chateau|Château|Clos|Domaine)\b", re.IGNORECASE)
+    r"^(?:Chateau|Château|Clos|Domaine)\b", re.IGNORECASE)
+# Second senior-review-pass finding: "Clos ..." does NOT always
+# self-identify a producer the way "Chateau ..."/"Domaine ..." do -- a
+# "Clos" can instead name a shared vineyard farmed by several different
+# domaines. Confirmed via a live-site crawl (2026-11-18, all 26 real
+# wine auctions, 8,649 lots, 63 distinct Clos-titled (title, lotName2)
+# pairs) that exactly these three Burgundy Grand Crus are genuinely
+# multi-producer here -- lotName2 held a different, clean domaine name
+# per lot each time (Clos de Vougeot: Chateau De La Tour, Domaine Leroy,
+# Louis Jadot, Rougeot Dupin, Jean Raphet, Mongeard Mugneret, Thorin,
+# Moreau Fontaine; Clos de la Roche: Domaine Amiot Bertrand, Domaine
+# Armand Rousseau, Louis Jadot; Clos Saint-Denis: Domaine Dujac, Maison
+# Roche De Bellene) -- also confirmed shared across multiple producers
+# in data/reference/wines_by_producer.csv. Deliberately narrow, not "any
+# Clos title": the opposite rule (drop Clos from _SELF_IDENTIFYING_TITLE
+# entirely, rely only on _NOT_PRODUCER below) was tried against that same
+# live sample and let several OTHER "Clos ..." titles' lotName2 -- a bare
+# appellation ("Pomerol", "Saint-Julien", "Sauternes", "Chateauneuf Du
+# Pape") or descriptive text ("Second Wine Of Leoville Las Cases") for
+# "Clos Rene"/"Clos Du Marquis"/"Clos Des Papes"/etc. -- through as a
+# fabricated "producer", since _NOT_PRODUCER has no appellation-name list
+# to catch those. Those titles stay self-identifying (producer None).
+_SHARED_CLOS_VINEYARDS = re.compile(
+    r"^clos (de )?vougeot\b|^clos de la roche\b|^clos (saint|st)[\s-]+denis\b",
+    re.IGNORECASE)
 # lotName2 text containing a digit (a critic score, a release year) or
 # an appellation/classification word is NOT a producer name even when
 # the title above isn't self-identifying (confirmed: Burgundy vineyard-
@@ -99,6 +123,16 @@ _SELF_IDENTIFYING_TITLE = re.compile(
 # unresolved vintage).
 _NOT_PRODUCER = re.compile(r"\d|\bcru\b|\bclasse\b|\bappellation\b",
                            re.IGNORECASE)
+
+
+def _is_self_identifying_title(title):
+    """True when ``title`` already names its own producer, so lotName2
+    there is extra text, not a producer -- see _SELF_IDENTIFYING_TITLE
+    and, for the one documented exception, _SHARED_CLOS_VINEYARDS."""
+    stripped = re.sub(r"^\d{4}\s+", "", title)
+    if _SHARED_CLOS_VINEYARDS.match(stripped):
+        return False
+    return bool(_SELF_IDENTIFYING_TITLE.match(stripped))
 
 
 def _to_float(text):
@@ -240,7 +274,7 @@ class WhiskyAuctionFetcher:
         # comment, and leave it None (still folded into ``description``)
         # everywhere else rather than guess.
         producer = None
-        if (detail and title and not _SELF_IDENTIFYING_TITLE.match(title)
+        if (detail and title and not _is_self_identifying_title(title)
                 and not _NOT_PRODUCER.search(detail)):
             producer = detail
 
