@@ -1847,6 +1847,64 @@ def load_koppe(b, limit):
             break
 
 
+def load_whiskyauction(b, limit):
+    """whisky.auction's own wine/champagne sales (see
+    ingest/fetchers/whiskyauction.py) -- GBP, hammer price only.
+
+    A lot's ``sold`` flag is set by the fetcher from its CSS class
+    (Met/NA/Aftersale vs NotMet): an unsold ("NotMet" -- reserve not
+    reached) lot has ``hammer_price=None`` even though the site still
+    shows a non-zero ``data-winningbid`` for it (the highest bid placed,
+    not a real sale price), so it must not be mistaken for an observed
+    price here.
+    """
+    n = 0
+    for f in _json_files("WhiskyAuction"):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        if not a.get("id"):
+            # Senior-review finding: without this guard, a malformed
+            # file (empty/missing "auction" block) would silently become
+            # the literal auction_id "None", colliding with -- and
+            # corrupting -- any OTHER malformed file's lots under the
+            # same phantom auction (the exact class of bug the koppe
+            # loader's lot_no-collision comment documents for a
+            # different field).
+            continue
+        aid = str(a["id"])
+        a_id = b.add_auction("whiskyauction", aid, a.get("name"),
+                             parse_date(a.get("date")), "GBP", "HAMMER")
+        for lot in d.get("lots", []):
+            bottle_size_cl = lot.get("bottle_size_cl")
+            # No dedicated ABV column exists in the schema (no other
+            # house reports it) -- folded into the free-text description
+            # instead of adding one for this single fetcher.
+            abv = lot.get("abv")
+            description = lot.get("description")
+            if abv is not None:
+                abv_text = f"{abv}% ABV"
+                description = (f"{description}, {abv_text}"
+                               if description else abv_text)
+            b.add_lot(a_id, {
+                "lot_no": lot.get("lot_no"),
+                "wine": lot.get("wine"),
+                "producer": lot.get("producer"),
+                "description": description,
+                "vintage": to_int(lot.get("vintage")),
+                "quantity": lot.get("quantity"),
+                "bottle_size_dl": bottle_size_cl / 10
+                if bottle_size_cl else None,
+                "hammer_price": to_float(lot.get("hammer_price")),
+                "price_basis": "HAMMER", "currency": "GBP",
+                "sold": 1 if lot.get("sold") else 0,
+                "lot_date": lot.get("lot_date"),
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+
 def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
     """Load the weinauktion-platform API JSON (steinfels / weinboerse).
 
@@ -4343,6 +4401,7 @@ HOUSES = [
     ("sylvies-html", load_sylvies_html),
     ("sylvies-fetched", load_sylvies_fetched),
     ("sylvies-txt", load_sylvies_txt),
+    ("whiskyauction", load_whiskyauction),
 ]
 
 

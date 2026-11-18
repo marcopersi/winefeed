@@ -59,6 +59,11 @@ PROVIDERS = [
     # WAF challenge itself would even pass from a GitHub Actions runner IP
     # is unverified -- so, like sothebys, this runs locally only for now.
     "sylvies",
+    # whiskyauction: whisky.auction also runs dedicated wine/champagne
+    # sales despite its name (see ingest/fetchers/whiskyauction.py) --
+    # plain curl_cffi, no login; a passive Cloudflare bot-management
+    # script is present but did not block a bare curl in manual testing.
+    "whiskyauction",
 ]
 # christies IS in PROVIDERS now (Nov 2026) -- see the comment on its entry
 # above. run_christies_backfill.py remains for occasional re-backfills; it
