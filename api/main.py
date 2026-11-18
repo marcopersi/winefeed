@@ -30,10 +30,42 @@ app.add_middleware(
 # data/build_db.py's _fill_price_per_bottle). Shared by every endpoint
 # that counts or charts price observations, so "lot_count" and the chart
 # always mean the same thing. Always used against ``lots`` aliased ``l``.
+#
+# Review fix: price_per_bottle_eur IS NOT NULL also admits idealwine's own
+# COTE valuations (price_kind='COTE', data/build_db.py's
+# _flag_cote_prices, D11) -- an estimate, not a competitive sale -- which
+# would otherwise inflate lot_count, skew the default-vintage pick, and
+# plot as if it were a real auction result. Excluded the same way
+# data/build_db.py's own forecast_input view already excludes it.
+#
+# Review fix: price_per_bottle_eur IS NOT NULL does NOT imply a confirmed
+# sale -- neither _apply_premium_policy nor _fill_price_per_bottle
+# (data/build_db.py) check ``sold`` before deriving realised_price/
+# price_per_bottle_eur from a recorded hammer_price, so a lot whose
+# reserve was never met but still carries a hammer/highest-bid figure
+# would otherwise plot as a completed sale. forecast_input's own ``sold
+# = 1`` clause (D14) is the precedent; its own comment there notes ``sold
+# IS NULL`` must be checked explicitly (NULL IS NOT 0 in SQL), which
+# ``sold = 1`` already does correctly (excludes NULL too).
+#
+# Review fix: price_per_bottle_eur already normalizes currency and divides
+# by bottle_size_dl/7.5, but that conversion does not remove the real
+# price premium a large format (magnum, etc.) commands over a standard
+# bottle -- mixing sizes into one series is a second "different product,
+# not a unit-conversion issue" case, same reasoning as vintage (see
+# data/build_db.py's own D15, which scopes a comparable forecast series by
+# (wine_ref_id, vintage, size_class=bottle_size_dl), never by vintage
+# alone). Restricted to the standard 750ml bottle rather than adding a
+# second (format) picker next to the vintage one -- MVP scope; a wine
+# whose history is magnum-only will show no chart rather than a
+# size-mixed one.
 _PRICEABLE = (
     "l.lot_kind = 'SINGLE'"
     " AND l.vintage_status IN ('STRUCTURED', 'EXTRACTED')"
+    " AND l.sold = 1"
     " AND l.price_per_bottle_eur IS NOT NULL"
+    " AND l.price_kind IS NULL"
+    " AND l.bottle_size_dl = 7.5"
     " AND l.lot_date IS NOT NULL"
 )
 
@@ -186,12 +218,16 @@ def vintages(wine_id: int):
 def prices(wine_id: int, vintage: int | None = Query(None)):
     """Return the EUR/per-bottle price series for one (wine, vintage).
 
-    ``price_per_bottle_eur`` already normalizes currency and bottle size,
-    but a vintage is a genuinely different product, not a unit-conversion
-    issue -- mixing vintages into one line previously plotted e.g. a 2015
-    half-bottle sold in HKD right next to a 1982 magnum sold in GBP as if
-    they were one comparable series. Defaults to the vintage with the
-    most observations when none is given.
+    ``price_per_bottle_eur`` already normalizes currency, but a vintage is
+    a genuinely different product, not a unit-conversion issue -- mixing
+    vintages into one line previously plotted e.g. a 2015 bottle sold in
+    HKD right next to a 1982 bottle sold in GBP as if they were one
+    comparable series. Defaults to the vintage with the most observations
+    when none is given. ``_PRICEABLE`` additionally restricts every
+    series here to standard 750ml bottles (see its own docstring) -- a
+    large-format lot's real price premium survives the currency/divide-
+    by-size conversion, so it isn't a comparable point on this line
+    either.
     """
     def run(conn):
         nonlocal vintage

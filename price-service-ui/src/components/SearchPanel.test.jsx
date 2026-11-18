@@ -24,15 +24,14 @@ afterEach(() => {
 
 describe("SearchPanel wine switching", () => {
   it("clears the previous wine's chart instead of showing it under the new heading", async () => {
+    const pendingPricesA = deferred();
     const pendingPricesB = deferred();
     axios.get.mockImplementation((url) => {
       if (url === "/wines/1/vintages" || url === "/wines/2/vintages") {
         return Promise.resolve({ data: { vintages: [] } });
       }
       if (url === "/wines/1/prices") {
-        return Promise.resolve({
-          data: { vintage: 2015, prices: [{ lot_date: "2015-01-01", price: 100, currency: "EUR" }] },
-        });
+        return pendingPricesA.promise;
       }
       if (url === "/wines/2/prices") {
         return pendingPricesB.promise;
@@ -43,20 +42,31 @@ describe("SearchPanel wine switching", () => {
     const { rerender } = render(
       <SearchPanel selectedWine={WINE_A} onSelectWine={() => {}} />,
     );
-    await screen.findByText(/no price history/i);
-    // Wine A's fetch never resolved with real points in this test, but the
-    // important thing is what's on screen once we switch to Wine B.
+    // Wine A's /prices fetch hasn't resolved yet -- a loading state, not
+    // an "empty" or stale one, must be shown (second-review-pass finding:
+    // the empty-state message used to show here too, misleadingly).
+    await screen.findByText(/loading price history/i);
+
+    pendingPricesA.resolve({
+      data: { vintage: 2015, prices: [{ lot_date: "2015-01-01", price: 100, currency: "EUR" }] },
+    });
+    await waitFor(() =>
+      expect(screen.queryByText(/loading price history/i)).not.toBeInTheDocument(),
+    );
 
     rerender(<SearchPanel selectedWine={WINE_B} onSelectWine={() => {}} />);
 
-    // Wine B's /prices fetch hasn't resolved yet -- the panel must show the
-    // empty state, not leftover data from Wine A (senior-review finding).
-    expect(screen.getByText(/no price history/i)).toBeInTheDocument();
+    // Wine B's /prices fetch hasn't resolved yet -- the panel must show a
+    // loading state, not leftover data from Wine A (senior-review
+    // finding).
+    expect(screen.getByText(/loading price history/i)).toBeInTheDocument();
 
     pendingPricesB.resolve({
       data: { vintage: 2018, prices: [{ lot_date: "2018-01-01", price: 200, currency: "EUR" }] },
     });
-    await waitFor(() => expect(screen.queryByText(/no price history/i)).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText(/loading price history/i)).not.toBeInTheDocument(),
+    );
   });
 
   it("shows an error note instead of stale data when the price fetch fails", async () => {
@@ -76,17 +86,29 @@ describe("SearchPanel wine switching", () => {
     ).toBeInTheDocument();
   });
 
-  it("never requests the new wine's prices with the previous wine's adopted vintage", async () => {
+  it("never requests the new wine's prices with the previous wine's picked vintage", async () => {
     // Senior-review finding, reproduced live: resetting vintage state in
     // an effect (instead of during render) let the prices-fetch effect
-    // still read the old wine's stale `selectedVintage` on the very
-    // first render after switching wines.
+    // still read the old wine's stale vintage on the very first render
+    // after switching wines. A backend-*adopted* default vintage can no
+    // longer leak this way (it lands only in `resolvedVintage`, never
+    // sent as a request param, per the requestedVintage/resolvedVintage
+    // split -- second-review-pass finding: a version of this test that
+    // never drives the picker can't exercise that leak at all, since the
+    // only way `requestedVintage` becomes non-null is a user pick), so
+    // this test drives the picker itself to reproduce the real risk.
     axios.get.mockImplementation((url, config) => {
-      if (url === "/wines/1/vintages" || url === "/wines/2/vintages") {
-        return Promise.resolve({ data: { vintages: [{ vintage: 2015, lot_count: 3 }] } });
+      if (url === "/wines/1/vintages") {
+        return Promise.resolve({
+          data: { vintages: [{ vintage: 2015, lot_count: 3 }, { vintage: 2010, lot_count: 1 }] },
+        });
+      }
+      if (url === "/wines/2/vintages") {
+        return Promise.resolve({ data: { vintages: [] } });
       }
       if (url === "/wines/1/prices") {
-        return Promise.resolve({ data: { vintage: 2015, prices: [] } });
+        const vintage = config.params.vintage ?? 2015;
+        return Promise.resolve({ data: { vintage, prices: [] } });
       }
       if (url === "/wines/2/prices") {
         return Promise.resolve({ data: { vintage: 2018, prices: [] } });
@@ -97,11 +119,12 @@ describe("SearchPanel wine switching", () => {
     const { rerender } = render(
       <SearchPanel selectedWine={WINE_A} onSelectWine={() => {}} />,
     );
-    // Let Wine A's prices fetch resolve and adopt vintage 2015.
+    const select = await screen.findByLabelText(/vintage/i);
+    fireEvent.change(select, { target: { value: "2010" } });
     await waitFor(() =>
       expect(axios.get).toHaveBeenCalledWith(
         "/wines/1/prices",
-        expect.objectContaining({ params: {} }),
+        expect.objectContaining({ params: { vintage: 2010 } }),
       ),
     );
 
@@ -113,14 +136,9 @@ describe("SearchPanel wine switching", () => {
       ),
     );
 
-    // Wine B may legitimately get a follow-up request for its OWN
-    // adopted vintage (2018) once that's known -- the bug was leaking
-    // Wine A's vintage (2015) into a Wine B request, not any vintage
-    // param at all.
     const wineBPriceCalls = axios.get.mock.calls.filter(([url]) => url === "/wines/2/prices");
-    expect(wineBPriceCalls.length).toBeGreaterThan(0);
     for (const [, config] of wineBPriceCalls) {
-      expect(config.params.vintage).not.toBe(2015);
+      expect(config.params.vintage).not.toBe(2010);
     }
   });
 });

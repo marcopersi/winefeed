@@ -9,6 +9,9 @@ from fastapi.testclient import TestClient
 import main
 
 
+# pylint: disable=too-many-public-methods
+# -- one test_ method per case is the point; see data/tests/
+# test_loader_roundtrip.py's own note for the same pattern.
 class TestSearch(unittest.TestCase):
     def setUp(self):
         with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
@@ -26,7 +29,8 @@ class TestSearch(unittest.TestCase):
                 auction_id INTEGER, lot_date TEXT, total_price REAL,
                 realised_price REAL, currency TEXT,
                 lot_kind TEXT, vintage_status TEXT, vintage_final INTEGER,
-                price_per_bottle_eur REAL);
+                price_per_bottle_eur REAL, price_kind TEXT,
+                bottle_size_dl REAL, sold INTEGER);
             INSERT INTO wines VALUES
                 (1, 'Château Montrose', 'Château Montrose', 'Saint-Estèphe'),
                 (2, 'Montrose 2015', NULL, NULL),
@@ -44,20 +48,39 @@ class TestSearch(unittest.TestCase):
                 -- wine 1: vintage 2020 is the most-traded (2 obs), 2021
                 -- has 1 obs -- the default-vintage pick must prefer 2020.
                 (1, 1, 1, '2020-01-01', 100.0, 95.0, 'EUR',
-                 'SINGLE', 'STRUCTURED', 2020, 95.0),
+                 'SINGLE', 'STRUCTURED', 2020, 95.0, NULL, 7.5, 1),
                 (2, 1, 1, '2020-06-01', 120.0, 115.0, 'EUR',
-                 'SINGLE', 'STRUCTURED', 2020, 115.0),
+                 'SINGLE', 'STRUCTURED', 2020, 115.0, NULL, 7.5, 1),
                 (3, 1, 1, '2021-01-01', NULL, 140.0, 'EUR',
-                 'SINGLE', 'STRUCTURED', 2021, 140.0),
+                 'SINGLE', 'STRUCTURED', 2021, 140.0, NULL, 7.5, 1),
                 -- wine 1: a MIXED lot and an unresolved-vintage lot --
                 -- must NOT count as priceable observations anywhere.
                 (4, 1, 1, '2022-01-01', 999.0, 999.0, 'EUR',
-                 'MIXED', 'STRUCTURED', 2022, 999.0),
+                 'MIXED', 'STRUCTURED', 2022, 999.0, NULL, 7.5, 1),
                 (5, 1, 1, '2022-02-01', 999.0, 999.0, 'EUR',
-                 'SINGLE', 'AMBIGUOUS', NULL, 999.0),
+                 'SINGLE', 'AMBIGUOUS', NULL, 999.0, NULL, 7.5, 1),
+                -- wine 1: a COTE valuation (idealwine) for the same
+                -- vintage -- must NOT count as a priceable observation
+                -- anywhere (review finding).
+                (7, 1, 1, '2020-04-01', NULL, NULL, 'EUR',
+                 'SINGLE', 'STRUCTURED', 2020, 999.0, 'COTE', 7.5, 1),
+                -- wine 1: a magnum (1.5l) for the same vintage -- must
+                -- NOT count as a priceable observation anywhere (review
+                -- finding: price_per_bottle_eur already divides out the
+                -- size, but doesn't remove the real large-format price
+                -- premium, so it isn't a comparable point on this line).
+                (8, 1, 1, '2020-05-01', 300.0, 290.0, 'EUR',
+                 'SINGLE', 'STRUCTURED', 2020, 290.0, NULL, 15.0, 1),
+                -- wine 1: a reserve-not-met lot with a leftover hammer-
+                -- derived price_per_bottle_eur (review finding:
+                -- _apply_premium_policy/_fill_price_per_bottle don't
+                -- check `sold` themselves) -- must NOT count as a
+                -- priceable observation anywhere.
+                (9, 1, 1, '2020-07-01', 800.0, 777.0, 'EUR',
+                 'SINGLE', 'STRUCTURED', 2020, 777.0, NULL, 7.5, 0),
                 -- wine 3: one priceable lot.
                 (6, 3, 1, '2020-06-01', 200.0, NULL, 'EUR',
-                 'SINGLE', 'STRUCTURED', 2019, 200.0);
+                 'SINGLE', 'STRUCTURED', 2019, 200.0, NULL, 7.5, 1);
         """)
         conn.commit()
         conn.close()
@@ -87,11 +110,12 @@ class TestSearch(unittest.TestCase):
     def test_search_lot_count_is_raw_row_count(self):
         # /search's lot_count is deliberately a cheap raw count (a
         # perf-critical, every-keystroke endpoint), unlike /wines/top's
-        # priceable-only count below -- wine 1 has 5 rows total (3
-        # priceable + 1 MIXED + 1 unresolved-vintage, see setUp).
+        # priceable-only count below -- wine 1 has 8 rows total (3
+        # priceable + 1 MIXED + 1 unresolved-vintage + 1 COTE + 1 magnum
+        # + 1 reserve-not-met, see setUp).
         resp = self.client.get("/search", params={"q": "château montrose"})
         results = resp.json()["results"]
-        self.assertEqual(results[0]["lot_count"], 5)
+        self.assertEqual(results[0]["lot_count"], 8)
 
     def test_search_requires_min_length(self):
         resp = self.client.get("/search", params={"q": "a"})
@@ -146,6 +170,44 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(body["vintage"], 2021)
         self.assertEqual([p["lot_date"] for p in body["prices"]],
                          ["2021-01-01"])
+
+    def test_prices_excludes_cote_valuations(self):
+        # Review finding: a COTE row (idealwine's own estimate, not a
+        # competitive sale) must not appear in the chart even though it
+        # has a price_per_bottle_eur.
+        resp = self.client.get("/wines/1/prices", params={"vintage": 2020})
+        prices = resp.json()["prices"]
+        self.assertEqual(len(prices), 2)
+        self.assertNotIn(999.0, [p["price"] for p in prices])
+
+    def test_prices_excludes_non_standard_bottle_size(self):
+        # Review finding: a magnum's price_per_bottle_eur is already
+        # divided by size, but still carries a real large-format price
+        # premium -- not a comparable point on a 750ml series.
+        resp = self.client.get("/wines/1/prices", params={"vintage": 2020})
+        prices = resp.json()["prices"]
+        self.assertNotIn(290.0, [p["price"] for p in prices])
+
+    def test_prices_excludes_unsold_lot_with_leftover_price(self):
+        # Review finding: price_per_bottle_eur IS NOT NULL does not imply
+        # a confirmed sale -- data/build_db.py's _apply_premium_policy/
+        # _fill_price_per_bottle don't check `sold` themselves.
+        resp = self.client.get("/wines/1/prices", params={"vintage": 2020})
+        prices = resp.json()["prices"]
+        self.assertNotIn(777.0, [p["price"] for p in prices])
+
+    def test_vintages_excludes_cote_and_non_standard_bottle_size(self):
+        resp = self.client.get("/wines/1/vintages")
+        vintages = resp.json()["vintages"]
+        self.assertEqual(vintages,
+                         [{"vintage": 2020, "lot_count": 2},
+                          {"vintage": 2021, "lot_count": 1}])
+
+    def test_top_wines_excludes_cote_and_non_standard_bottle_size(self):
+        resp = self.client.get("/wines/top", params={"n": 10})
+        results = resp.json()["results"]
+        self.assertEqual(results[0]["wine_id"], 1)
+        self.assertEqual(results[0]["lot_count"], 3)
 
     def test_prices_unknown_wine_empty(self):
         resp = self.client.get("/wines/9999/prices")
