@@ -9,6 +9,9 @@ from fastapi.testclient import TestClient
 import main
 
 
+# pylint: disable=too-many-public-methods
+# -- one test_ method per case is the point; see data/tests/
+# test_loader_roundtrip.py's own note for the same pattern.
 class TestSearch(unittest.TestCase):
     def setUp(self):
         with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
