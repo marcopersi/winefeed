@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import unittest
 from unittest.mock import patch
 
@@ -35,7 +36,7 @@ LISTING_2025_HTML = """
 """
 
 
-def _card(lot_no, lot_id, grid_text, estimate, result=None,
+def _card(lot_no, lot_id, grid_text, estimate, result=None,  # pylint: disable=too-many-positional-arguments
          explication="Résultats sans frais"):
     flash = ""
     if result is not None:
