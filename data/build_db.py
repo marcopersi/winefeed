@@ -1905,6 +1905,83 @@ def load_whiskyauction(b, limit):
             break
 
 
+def _load_drouot_template_json(b, provider, archive_dir, limit):
+    """Independent French houses on Drouot's own white-label CMS
+    template (see ingest/fetchers/drouot_template.py) -- EUR, hammer
+    price only.
+
+    Unlike every other HAMMER-basis house, the buyer's premium is
+    applied directly HERE, per auction, from the rate the fetcher
+    itself read off that sale's own catalogue page ("Frais de vente :
+    NN% TTC") -- not a guessed static PREMIUM_POLICY entry (there is
+    deliberately none for these 4 providers: the rate is quoted per
+    SALE on this template, not fixed site-wide, confirmed different
+    across the 4 houses' own sampled sales -- 23-28%). A sale whose
+    rate text this fetcher's regex didn't find leaves ``buyer_premium``
+    NULL, falling through to the same ``NO_PREMIUM_POLICY`` outcome
+    ``_fill_price_per_bottle`` already gives winebarrel's provider-wide
+    gap -- just decided per sale here instead of per house.
+    """
+    n = 0
+    for f in _json_files(archive_dir):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        if not a.get("id"):
+            # Same guard as load_whiskyauction: without it a malformed
+            # file would become the phantom auction_id "None", silently
+            # merging its lots with any OTHER malformed file's.
+            continue
+        aid = str(a["id"])
+        a_id = b.add_auction(provider, aid, a.get("name"),
+                             parse_date(a.get("date")), "EUR", "HAMMER")
+        rate = a.get("premium_rate")
+        for lot in d.get("lots", []):
+            hammer = to_float(lot.get("hammer_price"))
+            buyer_premium = realised_price = total_price = None
+            price_source = None
+            if hammer is not None and rate is not None:
+                buyer_premium = round(hammer * rate, 2)
+                realised_price = round(hammer * (1 + rate), 2)
+                total_price = realised_price
+                price_source = "DERIVED"
+            b.add_lot(a_id, {
+                "lot_no": lot.get("lot_no"),
+                "wine": lot.get("wine"),
+                "vintage": to_int(lot.get("vintage")),
+                "quantity": lot.get("quantity"),
+                "estimate_low": to_float(lot.get("estimate_low")),
+                "estimate_high": to_float(lot.get("estimate_high")),
+                "hammer_price": hammer,
+                "buyer_premium": buyer_premium,
+                "realised_price": realised_price,
+                "total_price": total_price,
+                "price_source": price_source,
+                "price_basis": "HAMMER", "currency": "EUR",
+                "sold": 1 if lot.get("sold") else 0,
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+
+def load_craitmuller(b, limit):
+    _load_drouot_template_json(b, "crait-muller", "CraitMuller", limit)
+
+
+def load_vasari_auction(b, limit):
+    _load_drouot_template_json(b, "vasari-auction", "VasariAuction", limit)
+
+
+def load_maisons_laffitte(b, limit):
+    _load_drouot_template_json(b, "maisons-laffitte", "MaisonsLaffitte",
+                               limit)
+
+
+def load_art_richelieu(b, limit):
+    _load_drouot_template_json(b, "art-richelieu", "ArtRichelieu", limit)
+
+
 def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
     """Load the weinauktion-platform API JSON (steinfels / weinboerse).
 
@@ -4402,6 +4479,10 @@ HOUSES = [
     ("sylvies-fetched", load_sylvies_fetched),
     ("sylvies-txt", load_sylvies_txt),
     ("whiskyauction", load_whiskyauction),
+    ("crait-muller", load_craitmuller),
+    ("vasari-auction", load_vasari_auction),
+    ("maisons-laffitte", load_maisons_laffitte),
+    ("art-richelieu", load_art_richelieu),
 ]
 
 
@@ -5003,6 +5084,11 @@ PREMIUM_POLICY = {
     # same page) with no single numeric rate to derive, same as sylvies --
     # left untracked rather than guessed.
     "whiskyauction": {"rate": 0.15},
+    # crait-muller / vasari-auction / maisons-laffitte / art-richelieu
+    # (the 4 Drouot-template houses) are deliberately NOT here:
+    # _load_drouot_template_json applies each sale's OWN buyer's-premium
+    # rate directly (read off that sale's catalogue page), since this
+    # template quotes it per sale, not fixed site-wide.
 }
 
 

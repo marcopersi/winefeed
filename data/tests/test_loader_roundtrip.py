@@ -909,6 +909,116 @@ class TestLoaderRoundtrip(unittest.TestCase):
             "WhiskyAuction", "broken.json", data, "load_whiskyauction")
         self.assertEqual(count, 0)
 
+    def test_crait_muller(self):
+        data = {"auction": {"id": "178676", "name": "Vins et spiritueux",
+                            "date": "2026-09-01", "premium_rate": 0.26},
+                "lots": [{"lot_no": "1", "wine": "2 Bouteilles Margaux",
+                          "vintage": "1990", "quantity": 2,
+                          "estimate_low": 10.0, "estimate_high": 12.0,
+                          "sold": True, "hammer_price": 30.0}]}
+        count, hammer, wine = _run_loader(
+            "CraitMuller", "178676.json", data, "load_craitmuller")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_vasari_auction(self):
+        data = {"auction": {"id": "174969", "name": "Mon Sommelier",
+                            "date": "2026-01-17", "premium_rate": 0.26},
+                "lots": [{"lot_no": "1", "wine": "1 bouteille Bollinger",
+                          "vintage": "2015", "quantity": 1,
+                          "sold": True, "hammer_price": 125.0}]}
+        count, hammer, wine = _run_loader(
+            "VasariAuction", "174969.json", data, "load_vasari_auction")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_maisons_laffitte(self):
+        data = {"auction": {"id": "172328", "name": "Vente online",
+                            "date": "2026-01-11", "premium_rate": 0.23},
+                "lots": [{"lot_no": "2", "wine": "3 bouteilles Lynch-Bages",
+                          "vintage": "1983", "quantity": 3,
+                          "sold": True, "hammer_price": 400.0}]}
+        count, hammer, wine = _run_loader(
+            "MaisonsLaffitte", "172328.json", data, "load_maisons_laffitte")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_art_richelieu(self):
+        data = {"auction": {"id": "185292", "name": "Vin & spiritueux",
+                            "date": "2026-09-29", "premium_rate": 0.28},
+                "lots": [{"lot_no": "1", "wine": "3 bouteilles Bouscaut",
+                          "vintage": "1998", "quantity": 3,
+                          "sold": True, "hammer_price": 30.0}]}
+        count, hammer, wine = _run_loader(
+            "ArtRichelieu", "185292.json", data, "load_art_richelieu")
+        self.assertEqual((count, hammer, wine), (1, 1, 1))
+
+    def test_drouot_template_applies_the_sale_s_own_premium_rate(self):
+        # Unlike every other HAMMER-basis house, the buyer's premium is
+        # applied directly by the loader, from the rate the fetcher read
+        # off THIS sale's own catalogue page -- not a static
+        # PREMIUM_POLICY entry (there is deliberately none for this
+        # provider).
+        data = {"auction": {"id": "185292", "name": "Vin & spiritueux",
+                            "date": "2026-09-29", "premium_rate": 0.28},
+                "lots": [{"lot_no": "1", "wine": "3 bouteilles Bouscaut",
+                          "sold": True, "hammer_price": 30.0}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "ArtRichelieu"), exist_ok=True)
+            with open(os.path.join(d, "ArtRichelieu", "185292.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_art_richelieu(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT hammer_price, buyer_premium, realised_price,"
+                " total_price, price_source, price_basis, currency"
+                " FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, (30.0, 8.4, 38.4, 38.4, "DERIVED", "HAMMER",
+                               "EUR"))
+
+    def test_drouot_template_no_premium_rate_leaves_buyer_premium_null(self):
+        # A sale whose "Frais de vente : NN% TTC" text this fetcher's
+        # regex didn't find must fall through to the same
+        # NO_PREMIUM_POLICY outcome _fill_price_per_bottle already gives
+        # winebarrel's provider-wide gap, not a fabricated premium.
+        data = {"auction": {"id": "185293", "name": "Vin & spiritueux II",
+                            "date": "2026-09-29", "premium_rate": None},
+                "lots": [{"lot_no": "1", "wine": "3 bouteilles Bouscaut",
+                          "sold": True, "hammer_price": 30.0}]}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "ArtRichelieu"), exist_ok=True)
+            with open(os.path.join(d, "ArtRichelieu", "185293.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(data, fh)
+            conn = sqlite3.connect(os.path.join(d, "t.sqlite"))
+            conn.executescript(build_db.SCHEMA)
+            builder = build_db.Builder(conn)
+            old = build_db.ARCHIVE
+            build_db.ARCHIVE = d
+            try:
+                build_db.load_art_richelieu(builder, None)
+            finally:
+                build_db.ARCHIVE = old
+            row = conn.execute(
+                "SELECT hammer_price, buyer_premium, price_source"
+                " FROM lots").fetchone()
+            conn.close()
+        self.assertEqual(row, (30.0, None, None))
+
+    def test_drouot_template_skips_file_with_no_auction_id(self):
+        # Same guard as load_whiskyauction's own test: without it, a
+        # malformed file would become the phantom auction_id "None".
+        data = {"auction": {}, "lots": [{"lot_no": "1", "wine": "x"}]}
+        count, _, _ = _run_loader(
+            "ArtRichelieu", "broken.json", data, "load_art_richelieu")
+        self.assertEqual(count, 0)
+
     def test_weinboerse(self):
         # Real shape (not the old weinauktion-platform API this loader used
         # to assume): a paginated export where each page embeds its own

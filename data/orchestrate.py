@@ -59,6 +59,13 @@ ARCHIVE_DIRS = {
     "bestwineauctions": "BestWineAuctions",
     "ackerwines": "Ackerwines",
     "whiskyauction": "WhiskyAuction",
+    # Drouot white-label-template houses (see
+    # ingest/fetchers/drouot_template.py) -- each emits the canonical
+    # {auction, lots} JSON shape, one own directory per house.
+    "crait-muller": "CraitMuller",
+    "vasari-auction": "VasariAuction",
+    "maisons-laffitte": "MaisonsLaffitte",
+    "art-richelieu": "ArtRichelieu",
 }
 
 

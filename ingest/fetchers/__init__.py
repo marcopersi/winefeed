@@ -8,6 +8,7 @@ from .christies import (ChristiesFetcher, MalformedResponse, MetaInvalid,
 from .denzauktionen import DenzauktionenFetcher
 from .dobiaschofsky import DobiaschofskyFetcher
 from .dorotheum import DorotheumFetcher
+from .drouot_template import DrouotTemplateFetcher
 from .sothebys import SothebysFetcher
 from .sylvies import SylviesFetcher
 from .finarte import FinarteFetcher
@@ -51,6 +52,26 @@ FETCHERS = {
     "munich-wine-company": MunichWineCompanyFetcher(),
     "franzwermuth": FranzWermuthFetcher(),
     "whiskyauction": WhiskyAuctionFetcher(),
+    # Independent French houses on Drouot's own white-label CMS template
+    # (see ingest/fetchers/drouot_template.py) -- NOT drouot.com itself,
+    # whose robots.txt disallows exactly the lot/sale/category/past-
+    # auctions paths a central scraper would need.
+    "crait-muller": DrouotTemplateFetcher(
+        provider="crait-muller", base_url="https://www.crait-muller.com",
+        results_path="/resultats"),
+    "vasari-auction": DrouotTemplateFetcher(
+        provider="vasari-auction",
+        base_url="https://www.vasari-auction.com",
+        results_path="/resultats-des-ventes"),
+    # Commercial name "Enchères Maisons-Laffitte"; domain is
+    # yvelines-encheres.com.
+    "maisons-laffitte": DrouotTemplateFetcher(
+        provider="maisons-laffitte",
+        base_url="https://www.yvelines-encheres.com",
+        results_path="/ventes-passees"),
+    "art-richelieu": DrouotTemplateFetcher(
+        provider="art-richelieu", base_url="https://www.art-richelieu.fr",
+        results_path="/ventes-passees"),
 }
 
 

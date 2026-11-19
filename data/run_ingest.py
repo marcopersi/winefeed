@@ -64,6 +64,13 @@ PROVIDERS = [
     # plain curl_cffi, no login; a passive Cloudflare bot-management
     # script is present but did not block a bare curl in manual testing.
     "whiskyauction",
+    # Four independent French houses confirmed running Drouot's own
+    # white-label CMS template (see ingest/fetchers/drouot_template.py)
+    # -- NOT drouot.com itself, whose robots.txt disallows exactly the
+    # paths a central scraper would need. Each house's OWN robots.txt
+    # only disallows /recherche/* -- plain curl_cffi, no login, no bot
+    # protection observed in manual testing.
+    "crait-muller", "vasari-auction", "maisons-laffitte", "art-richelieu",
 ]
 # christies IS in PROVIDERS now (Nov 2026) -- see the comment on its entry
 # above. run_christies_backfill.py remains for occasional re-backfills; it
