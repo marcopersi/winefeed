@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from ingest.fetchers.drouot_template import DrouotTemplateFetcher, _num
 from ingest.models import AuctionRef
@@ -92,7 +93,13 @@ class FakeSession:
     def get(self, url, params=None):
         self.requests.append((url, params))
         key = (url, tuple(sorted(params.items())) if params else None)
-        return FakeResponse(self._pages.get(key, ""))
+        value = self._pages.get(key, "")
+        # A list of pages for one key is consumed in order (one entry
+        # per call to that same URL+params) -- used to simulate a
+        # transient empty page followed by a successful retry.
+        if isinstance(value, list):
+            return FakeResponse(value.pop(0) if value else "")
+        return FakeResponse(value)
 
 
 def fetcher():
@@ -227,6 +234,126 @@ class TestFetch(unittest.TestCase):
             self._fetch({
                 (CATALOGUE_URL, (("max", 50), ("offset", 0))): unexpected,
             })
+
+    def test_nc_result_is_treated_as_no_hammer_price_not_an_error(self):
+        # Confirmed real: a Résultat block can read "NC" (Non
+        # Communiqué) instead of a figure, with no
+        # explicationResultats div at all -- the lot's result exists
+        # but wasn't disclosed. Must not be mistaken for the
+        # not-sans-frais anomaly (no figure to trust either way), and
+        # must not raise.
+        nc_card = """
+        <div class="ordre_false product clearfix vente185292" id="lot1 lotId111">
+            <div class="product-desc">
+                <div class="num_lot"><span class='lotnum'>1</span></div>
+                <div class="product-description">
+                    <a href="/lot/185292/111-slug">
+                        <h2 id="lotDesc-111">2 Bouteilles de Château...</h2>
+                    </a>
+                </div>
+                <div class="product-price">
+                    <div class="estimAff4">10 - 12 EUR</div>
+                    <div class="sale-flash2"> Résultat <nobr> : NC </nobr> </div>
+                </div>
+            </div>
+        </div>
+        """
+        page = (
+            '<h1 class="nom_vente">Vin</h1>'
+            '<div class="date_vente">mardi 29 septembre 2026 10:00</div>'
+            '<div class="nbre_lot_haut">Lots 1 à 1 sur 1</div>'
+            + nc_card)
+        result, _ = self._fetch({
+            (CATALOGUE_URL, (("max", 50), ("offset", 0))): page,
+        })
+        lot = result.data["lots"][0]
+        self.assertFalse(lot["sold"])
+        self.assertIsNone(lot["hammer_price"])
+
+    def test_unrecognized_result_text_still_raises(self):
+        # Code-review finding: only the specific, confirmed-real "NC"
+        # value may skip the "sans frais" check without raising -- any
+        # OTHER non-numeric text (a typo, "Retiré", a wording this
+        # fetcher has never seen) must still fail loud instead of
+        # being silently recorded as an unsold lot.
+        weird_card = """
+        <div class="ordre_false product clearfix vente185292" id="lot1 lotId111">
+            <div class="product-desc">
+                <div class="num_lot"><span class='lotnum'>1</span></div>
+                <div class="product-description">
+                    <a href="/lot/185292/111-slug">
+                        <h2 id="lotDesc-111">2 Bouteilles de Château...</h2>
+                    </a>
+                </div>
+                <div class="product-price">
+                    <div class="estimAff4">10 - 12 EUR</div>
+                    <div class="sale-flash2"> Résultat <nobr>Retiré</nobr> </div>
+                </div>
+            </div>
+        </div>
+        """
+        page = (
+            '<h1 class="nom_vente">Vin</h1>'
+            '<div class="date_vente">mardi 29 septembre 2026 10:00</div>'
+            '<div class="nbre_lot_haut">Lots 1 à 1 sur 1</div>'
+            + weird_card)
+        with self.assertRaises(RuntimeError):
+            self._fetch({
+                (CATALOGUE_URL, (("max", 50), ("offset", 0))): page,
+            })
+
+    @patch("ingest.fetchers.drouot_template.time.sleep")
+    def test_retries_a_transient_empty_page_before_trusting_it(
+            self, _mock_sleep):
+        # Confirmed real during a full historical crawl: a page past
+        # offset=0 occasionally came back with zero cards even though
+        # the catalogue's own total said more remain; an isolated
+        # re-fetch of the exact same URL immediately afterwards
+        # returned the normal cards. _fetch_catalogue_page must retry
+        # rather than trust the first empty response as "no more
+        # pages" whenever the total is already known to be bigger.
+        f = fetcher()
+        ref = AuctionRef("art-richelieu", "185292", url=CATALOGUE_URL,
+                         title="Vin & spiritueux online")
+        key = (CATALOGUE_URL, (("max", 50), ("offset", 50)))
+        session = FakeSession({
+            key: [CATALOGUE_PAGE_EMPTY_HTML, CATALOGUE_PAGE0_HTML],
+        })
+        soup = f._fetch_catalogue_page(session, ref, 50, expected_total=100)
+        self.assertEqual(len(soup.select("div.product.clearfix")), 3)
+        self.assertEqual(len(session.requests), 2)
+
+    @patch("ingest.fetchers.drouot_template.time.sleep")
+    def test_retries_a_transient_empty_page_zero_too(self, _mock_sleep):
+        # Confirmed real: several maisons-laffitte catalogues came back
+        # with zero cards on a plain PAGE 0 fetch (no "Lots X à Y sur
+        # N" ground truth yet either) during a full historical crawl,
+        # but an isolated re-fetch of the exact same URL immediately
+        # afterwards returned the normal lot grid -- page 0 must retry
+        # an empty response too, not just later pages.
+        f = fetcher()
+        ref = AuctionRef("art-richelieu", "185292", url=CATALOGUE_URL,
+                         title="Vin & spiritueux online")
+        key = (CATALOGUE_URL, (("max", 50), ("offset", 0)))
+        session = FakeSession({
+            key: [CATALOGUE_PAGE_EMPTY_HTML, CATALOGUE_PAGE0_HTML],
+        })
+        soup = f._fetch_catalogue_page(session, ref, 0, expected_total=None)
+        self.assertEqual(len(soup.select("div.product.clearfix")), 3)
+        self.assertEqual(len(session.requests), 2)
+
+    def test_does_not_retry_a_genuinely_empty_final_page(self):
+        # Once offset has reached the known total, a page with zero
+        # cards IS the real end of pagination -- retrying it would
+        # just waste requests for no reason.
+        f = fetcher()
+        ref = AuctionRef("art-richelieu", "185292", url=CATALOGUE_URL,
+                         title="Vin & spiritueux online")
+        key = (CATALOGUE_URL, (("max", 50), ("offset", 50)))
+        session = FakeSession({key: [CATALOGUE_PAGE_EMPTY_HTML]})
+        soup = f._fetch_catalogue_page(session, ref, 50, expected_total=50)
+        self.assertEqual(soup.select("div.product.clearfix"), [])
+        self.assertEqual(len(session.requests), 1)
 
 
 if __name__ == "__main__":

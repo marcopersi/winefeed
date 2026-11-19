@@ -41,12 +41,21 @@ as franzwermuth's own terms PDF.
 """
 import datetime
 import re
+import time
 
 from bs4 import BeautifulSoup
 
 from ..models import AuctionRef, FetchResult
 
 PAGE_SIZE = 50
+# Confirmed real during a full historical crawl (maisons-laffitte/23209,
+# among others): a page beyond offset=0 occasionally comes back with
+# ZERO lot cards even though the catalogue's own "Lots X à Y sur N" text
+# (read from page 0) says more remain -- an isolated re-fetch of the
+# exact same URL immediately afterwards returned the normal 50 cards,
+# so this is a transient failure under sustained crawl load, not a
+# real end of pagination.
+_MAX_PAGE_RETRIES = 3
 
 # Collapses christies.py's own two-tier WINE_TITLE/AMBIGUOUS_TITLE idea
 # into one list: being over-inclusive here only costs one extra GET
@@ -80,6 +89,10 @@ _PREMIUM_RATE = re.compile(
 _VINTAGE = re.compile(r"\b(1[5-9]\d{2}|20\d{2})\b")
 _QUANTITY = re.compile(
     r"^(\d+)\s*(?:bouteilles?|blles?|magnums?|j[ée]roboams?|pots?)\b", re.I)
+# "NC" = Non Communiqué -- the one confirmed-real, non-numeric Résultat
+# value (the colon from "Résultat : NC" survives get_text(strip=True)
+# since it's inside the same <nobr>, so this allows an optional one).
+_NC_RESULT = re.compile(r":?\s*NC\s*", re.I)
 
 _FR_MONTHS = {
     "janvier": 1, "février": 2, "mars": 3, "avril": 4, "mai": 5,
@@ -164,9 +177,8 @@ class DrouotTemplateFetcher:
         name, date, premium_rate = ref.title, None, None
         expected_total = None
         while True:
-            html = session.get(ref.url, params={
-                "offset": offset, "max": PAGE_SIZE}).text
-            soup = BeautifulSoup(html, "html.parser")
+            soup = self._fetch_catalogue_page(session, ref, offset,
+                                              expected_total)
             if offset == 0:
                 name_el = soup.select_one(".nom_vente")
                 if name_el:
@@ -183,11 +195,17 @@ class DrouotTemplateFetcher:
                 break
             cards.extend(page_cards)
             offset += PAGE_SIZE
+            if expected_total is not None and offset >= expected_total:
+                break
 
         # Same failure class as whiskyauction.py's "Showing N of TOTAL"
         # check: a blocked/challenge response mid-pagination would look
         # exactly like "no more pages" otherwise, silently truncating
-        # the catalogue instead of failing loud.
+        # the catalogue instead of silently archiving it incomplete.
+        # _fetch_catalogue_page's own retries already cover a single
+        # transient empty page, so reaching this with a mismatch means
+        # the retries themselves were exhausted -- a real problem worth
+        # failing loud on, not a page-count-off-by-one to paper over.
         if expected_total is not None and len(cards) != expected_total:
             raise RuntimeError(
                 f"{self.provider}/{ref.auction_id}: expected "
@@ -210,6 +228,28 @@ class DrouotTemplateFetcher:
                 "lots": lots,
             },
         )
+
+    def _fetch_catalogue_page(self, session, ref, offset, expected_total):
+        for attempt in range(_MAX_PAGE_RETRIES):
+            html = session.get(ref.url, params={
+                "offset": offset, "max": PAGE_SIZE}).text
+            soup = BeautifulSoup(html, "html.parser")
+            cards = soup.select("div.product.clearfix")
+            # An empty PAGE 0 (no "Lots X à Y sur N" ground truth yet
+            # either) is retried too -- confirmed real during a full
+            # historical crawl: several maisons-laffitte catalogues
+            # came back with zero cards on a plain page-0 fetch, but an
+            # isolated re-fetch of the exact same URL immediately
+            # afterwards returned the normal lot grid. Only a page at
+            # or past an ALREADY-KNOWN total is trusted as the genuine
+            # end of pagination without a retry.
+            if (cards
+                    or (expected_total is not None
+                        and offset >= expected_total)
+                    or attempt == _MAX_PAGE_RETRIES - 1):
+                return soup
+            time.sleep(2 ** attempt)
+        return soup  # pragma: no cover -- loop always returns above
 
     @staticmethod
     def _premium_rate(soup):
@@ -245,24 +285,43 @@ class DrouotTemplateFetcher:
                 estimate_low, estimate_high = _num(parts[0]), _num(parts[1])
 
         flash = card.select_one(".sale-flash2 nobr")
-        sold = flash is not None
+        sold = False
         hammer_price = None
-        if sold:
-            explication = card.select_one(".explicationResultats")
-            expl_text = (explication.get_text(strip=True)
-                        if explication else "")
-            # The site shows this result block ONLY for lots that found
-            # a buyer (confirmed: estimate-only lots within the SAME
-            # catalogue never carry it) -- but it must say "sans frais"
-            # (without fees, i.e. a true hammer price), not some other,
-            # unexpected wording this fetcher has never seen, before the
-            # figure is trusted as HAMMER.
-            if "sans frais" not in expl_text.lower():
+        if flash is not None:
+            flash_text = flash.get_text(strip=True)
+            hammer_price = _num(flash_text)
+            if hammer_price is not None:
+                explication = card.select_one(".explicationResultats")
+                expl_text = (explication.get_text(strip=True)
+                            if explication else "")
+                # The site shows this result block ONLY for lots that
+                # found a buyer (confirmed: estimate-only lots within
+                # the SAME catalogue never carry it) -- but it must say
+                # "sans frais" (without fees, i.e. a true hammer
+                # price), not some other, unexpected wording this
+                # fetcher has never seen, before the figure is trusted
+                # as HAMMER.
+                if "sans frais" not in expl_text.lower():
+                    raise RuntimeError(
+                        f"{self.provider}/{auction_id}: lot {lot_id} "
+                        f"has a Résultat without a confirmed 'sans "
+                        f"frais' (hammer) label: {expl_text!r}")
+                sold = True
+            elif not _NC_RESULT.fullmatch(flash_text):
+                # Confirmed real: a Résultat block can read "NC" (Non
+                # Communiqué) instead of a figure -- the lot's result
+                # exists but wasn't disclosed, with no
+                # explicationResultats div at all. That specific,
+                # recognized case is left like an unsold lot rather
+                # than guessed; anything else non-numeric here (a typo,
+                # a wording this fetcher has never seen, "Retiré",
+                # etc.) must still fail loud instead of silently being
+                # recorded as unsold too (code-review finding: the
+                # earlier version let _num() returning None for ANY
+                # text skip the "sans frais" check entirely).
                 raise RuntimeError(
-                    f"{self.provider}/{auction_id}: lot {lot_id} has a "
-                    f"Résultat without a confirmed 'sans frais' (hammer) "
-                    f"label: {expl_text!r}")
-            hammer_price = _num(flash.get_text())
+                    f"{self.provider}/{auction_id}: lot {lot_id} has "
+                    f"an unrecognized Résultat value: {flash_text!r}")
 
         return {
             "lot_no": lot_no, "lot_id": lot_id,
