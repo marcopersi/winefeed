@@ -36,7 +36,7 @@ LISTING_2025_HTML = """
 """
 
 
-def _card(lot_no, lot_id, grid_text, estimate, result=None,  # pylint: disable=too-many-positional-arguments
+def _card(lot_no, lot_id, grid_text, estimate, result=None,
          explication="Résultats sans frais"):
     flash = ""
     if result is not None:
