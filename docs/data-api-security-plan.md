@@ -42,7 +42,7 @@ keinen Code — es ist die Review-Stufe vor jeder Umsetzung.
 
 ---
 
-## 1a. Fortschritts-Übersicht (Stand 2026-11-13)
+## 1a. Fortschritts-Übersicht (Stand 2026-11-20)
 
 | Stufe/Schritt | Status |
 |---|---|
@@ -53,7 +53,7 @@ keinen Code — es ist die Review-Stufe vor jeder Umsetzung.
 | D2 Zugriffsstufen | ✅ entschieden 2026-11-13 |
 | D3 Öffentliches API? | ✅ entschieden 2026-11-13: nein, nur eigene UI |
 | D4 Edge/WAF-Anbieter | 🟡 Tendenz genannt (Supabase Cloud + Cloudflare/netcup), nicht final |
-| D5 Rechtliche Durchsetzung | 🟡 Eigentümer geklärt (Nutzer); 6.1.1 (`docs/database-investment-memo.md`) + 6.1.2 (`docs/tos-anti-scraping-clause.md`, v0.1) erledigt, Rechtsberatungs-Review (6.1.4) offen |
+| D5 Rechtliche Durchsetzung | 🟡 Eigentümer geklärt (Nutzer); 6.1.1 (`docs/database-investment-memo.md`) + 6.1.2 (`docs/tos-anti-scraping-clause.md`, v0.2) erledigt, Rechtsberatungs-Review (6.1.4) offen |
 | Stufe 0 (vendor-agnostischer Teil)/2/3/4 | ⬜ können beginnen, sobald 0.1 (Supabase-Audit) + 0.3 abgeschlossen sind |
 | Stufe 1.2 (WAF) + Deployment | ⬜ blockiert auf finale D4-Entscheidung |
 
