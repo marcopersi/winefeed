@@ -66,6 +66,9 @@ ARCHIVE_DIRS = {
     "vasari-auction": "VasariAuction",
     "maisons-laffitte": "MaisonsLaffitte",
     "art-richelieu": "ArtRichelieu",
+    # Aguttes: own fetcher (Next.js + Artisio backend, not the Drouot
+    # white-label template) -- see ingest/fetchers/aguttes.py.
+    "aguttes": "Aguttes",
 }
 
 

@@ -1,5 +1,6 @@
 """Fetcher registry."""
 from .ackerwines import AckerwinesFetcher
+from .aguttes import AguttesFetcher
 from .baghera import BagheraFetcher
 from .beschcannes import BeschCannesFetcher
 from .bestwineauctions import BestwineauctionsFetcher
@@ -72,6 +73,10 @@ FETCHERS = {
     "art-richelieu": DrouotTemplateFetcher(
         provider="art-richelieu", base_url="https://www.art-richelieu.fr",
         results_path="/ventes-passees"),
+    # Aguttes' own "Grands Vins & Spiritueux" department (see
+    # ingest/fetchers/aguttes.py) -- NOT the Drouot white-label template
+    # (Next.js + Artisio backend instead), own fetcher.
+    "aguttes": AguttesFetcher(),
 }
 
 
