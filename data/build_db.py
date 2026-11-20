@@ -1982,6 +1982,100 @@ def load_art_richelieu(b, limit):
     _load_drouot_template_json(b, "art-richelieu", "ArtRichelieu", limit)
 
 
+def load_aguttes(b, limit):
+    """Aguttes' "Grands Vins & Spiritueux" department (see
+    ingest/fetchers/aguttes.py) -- EUR. Two sale shapes, each carrying its
+    own ``auction.price_basis``:
+
+    - "HAMMER" (the current, native Artisio-backed sales): unlike the 4
+      Drouot-template houses above, whose quoted "NN% TTC" premium rate
+      already includes VAT, Aguttes' own buyer's-premium rate is quoted
+      HT (excl. VAT) with VAT charged separately ON TOP of it to reach
+      the TTC total -- confirmed real, quoted verbatim from Aguttes' own
+      English AND French terms_and_conditions text (e.g. "21% excl.
+      taxes + VAT at the current rate, i.e. 25.2% incl. taxes"). The
+      fetcher already resolved each lot's own ``premium_rate`` against
+      Aguttes' tiered schedule (it can step down above a threshold), so
+      only the composition (premium, then VAT on the premium) happens
+      here.
+    - "HAMMER_PLUS_BUYERS_PREMIUM" (older sales still routed through a
+      legacy Drouot-gateway mirror, confirmed real on at least 1 sale):
+      the fetcher's own ``realised_price`` is already TTC -- same
+      gross-only shape as load_pandolfini, no hammer/premium/VAT to
+      derive.
+    """
+    n = 0
+    for f in _json_files("Aguttes"):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        if not a.get("id"):
+            # Same guard as load_whiskyauction/_load_drouot_template_json:
+            # without it a malformed file becomes the phantom auction_id
+            # "None", silently merging its lots with any other malformed
+            # file's.
+            continue
+        aid = str(a["id"])
+        cur = a.get("currency") or "EUR"
+        price_basis = a.get("price_basis") or "HAMMER"
+        a_id = b.add_auction("aguttes", aid, a.get("name"),
+                             parse_date(a.get("date")), cur, price_basis)
+        if price_basis == "HAMMER_PLUS_BUYERS_PREMIUM":
+            for lot in d.get("lots", []):
+                b.add_lot(a_id, {
+                    "lot_no": lot.get("lot_no"), "wine": lot.get("wine"),
+                    "vintage": to_int(lot.get("vintage")),
+                    "quantity": lot.get("quantity"),
+                    "estimate_low": to_float(lot.get("estimate_low")),
+                    "estimate_high": to_float(lot.get("estimate_high")),
+                    "realised_price": to_float(lot.get("realised_price")),
+                    "price_basis": "HAMMER_PLUS_BUYERS_PREMIUM",
+                    "currency": cur, "sold": 1 if lot.get("sold") else 0,
+                })
+            n += 1
+            if limit and n >= limit:
+                break
+            continue
+
+        vat_rate = a.get("vat_rate")
+        for lot in d.get("lots", []):
+            hammer = to_float(lot.get("hammer_price"))
+            rate = lot.get("premium_rate")
+            buyer_premium = tax_amount = realised_price = total_price = None
+            price_source = None
+            # All three of hammer/rate/vat_rate are required: a
+            # buyer_premium without a known VAT rate would be a real
+            # (HT) number, but total_price would then silently read as
+            # the FULL TTC price while actually missing ~20% VAT on the
+            # premium -- worse than leaving it NULL (see
+            # ingest/fetchers/aguttes.py on why VAT is never baked into
+            # the quoted premium rate here).
+            if hammer is not None and rate is not None and vat_rate is not None:
+                buyer_premium = round(hammer * rate, 2)
+                tax_amount = round(buyer_premium * vat_rate, 2)
+                realised_price = round(hammer + buyer_premium, 2)
+                total_price = round(realised_price + tax_amount, 2)
+                price_source = "DERIVED"
+            b.add_lot(a_id, {
+                "lot_no": lot.get("lot_no"), "wine": lot.get("wine"),
+                "vintage": to_int(lot.get("vintage")),
+                "quantity": lot.get("quantity"),
+                "estimate_low": to_float(lot.get("estimate_low")),
+                "estimate_high": to_float(lot.get("estimate_high")),
+                "hammer_price": hammer,
+                "buyer_premium": buyer_premium,
+                "tax_amount": tax_amount,
+                "realised_price": realised_price,
+                "total_price": total_price,
+                "price_source": price_source,
+                "price_basis": "HAMMER", "currency": cur,
+                "sold": 1 if lot.get("sold") else 0,
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+
 def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
     """Load the weinauktion-platform API JSON (steinfels / weinboerse).
 
@@ -4483,6 +4577,7 @@ HOUSES = [
     ("vasari-auction", load_vasari_auction),
     ("maisons-laffitte", load_maisons_laffitte),
     ("art-richelieu", load_art_richelieu),
+    ("aguttes", load_aguttes),
 ]
 
 

@@ -71,6 +71,11 @@ PROVIDERS = [
     # only disallows /recherche/* -- plain curl_cffi, no login, no bot
     # protection observed in manual testing.
     "crait-muller", "vasari-auction", "maisons-laffitte", "art-richelieu",
+    # aguttes: own fetcher (Next.js + Artisio backend, not the Drouot
+    # white-label template) for its "Grands Vins & Spiritueux" department
+    # -- see ingest/fetchers/aguttes.py. No bot protection observed in
+    # manual testing (plain curl_cffi, no login).
+    "aguttes",
 ]
 # christies IS in PROVIDERS now (Nov 2026) -- see the comment on its entry
 # above. run_christies_backfill.py remains for occasional re-backfills; it

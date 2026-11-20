@@ -1,6 +1,6 @@
 # Premium-/Gebühren-Policy je Haus (Ground Truth)
 
-Stand: 2026-10-13. Dies ist die verbindliche Gebührenstruktur je Haus, aus
+Stand: 2026-11-20. Dies ist die verbindliche Gebührenstruktur je Haus, aus
 Primärquellen (Terms/Conditions) zu pflegen. Spalten: Preis-Basis (was der
 Fetcher liefert), Buyer's Premium, Fees (Lotgebühr), MwSt/VAT, Quelle.
 
@@ -28,6 +28,8 @@ Fetcher liefert), Buyer's Premium, Fees (Lotgebühr), MwSt/VAT, Quelle.
 | winebarrel | — (Konsignations-Service, kein klassisches Aufgeld) | Seller-Provision 7,5–15 % (gestaffelt) | — | — | bestätigt |
 | sylvies | HAMMER | 20 % exkl. MwSt | — | zielland-abhängig, kein fixer Satz | bestätigt (sylvies.be Conditions of Sale) |
 | whiskyauction | HAMMER | 15 % flat, aktueller Satz auf alle Lots angewandt (keine Staffel, kein Wein/Whisky-Unterschied; ob der Satz für ältere Auktionen (vor 2026) schon galt, ist nicht verifiziert -- gleiche Approximation wie bei langtons/winefields) | — (£5 Registrierung ist Account-, nicht Lot-Gebühr) | zielland-abhängig (UK: +VAT; Rest: keine VAT auf Commission), kein fixer Satz | bestätigt (whisky.auction/our-fees, "Buyers Fees > Commission fee") |
+| crait-muller / vasari-auction / maisons-laffitte / art-richelieu (Drouot-Template) | HAMMER | je Sale eigener Satz, direkt von der Katalogseite gelesen ("Frais de vente : NN% TTC" -- **bereits MwSt-inklusive**, NICHT in `PREMIUM_POLICY`/`TAX_POLICY`, siehe `_load_drouot_template_json`); beobachtet 23-28 % | — | **bereits im TTC-Satz enthalten** | bestätigt (jeweilige Katalogseiten) |
+| aguttes | HAMMER | gestaffelter Satz je Sale, aus `premiums` (Sale-JSON) gelesen, **HT (exkl. MwSt)** -- pro LOS gegen seinen eigenen Hammerpreis aufgelöst (Staffel kann oberhalb einer Schwelle sinken); beobachtet 21 % (Wein/Spirituosen) | — | 20 % **separat auf das Aufgeld**, NICHT im Satz enthalten -- wörtlich bestätigt in Aguttes' eigenem `terms_and_conditions`-Text (EN: "21% excl. taxes + VAT at the current rate, i.e. 25.2% incl. taxes"; FR: "20.8%HT + TVA au taux en vigueur soit 25%TTC") -- effektiver TTC-Aufschlag auf den Hammerpreis ≈ Satz × 1,20, NICHT der Satz selbst | bestätigt (Sale-JSON `terms_and_conditions`, V26VIN08) |
 
 ## Preis-Quelle-Invariante (D1)
 
@@ -59,3 +61,10 @@ Aufgeld** abgeleitet (`tax_amount = ROUND(buyer_premium × rate, 2)`) und auf
 Häuser mit im Aufgeld enthaltener MwSt (finarte, besch-cannes, dorotheum,
 baghera) sowie nicht numerisch belegte Raten (sothebys, langtons, christies)
 bleiben `tax_amount = NULL`.
+
+aguttes steht absichtlich NICHT in dieser globalen `TAX_POLICY`-Tabelle: die
+MwSt-Rate (20 %) ist pro Sale aus deren eigenem `tax_rate`-Feld gelesen (nicht
+site-weit fix), daher berechnet `load_aguttes` `tax_amount` direkt inline
+statt über `_apply_tax` -- gleiches Prinzip wie bei den 4 Drouot-Template-
+Häusern, die ihren (dort bereits MwSt-inklusiven) Satz ebenfalls inline aus
+der jeweiligen Sale anwenden.
