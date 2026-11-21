@@ -118,6 +118,18 @@ class ForecastRowTests(unittest.TestCase):
             _fake_forecaster(dict(_QUANTILES)))
         self.assertAlmostEqual(row["q10_eur"], math.exp(1.0 - 0.9))
 
+    def test_decision_insufficient_data_never_calls_forecaster(self):
+        # Review finding: a disabled density class must short-circuit
+        # BEFORE the (real local_level: Kalman-fit) forecaster call,
+        # not just discard its result afterwards.
+        df = _series_df([1.0, 1.0, 1.0, 1.0])
+        forecaster = mock.Mock()
+        row = bpf.forecast_row(
+            (1, 2020, 75.0), df, HORIZON_NEXT, _CALIB_INSUFFICIENT, _AS_OF,
+            _CREATED_AT, forecaster)
+        self.assertEqual(row["flags"], "INSUFFICIENT_DATA")
+        forecaster.assert_not_called()
+
     def test_decision_missing_entirely_is_insufficient_data(self):
         # density_class not present in "decision" at all (e.g. never
         # seen in that horizon's TEST split) -> conservative default.

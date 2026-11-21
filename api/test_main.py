@@ -100,7 +100,15 @@ class TestSearch(unittest.TestCase):
                 (2, 1, 2020, 7.5, 'next', 'local_level',
                  'local_level-conformal-v1', 5, '2022-01-01', NULL,
                  NULL, NULL, NULL, NULL, NULL, NULL, 'INSUFFICIENT_DATA',
-                 '2026-11-20T00:00:00Z');
+                 '2026-11-20T00:00:00Z'),
+                -- wine 3, vintage 2019: a row left behind by a prior/
+                -- stale model_version (review finding) -- must never be
+                -- served instead of, or on top of, the serving version's
+                -- own (missing) row.
+                (3, 3, 2019, 7.5, '12m', 'local_level',
+                 'old-stale-version', 5, '2022-01-01', 99.0,
+                 90.0, 92.0, 95.0, 103.0, 106.0, 108.0, NULL,
+                 '2026-01-01T00:00:00Z');
         """)
         conn.commit()
         conn.close()
@@ -294,6 +302,17 @@ class TestSearch(unittest.TestCase):
             self.assertEqual(body["forecasts"][horizon]["flags"],
                              "INSUFFICIENT_DATA")
             self.assertIsNone(body["forecasts"][horizon]["median"])
+
+    def test_forecast_ignores_rows_from_a_stale_model_version(self):
+        # wine 3 only has a price_forecasts row under an old
+        # model_version (fixture above) -- the endpoint must pin itself
+        # to the serving FORECAST_MODEL_VERSION and treat that stale row
+        # as if it didn't exist, not serve its (very different) values.
+        resp = self.client.get("/wines/3/forecast")
+        body = resp.json()
+        twelve_m = body["forecasts"]["12m"]
+        self.assertEqual(twelve_m["flags"], "INSUFFICIENT_DATA")
+        self.assertIsNone(twelve_m["median"])
 
     def test_forecast_unknown_wine_is_insufficient_data_not_error(self):
         resp = self.client.get("/wines/9999/forecast")

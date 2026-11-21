@@ -13,6 +13,14 @@ from fastapi.middleware.cors import CORSMiddleware
 DB_PATH = os.environ.get(
     "DB_PATH", "/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite")
 
+# Literal, not imported -- same reasoning as the "next"/"12m" horizon
+# literals below: the API has no dependency on the heavier forecast
+# package. MUST match data/forecast/build_price_forecasts.py's
+# MODEL_VERSION. Several model_versions can coexist in price_forecasts
+# across a backtest/recalibration transition, so the endpoint must pin
+# itself to the one it's meant to serve, not whichever row it reads last.
+FORECAST_MODEL_VERSION = "local_level-conformal-v1"
+
 app = FastAPI(title="winefeed price API")
 
 app.add_middleware(
@@ -249,6 +257,9 @@ def forecast(wine_id: int, vintage: int | None = Query(None)):
     ``price_forecasts`` table it writes -- see data/forecast/
     build_price_forecasts.py's own module docstring for that contract
     and MUST match its ``HORIZON_NEXT``/``HORIZON_12M`` constants).
+    Pinned to ``FORECAST_MODEL_VERSION`` (module-level, same literal-
+    constant convention) so a backtest/recalibration run that leaves
+    an older model_version's rows behind can't get served instead.
 
     Values are EUR-per-0.75l, house-neutral estimates (no specific
     future auction house's premium baked in, see build_price_forecasts
@@ -278,8 +289,9 @@ def forecast(wine_id: int, vintage: int | None = Query(None)):
                    flags, n_obs, last_obs_date
             FROM price_forecasts
             WHERE wine_ref_id = ? AND vintage = ? AND size_class = 7.5
+                  AND model_version = ?
             """,
-            (wine_id, vintage)).fetchall()
+            (wine_id, vintage, FORECAST_MODEL_VERSION)).fetchall()
 
     rows = _with_conn(run)
     by_horizon = {r["horizon"]: {

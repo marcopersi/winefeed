@@ -2,7 +2,7 @@ import {
   CartesianGrid, ComposedChart, ErrorBar, Line, ResponsiveContainer,
   Scatter, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { HistoryTooltipBody, formatDate } from "./PriceChart.jsx";
+import { HistoryTooltipBody, formatDate, useRevealOnData } from "./PriceChart.jsx";
 
 const FORECAST_TICK = "Estimate";
 
@@ -47,8 +47,20 @@ function ForecastTooltip({ active, payload }) {
 // estimate, not a second series -- the lighter step of --series-1,
 // never a new hue, with a direct "Estimate" label (never color alone)
 // to carry the "this one is uncertain" distinction.
-export default function ForecastChart({ prices, forecast, horizonLabel }) {
-  if (!forecast || forecast.flags === "INSUFFICIENT_DATA") {
+export default function ForecastChart({ prices, forecast, error, horizonLabel }) {
+  const hasForecast = !error && !!forecast && forecast.flags !== "INSUFFICIENT_DATA";
+  // Hook must run on every render (rules of hooks) -- the empty-state
+  // early returns below happen after it, not before.
+  const visible = useRevealOnData(hasForecast);
+
+  if (error) {
+    return (
+      <p className="empty-note">
+        Couldn't load the {horizonLabel.toLowerCase()} right now.
+      </p>
+    );
+  }
+  if (!hasForecast) {
     return (
       <p className="empty-note">
         Not enough data yet for a {horizonLabel.toLowerCase()} estimate.
@@ -79,7 +91,7 @@ export default function ForecastChart({ prices, forecast, horizonLabel }) {
   const data = [...history, forecastPoint];
 
   return (
-    <div className="chart-card forecast-chart">
+    <div className={`chart-card forecast-chart${visible ? " is-visible" : ""}`}>
       {forecast.flags === "EXTRAPOLATION" && (
         <p className="forecast-flag-note">
           This estimate extends well beyond recent prices — treat it with
