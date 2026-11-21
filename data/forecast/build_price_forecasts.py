@@ -116,12 +116,12 @@ def _decision(calib_horizon, dclass):
     return calib_horizon["decision"].get(dclass, "INSUFFICIENT_DATA")
 
 
-def forecast_row(  # pylint: disable=too-many-positional-arguments
-        series_key, df, horizon, calib_horizon, as_of, created_at,
-        forecaster):
-    # -- same pattern as eval.evaluate_series (also 6+ positional args,
-    # each one a distinct, non-combinable input, not a parameter object
-    # worth inventing just to appease this count).
+def forecast_row(series_key, df, horizon, calib_horizon, as_of, created_at,
+                 forecaster):
+    # Many positional args, each a distinct, non-combinable input -- same
+    # pattern as eval.evaluate_series. No pylint disable needed: CI's
+    # pinned pylint (older than this machine's) has no
+    # too-many-positional-arguments check to begin with.
     """One ``price_forecasts`` row for ``series_key`` at ``horizon``, or
     ``None`` if the series has literally zero observations (not a real
     series, ``load_all_series`` never actually emits this, defensive
