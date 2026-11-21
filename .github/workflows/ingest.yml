@@ -66,7 +66,7 @@ jobs:
           PANDOLFINI_PWD: ${{ secrets.PANDOLFINI_PWD }}
           FINARTE_USER: ${{ secrets.FINARTE_USER }}
           FINARTE_PWD: ${{ secrets.FINARTE_PWD }}
-        run: python data/run_ingest.py --only steinfels,weinboerse,weinauktionator,hdh,koppe,langtons,winefields,dorotheum,pandolfini,finarte,besch-cannes,dobiaschofsky,winebarrel,denzauktionen,munich-wine-company,franzwermuth,baghera,bestwineauctions,ackerwines,christies,whiskyauction,crait-muller,vasari-auction,maisons-laffitte,art-richelieu
+        run: python data/run_ingest.py --only steinfels,weinboerse,weinauktionator,hdh,koppe,langtons,winefields,dorotheum,pandolfini,finarte,besch-cannes,dobiaschofsky,winebarrel,denzauktionen,munich-wine-company,franzwermuth,baghera,bestwineauctions,ackerwines,christies,whiskyauction,crait-muller,vasari-auction,maisons-laffitte,art-richelieu,aguttes
 
       - name: Fetch iDealwine cote delta
         # if: always() -- see "Upload archive"/"Commit manifest" below.
