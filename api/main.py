@@ -214,6 +214,86 @@ def vintages(wine_id: int):
         {"vintage": r["vintage"], "lot_count": r["lot_count"]} for r in rows]}
 
 
+def _default_vintage(conn, wine_id):
+    """The vintage with the most priceable observations for ``wine_id``,
+    or ``None`` if it has none -- the shared "no vintage given" default
+    for both /prices and /forecast, so a future fix to this rule (tie-
+    break, lot_kind exclusion, ...) can't apply to one and not the
+    other (review finding: this used to be copy-pasted per endpoint)."""
+    top = conn.execute(
+        f"""
+        SELECT l.vintage_final AS vintage, COUNT(*) AS n
+        FROM lots l
+        WHERE l.wine_ref_id = ? AND {_PRICEABLE}
+        GROUP BY l.vintage_final ORDER BY n DESC LIMIT 1
+        """,
+        (wine_id,)).fetchone()
+    return None if top is None else top["vintage"]
+
+
+def _empty_forecast():
+    return {
+        "median": None, "q025": None, "q10": None, "q25": None,
+        "q75": None, "q90": None, "q975": None,
+        "flags": "INSUFFICIENT_DATA", "n_obs": 0, "last_obs_date": None,
+    }
+
+
+@app.get("/wines/{wine_id}/forecast")
+def forecast(wine_id: int, vintage: int | None = Query(None)):
+    """Return Stufe-4-kalibrierte local_level-Prognosebaender fuer ein
+    (wine_id, vintage), Flasche 0,75l, ueber beide Horizonte ("next"/
+    "12m" -- literal strings, not imported from the ``forecast``
+    package: the API intentionally has no dependency on that package's
+    heavier requirements (pandas/statsmodels/...), only on the plain
+    ``price_forecasts`` table it writes -- see data/forecast/
+    build_price_forecasts.py's own module docstring for that contract
+    and MUST match its ``HORIZON_NEXT``/``HORIZON_12M`` constants).
+
+    Values are EUR-per-0.75l, house-neutral estimates (no specific
+    future auction house's premium baked in, see build_price_forecasts
+    .py's own docstring on why) -- present them as an estimate, not a
+    specific house's expected hammer price.
+
+    Same default-vintage pick as /prices (most observations). A
+    horizon with no row (table not yet populated for this wine, or the
+    Stufe-3 decision rule flagged its density_class INSUFFICIENT_DATA)
+    comes back with every quantile ``null`` and
+    ``flags: "INSUFFICIENT_DATA"`` -- the plan's own 5.4 wording
+    ("Antwort ohne Punktwert bei INSUFFICIENT_DATA"), never a missing
+    key the UI would have to special-case.
+    """
+    def run(conn):
+        nonlocal vintage
+        if vintage is None:
+            vintage = _default_vintage(conn, wine_id)
+            if vintage is None:
+                return None
+        return conn.execute(
+            """
+            SELECT horizon,
+                   median_eur AS median, q025_eur AS q025, q10_eur AS q10,
+                   q25_eur AS q25, q75_eur AS q75, q90_eur AS q90,
+                   q975_eur AS q975,
+                   flags, n_obs, last_obs_date
+            FROM price_forecasts
+            WHERE wine_ref_id = ? AND vintage = ? AND size_class = 7.5
+            """,
+            (wine_id, vintage)).fetchall()
+
+    rows = _with_conn(run)
+    by_horizon = {r["horizon"]: {
+        "median": r["median"], "q025": r["q025"], "q10": r["q10"],
+        "q25": r["q25"], "q75": r["q75"], "q90": r["q90"],
+        "q975": r["q975"], "flags": r["flags"], "n_obs": r["n_obs"],
+        "last_obs_date": r["last_obs_date"],
+    } for r in (rows or [])}
+    for horizon in ("next", "12m"):
+        by_horizon.setdefault(horizon, _empty_forecast())
+    return {"wine_id": wine_id, "vintage": vintage, "size_class": 7.5,
+           "forecasts": by_horizon}
+
+
 @app.get("/wines/{wine_id}/prices")
 def prices(wine_id: int, vintage: int | None = Query(None)):
     """Return the EUR/per-bottle price series for one (wine, vintage).
@@ -232,17 +312,9 @@ def prices(wine_id: int, vintage: int | None = Query(None)):
     def run(conn):
         nonlocal vintage
         if vintage is None:
-            top = conn.execute(
-                f"""
-                SELECT l.vintage_final AS vintage, COUNT(*) AS n
-                FROM lots l
-                WHERE l.wine_ref_id = ? AND {_PRICEABLE}
-                GROUP BY l.vintage_final ORDER BY n DESC LIMIT 1
-                """,
-                (wine_id,)).fetchone()
-            if top is None:
+            vintage = _default_vintage(conn, wine_id)
+            if vintage is None:
                 return None
-            vintage = top["vintage"]
         return conn.execute(
             f"""
             SELECT l.lot_date, l.price_per_bottle_eur AS price,

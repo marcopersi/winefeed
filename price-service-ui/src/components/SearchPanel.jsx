@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
-import { fetchPrices, fetchVintages, searchWines } from "../lib/api.js";
+import { fetchForecast, fetchPrices, fetchVintages, searchWines } from "../lib/api.js";
+import ForecastChart from "./ForecastChart.jsx";
 import PriceChart from "./PriceChart.jsx";
+
+// Only "12m" is wired up here: as of the Stufe-4 calibration run
+// (docs/forecast-calibration-report.md), the "next" horizon fails its
+// held-out coverage band in every density class and would show
+// "Not enough data" for literally every wine -- not worth a horizon
+// picker nobody could use yet. Revisit once "next" has real coverage.
+const FORECAST_HORIZON = "12m";
+const FORECAST_HORIZON_LABEL = "12-month estimate";
 
 function SearchIcon() {
   return (
@@ -51,6 +60,8 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
   // The vintage picker's value/gate: the user's own pick once made,
   // otherwise whatever the backend resolved for the open series.
   const displayedVintage = requestedVintage ?? resolvedVintage;
+  const [forecast, setForecast] = useState(null);
+  const [forecastLoading, setForecastLoading] = useState(!!selectedWine);
 
   // Cross-tab navigation: the leaderboard can hand us a wine to open here.
   useEffect(() => {
@@ -113,6 +124,8 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
     setVintages([]);
     setRequestedVintage(null);
     setResolvedVintage(null);
+    setForecast(null);
+    setForecastLoading(!!selectedWine);
   }
 
   useEffect(() => {
@@ -172,6 +185,34 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
     };
   }, [selectedWine, requestedVintage]);
 
+  useEffect(() => {
+    if (!selectedWine) {
+      return undefined;
+    }
+    let cancelled = false;
+    setForecastLoading(true);
+    (async () => {
+      try {
+        const resp = await fetchForecast(selectedWine.wine_id, requestedVintage);
+        if (!cancelled) {
+          setForecast(resp.data.forecasts?.[FORECAST_HORIZON] ?? null);
+        }
+      } catch (error) {
+        console.error("forecast error:", error);
+        if (!cancelled) {
+          setForecast(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setForecastLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedWine, requestedVintage]);
+
   function changeVintage(vintage) {
     // Cleared here, not in an effect: otherwise the old series (or a
     // stale error) stays on screen -- looking current -- for as long as
@@ -183,6 +224,8 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
     setPrices([]);
     setPricesError(false);
     setPricesLoading(true);
+    setForecast(null);
+    setForecastLoading(true);
     setRequestedVintage(vintage);
   }
 
@@ -277,6 +320,14 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
             <p className="empty-note">Couldn't load the price history right now.</p>
           ) : (
             <PriceChart prices={prices} />
+          )}
+
+          {!pricesLoading && !pricesError && prices.length > 0 && !forecastLoading && (
+            <ForecastChart
+              prices={prices}
+              forecast={forecast}
+              horizonLabel={FORECAST_HORIZON_LABEL}
+            />
           )}
         </div>
       )}

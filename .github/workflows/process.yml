@@ -43,6 +43,19 @@ jobs:
           DB_PATH: ${{ runner.temp }}/wine_auction_prices.sqlite
         run: python data/build_db.py
 
+      - name: Build price forecasts
+        # Stufe 5.3 (docs/price-prediction-plan.md): runs AFTER the DB
+        # build, against that same freshly-built file -- build_db.py
+        # recreates the DB from scratch every run (tmp + os.replace), so
+        # price_forecasts never survives from a previous run and must be
+        # (re)written here before the file is uploaded as an artifact.
+        # Uses the COMMITTED calibration_table.json (data/forecast/) as-
+        # is -- Stufe 4's own backtest/calibration is a separate, far
+        # more expensive, manually-run step (see docs/price-prediction-
+        # plan.md), not something this per-ingest job recomputes.
+        working-directory: data
+        run: python -m forecast.build_price_forecasts --db "${{ runner.temp }}/wine_auction_prices.sqlite"
+
       - name: Upload DB
         uses: actions/upload-artifact@v7
         with:

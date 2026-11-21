@@ -21,6 +21,13 @@ export function fetchVintages(wineId) {
   return axios.get(`/wines/${wineId}/vintages`, { timeout: TIMEOUT_MS });
 }
 
+export function fetchForecast(wineId, vintage) {
+  return axios.get(`/wines/${wineId}/forecast`, {
+    params: vintage == null ? {} : { vintage },
+    timeout: TIMEOUT_MS,
+  });
+}
+
 export function fetchTopWines(n = 10) {
   return axios.get("/wines/top", { params: { n }, timeout: TIMEOUT_MS });
 }
