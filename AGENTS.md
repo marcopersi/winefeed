@@ -47,5 +47,6 @@
   dem DB-Build in `process.yml`, mit der committeten
   `calibration_table.json`. API: `GET /wines/{id}/forecast`
   (`api/main.py`). UI: `ForecastChart.jsx` (nur Horizont "12m" verdrahtet
-  -- "next" verfehlt aktuell sein Coverage-Band in jeder Dichteklasse,
-  siehe `docs/forecast-calibration-report.md`).
+  -- "next" verfehlt sein Coverage-Band noch in 4 von 5 Dichteklassen
+  (nur "10+" trifft es seit dem Review-Fix 2026-11-22, s.u.), siehe
+  `docs/forecast-calibration-report.md`).

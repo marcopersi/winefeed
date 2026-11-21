@@ -236,6 +236,27 @@ class NoLookaheadTest(unittest.TestCase):
             self.assertAlmostEqual(m, past, places=9)
             self.assertNotAlmostEqual(m, future, places=1)
 
+    def test_next_horizon_never_scores_a_target_after_a_historical_as_of(self):
+        # Review finding: a HISTORICAL --as-of (reproducibility re-run
+        # against the live, since-grown DB, not a point-in-time
+        # snapshot) must not score "next" against a sale that happened
+        # AFTER that as_of -- the "12m" horizon is already bounded by
+        # `admits_horizon`, but "next" has no such window and would
+        # otherwise pick up whatever row comes next in `df`, future
+        # leak or not.
+        as_of = "2024-01-01"
+        df = _series([
+            ("2023-02-01", 1.0, "koppe", 1),
+            # the only row at/after origin 2023-07-01 -- dated AFTER
+            # as_of, so "next" at that origin must see no target at all.
+            ("2024-06-01", 2.0, "koppe", 1),
+        ])
+        rows, _n_candidates, _n_insufficient = feval.evaluate_series(
+            df, ("w", 2020, 7.5), lambda *a: _const_forecast(0.0),
+            HORIZON_NEXT, as_of, "spy")
+        for row in rows:
+            self.assertLessEqual(row["target_date"], pd.Timestamp(as_of))
+
 
 class MetricKnownValuesTest(unittest.TestCase):
     """G1's other mandated test: every metric against hand-computed

@@ -20,11 +20,16 @@ davon, beide senior-review-gefunden (2026-11-21), nicht geraten:
 1. ``eval.split``'s Ziel-Fenster aufeinanderfolgender Origins ueberlappen
   (z. B. "12m": FIT-Origin 2025-01-01 zielt auf [2025-01-01,2026-01-01),
   TEST-Origin 2025-07-01 auf [2025-07-01,2026-07-01) -- 6 Monate
-  Overlap). Eine Zielzeile, die in beiden Fenstern liegt, wuerde sonst
-  sowohl die Korrektur FITten als auch ihre eigene Coverage "pruefen" --
-  dieselbe Leck-Klasse, die der Copilot-Review in Stufe 2 zweimal fand.
-  ``_drop_overlapping_targets`` entfernt jede TEST-Zeile, deren
-  (series_key, target_date) auch unter einem FIT-Origin auftrat.
+  Overlap). Eine Zielzeile mit ``target_date >= test_origin`` wuerde die
+  Korrektur sonst auf Beobachtungen FITten, die zeitlich erst im
+  gehaltenen TEST-Zeitraum liegen -- kein echtes Held-out mehr, dieselbe
+  Leck-Klasse, die der Copilot-Review in Stufe 2 zweimal fand (G1-
+  Review-Fix 2026-11-21: eine fruehere Version entfernte nur exakt
+  doppelt vorkommende TEST-Zeilen, was das Problem auf der FIT-Seite
+  unberuehrt liess). ``_split_fit_test`` schneidet FIT jetzt direkt auf
+  ``target_date < test_origin`` zurueck -- TEST bleibt dabei IMMER
+  vollstaendig (nie gekuerzt), da jede ausgeschlossene FIT-Zielzeile
+  ohnehin in TESTs eigenem Fenster liegt.
 2. Der TEST-Origin liegt naeher an ``as_of`` als die FIT-Origins, daher
   sind seine REALISIERTEN ``gap_days`` systematisch kuerzer (rechts-
   zensiert) als die der FIT-Origins (siehe ``_gap_days_summary`` im
@@ -65,6 +70,7 @@ jedem cwd, nicht nur aus ``data/``):
 import argparse
 import datetime
 import json
+import math
 import pathlib
 import sqlite3
 
@@ -93,29 +99,76 @@ def _abs_resid(rows_df):
     return (rows_df["y_true"] - rows_df["q0.5"]).abs()
 
 
+def _order_stat_from_sorted(sorted_residuals, level):
+    """The k-th smallest of an ALREADY-ASCENDING-SORTED ``sorted_
+    residuals`` with ``k = ceil((n+1)*level)`` -- the classical finite-
+    sample split-conformal threshold, NOT an interpolated sample
+    quantile (review finding: ``pandas.Series.quantile`` interpolates,
+    which can under-cover at small n -- e.g. the valid 80% threshold
+    for 5 residuals is their MAXIMUM, never something interpolated
+    below it). Returns ``None`` when there are too few residuals to
+    support this level AT ALL (``k > n``) -- the caller must fall back
+    to a split with enough evidence, never guess a threshold with no
+    coverage guarantee behind it. Takes the sort as a precondition
+    (review finding: ``fit_table`` needs this for all three ``feval.
+    INTERVALS`` levels of the SAME residual set -- sorting once there
+    instead of once per level here is the same O(n log n) work done
+    1/3 as often)."""
+    n = len(sorted_residuals)
+    if n == 0:
+        return None
+    k = math.ceil((n + 1) * level)
+    if k > n:
+        return None
+    return sorted_residuals[k - 1]
+
+
+def _conformal_order_stat(residuals, level):
+    """``_order_stat_from_sorted``, sorting ``residuals`` itself first
+    -- the convenience/tested entry point for a single (set, level)
+    pair; see ``fit_table`` for the sort-once-per-set caller."""
+    return _order_stat_from_sorted(sorted(residuals), level)
+
+
 def fit_table(rows_df):
     """{density_class: {level: correction}} aus EINEM (bereits
     ``feval._scored``-gefilterten) Split von ``eval.evaluate``'s
-    Pro-Ziel-Zeilen. ``correction`` ist das Quantil der absoluten
-    Log-Residuen (|y_true - Median-Prognose|) auf ``level`` -- Plan-
-    Wortlaut 4.1: "Intervall = Modell-Median +/- Quantil der absoluten
-    Log-Fehler". ``"_pooled"`` ist der ungruppierte Fallback, auch
-    direkt als Wert fuer jede ``_KNOWN_DENSITY_CLASSES``-Klasse
-    eingetragen, die in diesem Split nicht vorkam (Review-Fix: ein
-    kuenftiger Leser der JSON-Tabelle soll nie selbst auf "_pooled"
-    zurueckfallen muessen, um einen KeyError zu vermeiden)."""
+    Pro-Ziel-Zeilen. ``correction`` ist ``_conformal_order_stat`` der
+    absoluten Log-Residuen (|y_true - Median-Prognose|) auf ``level`` --
+    Plan-Wortlaut 4.1: "Intervall = Modell-Median +/- Quantil der
+    absoluten Log-Fehler", Stufe-4.1-Review-Fix: das "Quantil" ist der
+    Conformal-Order-Statistik-Wert, nicht ``pandas``' interpolierter.
+    ``"_pooled"`` ist der ungruppierte Fallback -- fuer eine Klasse, bei
+    der ``_conformal_order_stat`` AUCH NUR EIN Niveau mit ``None``
+    verweigert (zu wenige Beobachtungen fuer eine belastbare Schwelle),
+    wird die GANZE Klasse (alle drei Niveaus) auf "_pooled" zurueck-
+    gesetzt, nie nur das eine Niveau -- sonst koennten sich ein eng
+    klassenspezifisches 50/80%-Band und ein breiteres gepooltes 95%-Band
+    kreuzen (q025 > q10). ``"_pooled"`` selbst ist auch direkt als Wert
+    fuer jede ``_KNOWN_DENSITY_CLASSES``-Klasse eingetragen, die in
+    diesem Split nicht vorkam (Review-Fix: ein kuenftiger Leser der
+    JSON-Tabelle soll nie selbst auf "_pooled" zurueckfallen muessen, um
+    einen KeyError zu vermeiden)."""
     df = rows_df.assign(_resid=_abs_resid(rows_df))
-    table = {
-        "_pooled": {
-            str(level): float(df["_resid"].quantile(level))
-            for level in feval.INTERVALS
-        }
-    }
+    pooled_sorted = sorted(df["_resid"].tolist())
+    pooled = {}
+    for level in feval.INTERVALS:
+        corr = _order_stat_from_sorted(pooled_sorted, level)
+        if corr is None:
+            raise ValueError(
+                f"FIT split has too few residuals ({len(pooled_sorted)}) "
+                f"for a valid pooled {level} conformal threshold")
+        pooled[str(level)] = float(corr)
+    table = {"_pooled": pooled}
     for dclass, grp in df.groupby("density_class"):
-        table[dclass] = {
-            str(level): float(grp["_resid"].quantile(level))
-            for level in feval.INTERVALS
-        }
+        resid_sorted = sorted(grp["_resid"].tolist())
+        corr_by_level = {level: _order_stat_from_sorted(resid_sorted, level)
+                        for level in feval.INTERVALS}
+        if any(c is None for c in corr_by_level.values()):
+            table[dclass] = dict(pooled)
+        else:
+            table[dclass] = {str(level): float(c)
+                             for level, c in corr_by_level.items()}
     for dclass in _KNOWN_DENSITY_CLASSES:
         table.setdefault(dclass, dict(table["_pooled"]))
     return table
@@ -141,6 +194,20 @@ def held_out_coverage(rows_df, table):
     return out
 
 
+def _fill_missing_decisions(decisions):
+    """Review fix (Finding 4): ``correction`` (``fit_table``) has an
+    entry for every ``_KNOWN_DENSITY_CLASSES``, but ``decisions`` (built
+    from ``coverage``, which only ever covers classes that actually
+    showed up in TEST) does not -- without this, a class absent from
+    TEST (e.g. the committed table's own "0") has a correction but no
+    decision at all, undefined for a direct ``table["decision"][dclass]``
+    lookup. No held-out evidence for a class is itself a reason not to
+    serve it, mutates and returns ``decisions`` for convenience."""
+    for dclass in _KNOWN_DENSITY_CLASSES:
+        decisions.setdefault(dclass, "INSUFFICIENT_DATA")
+    return decisions
+
+
 def classify(coverage_row):
     """3.6 als Regel statt Modell: ausserhalb des [77,83]-Bands beim
     80 %-Niveau -> INSUFFICIENT_DATA ("das ist das Ergebnis, kein
@@ -152,8 +219,21 @@ def classify(coverage_row):
 def _split_fit_test(rows_df):
     """Chronologischer Split nach ``origin`` (nicht zufaellig, G1-
     Prinzip): alle bis auf den spaetesten Origin sind FIT, der spaeteste
-    ist TEST. ``_drop_overlapping_targets`` (Review-Fix) macht daraus
-    erst eine echte Trennung -- siehe Modul-Docstring Punkt 1."""
+    ist TEST -- ALLE TEST-Zeilen bleiben erhalten (nie gekuerzt, s.u.).
+
+    Review-Fix (Finding 2, ersetzt die fruehere ``_drop_overlapping_
+    targets``): ``eval.split``'s "12m"-Ziel-Fenster aufeinanderfolgender
+    (nur 6 Monate versetzter) Origins ueberlappen um 6 Monate, daher
+    kann ein FIT-Origin Zielzeilen mit ``target_date >= test_origin``
+    enthalten -- die Korrektur wuerde dann auf Beobachtungen FITten, die
+    zeitlich erst im (oder nach dem) gehaltenen TEST-Zeitraum liegen,
+    kein echtes Held-out mehr. Die fruehere Version entfernte dasselbe
+    Problem nur teilweise, indem sie exakt doppelt vorkommende TEST-
+    Zeilen verwarf (TEST konnte dadurch leer werden, siehe unten) --
+    dieser Fix schneidet statt dessen FIT selbst auf ``target_date <
+    test_origin`` zurueck, was jede Ueberlappung automatisch ausschliesst
+    (jede FIT-Zielzeile mit ``target_date >= test_origin`` liegt ohnehin
+    vollstaendig in TESTs eigenem Fenster, s. Modul-Docstring)."""
     origins = sorted(rows_df["origin"].unique())
     if len(origins) < 2:
         raise SystemExit(
@@ -161,22 +241,14 @@ def _split_fit_test(rows_df):
             "zeitlich getrennte Validierung -- siehe half_year_origins")
     fit_origins, test_origin = origins[:-1], origins[-1]
     fit_rows = rows_df[rows_df["origin"].isin(fit_origins)]
+    fit_rows = fit_rows[fit_rows["target_date"] < test_origin]
+    if fit_rows.empty:
+        raise SystemExit(
+            "FIT-Split ist leer, nachdem alle Zielzeilen auf/nach dem "
+            f"TEST-Origin ({test_origin.date()}) ausgeschlossen wurden "
+            "-- frueherer TEST-Origin oder mehr FIT-Origins noetig")
     test_rows = rows_df[rows_df["origin"] == test_origin]
-    test_rows = _drop_overlapping_targets(fit_rows, test_rows)
     return fit_origins, test_origin, fit_rows, test_rows
-
-
-def _drop_overlapping_targets(fit_rows, test_rows):
-    """Review-Fix (Finding 1): ``eval.split``'s Ziel-Fenster
-    aufeinanderfolgender Origins ueberlappen, daher kann dieselbe
-    realisierte Beobachtung (identifiziert durch series_key +
-    target_date) als Zielzeile unter MEHREREN Origins auftauchen. Ohne
-    diesen Schritt koennte ``fit_table`` und ``held_out_coverage`` auf
-    derselben Beobachtung arbeiten -- kein echtes Held-out mehr."""
-    seen = set(zip(fit_rows["series_key"], fit_rows["target_date"]))
-    keep = [key not in seen
-           for key in zip(test_rows["series_key"], test_rows["target_date"])]
-    return test_rows[keep]
 
 
 def _gap_days_summary(rows_df):
@@ -253,8 +325,8 @@ def main():
             _split_fit_test(rows_df))
         tbl = fit_table(fit_rows)
         coverage = held_out_coverage(test_rows, tbl)
-        decisions = {dclass: classify(row)
-                    for dclass, row in coverage.items()}
+        decisions = _fill_missing_decisions({
+            dclass: classify(row) for dclass, row in coverage.items()})
         table[horizon] = {
             "fit_origins": [str(o.date()) for o in fit_origins],
             "test_origin": str(test_origin.date()),
