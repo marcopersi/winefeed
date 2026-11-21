@@ -71,9 +71,9 @@ und Zahlen stehen bei den jeweiligen Micro-Steps in §5.
 | **Gate G0** (Review Stufe 0) | ✅ erledigt 2026-11-06 — 9 echte Bugs über 2 Runden gefunden+behoben (Wermuth-Spaltenversatz+Trailing-Blank, Magnum/Double-Magnum-Grössenerkennung inkl. Bare-Word-Kollisionen, UNKNOWN-Lose, Outlier-Kontamination, D15-Fenster-Scope, `strip_bottle_format`-Fragmentierung), D21 neu eröffnet. 0.2b bleibt blockiert (Token) |
 | Stufe 1 – Baselines & Eval-Harness | ✅ 1.1–1.5 alle erledigt (2026-11-10, Code+Tests+Live-Report-Lauf verifiziert) — Gate G1 (Baseline-Zahlen festschreiben) als nächstes |
 | Stufe 2 – Local-Level-Modell (Kalman) | 🟡 2.2-2.5 erledigt, Pinball-AC weiterhin erfüllt (93,75 % der Gruppen). **2.1 erledigt 2026-11-13** (siehe §5): Coverage-AC über ALLE Dichteklassen bewertet (User-Entscheid) -- **nicht erfüllt**, dichteabhängig (nur next/10+ im Band). **2.6 erledigt 2026-11-13:** `local_linear_trend` getestet, NICHT übernommen (lokal_level bleibt Produktionsmodell). Gate G2 (Gold-Set fehlt noch) weiterhin offen |
-| Stufe 3 – Gruppenindex/Fallback | ⬜ nicht begonnen |
-| Stufe 4 – Konforme Kalibrierung | ⬜ nicht begonnen |
-| Stufe 5 – Serving (API/UI) | ⬜ nicht begonnen |
+| Stufe 3 – Gruppenindex/Fallback | ✅ **erledigt 2026-11-21, als Regel statt Modell** (User-Entscheid "KISS", Advisor-Entscheid): kein separates Fallback-Modell (Repeat-Sales-Index/EB-Shrinkage, 3.2-3.4 nicht gebaut) -- die einzige offene Stufe-2-Lücke war Coverage je Dichteklasse, die 4.1 durch Konstruktion schliesst. 3.6 ("INSUFFICIENT_DATA ist das Ergebnis, kein Fehler") wird direkt als Entscheidungsregel in `calibrate.classify` umgesetzt. 3.1/3.5 damit gegenstandslos (kein Gruppenmodell, keine Gruppen-Fallback-Streuung nötig) |
+| Stufe 4 – Konforme Kalibrierung | ✅ **4.1/4.2 erledigt 2026-11-21** (`data/forecast/calibrate.py`, Split-Conformal je density_class×Horizont×Niveau, zeitlich von der Kalibrierung getrennt validiert). Senior-Review (2 Runden) fand+fixte 2 echte Probleme (Rolling-Origin-Zielfenster-Überlapp zwischen FIT/TEST, fehlender EXTRAPOLATION-Filter). **Reales Ergebnis:** Horizont "next" verfehlt das [77,83]-Band in JEDER Dichteklasse (INSUFFICIENT_DATA überall) -- Horizont "12m" trifft es in allen 4 Klassen (forecast überall), siehe `docs/forecast-calibration-report.md`. **4.3 (Drift-Monitor) bewusst zurückgestellt** (KISS, kein Serving-Loop in v1, der ihn bräuchte) |
+| Stufe 5 – Serving (API/UI) | ⬜ nicht begonnen -- nächster Schritt |
 
 **Todo-Liste, in Reihenfolge:**
 
@@ -974,27 +974,33 @@ Jeder Schritt ändert `build_db.py` isoliert, mit eigenem Commit + Test.
 
 ### Stufe 3 – Gruppenindex & Fallback
 
-**3.1 Gruppen-Definition** (S): Hierarchie `region > producer > vintage`; Mindestgrösse je Ebene; Ebenen-Auswahl datengetrieben (kleinste Ebene mit ≥ N Beobachtungen).
+**Status: 2026-11-21, als REGEL statt Modell abgeschlossen (User-Entscheid "KISS", bestätigt per Advisor).** 3.2/3.3/3.4 (Pseudo-Repeat-Sales-Index, Index-Prognose, Empirical-Bayes-Shrinkage) wurden NICHT gebaut: die einzige nach Stufe 2 offene Lücke war Coverage je Dichteklasse (siehe 2.5/2.1), und Stufe 4.1 (Conformal-Kalibrierung) schliesst genau diese Lücke durch Konstruktion -- ein zweites Modell für dieselbe Lücke wäre Overengineering gewesen. 3.1 (Gruppen-Definition)/3.5 (Fallback-Intervall) sind damit gegenstandslos, da es kein Gruppenmodell gibt, dessen Fallback sie definieren müssten. 3.6 wird direkt umgesetzt, aber als Entscheidungsregel statt als separate Evaluation: `data/forecast/calibrate.classify` markiert jede density_class, deren kalibriertes 80 %-Intervall das Held-out-Band [77,83] verfehlt, als `INSUFFICIENT_DATA` -- "dann ist das das Ergebnis, kein Fehler", wörtlich wie hier spezifiziert. Reales Ergebnis: siehe Stufe 4 unten. **Gate G3 entfällt** (kein Gruppenmodell-Review nötig, da keins gebaut wurde).
 
-**3.2 Repeat-Sales-Index** (L): Wiederverkaufspaare gleicher (Wein, Jahrgang, Format) ⇒ Regression `Δln P = Σ β_t·D_t` (Case-Shiller, Gewichtung nach Zeitabstand, da Varianz mit Abstand wächst). Index monatlich, Basis 100.
-- Test: Synthetischer Index (bekannter Trend) wird innerhalb Toleranz rekonstruiert.
-- Hinweis: Auktions-Wiederverkäufe der *selben Flasche* sind nicht identifizierbar; gleiche Wein·Jahrgang-Kombinationen sind der Proxy. Das ist **kein** echter Repeat-Sales-Index → in der Doku so benennen („Pseudo-Repeat-Sales").
+~~**3.1 Gruppen-Definition** (S): Hierarchie `region > producer > vintage`; Mindestgrösse je Ebene; Ebenen-Auswahl datengetrieben (kleinste Ebene mit ≥ N Beobachtungen).~~
 
-**3.3 Index-Prognose** (M): Index per Local-Level fortschreiben; Wein-spezifisches Niveau = Index × Gruppenniveau (letzter geschätzter Level oder Hierarchie-Shrinkage).
+~~**3.2 Repeat-Sales-Index** (L): Wiederverkaufspaare gleicher (Wein, Jahrgang, Format) ⇒ Regression `Δln P = Σ β_t·D_t` (Case-Shiller, Gewichtung nach Zeitabstand, da Varianz mit Abstand wächst). Index monatlich, Basis 100.~~
+- ~~Test: Synthetischer Index (bekannter Trend) wird innerhalb Toleranz rekonstruiert.~~
+- ~~Hinweis: Auktions-Wiederverkäufe der *selben Flasche* sind nicht identifizierbar; gleiche Wein·Jahrgang-Kombinationen sind der Proxy. Das ist **kein** echter Repeat-Sales-Index → in der Doku so benennen („Pseudo-Repeat-Sales").~~
 
-**3.4 Hierarchisches Shrinkage** (M): Empirical-Bayes: Niveau/Varianz je Wein werden zum Gruppenmittel geschrumpft, Gewicht ∝ `n_obs`. (Voll-Bayes mit PyMC/Stan nur falls EB nicht genügt – bewusst späterer Schritt, nicht v1.)
+~~**3.3 Index-Prognose** (M): Index per Local-Level fortschreiben; Wein-spezifisches Niveau = Index × Gruppenniveau (letzter geschätzter Level oder Hierarchie-Shrinkage).~~
 
-**3.5 Fallback-Intervall** (S): Streuung = Gruppen-Residuenstreuung × Aufschlag; Flag `GROUP_INDEX`.
+~~**3.4 Hierarchisches Shrinkage** (M): Empirical-Bayes: Niveau/Varianz je Wein werden zum Gruppenmittel geschrumpft, Gewicht ∝ `n_obs`. (Voll-Bayes mit PyMC/Stan nur falls EB nicht genügt – bewusst späterer Schritt, nicht v1.)~~
+
+~~**3.5 Fallback-Intervall** (S): Streuung = Gruppen-Residuenstreuung × Aufschlag; Flag `GROUP_INDEX`.~~
 
 **3.6 Evaluation Dünn-Fälle** (M): Separate Metriken für n_obs ∈ {1–2, 3–4, 5–9}. AC: Coverage ±3 pp auch hier; wenn nicht erreichbar ⇒ `INSUFFICIENT_DATA` für diese Klasse (dann ist das das Ergebnis, kein Fehler).
+- **Status: erledigt 2026-11-21, als Regel in `calibrate.classify` statt separater Evaluation** -- siehe Stufe-Status oben.
 
-**Gate G3:** Review: Wo ist „genügend" wirklich? Definition der finalen Produktabdeckung.
+~~**Gate G3:** Review: Wo ist „genügend" wirklich? Definition der finalen Produktabdeckung.~~ (entfällt, siehe Stufe-Status oben)
 
 ### Stufe 4 – Konforme Kalibrierung
 
 **4.1 Konforme Residuen** (M): Split-/Rolling-Conformal auf den Out-of-Sample-Fehlern der Backtests, nach Dichteklasse und Horizont gruppiert (`mondrian conformal`). Intervall = Modell-Median ± Quantil der absoluten Log-Fehler.
+- **Status: erledigt 2026-11-21** (`data/forecast/calibrate.py`, `fit_table`/`held_out_coverage`). Korrektur gefittet auf den frühen Rolling-Origins, Coverage auf dem spätesten, bislang ungesehenen Origin gemessen -- zeitlich getrennt, kein Leck. Senior-Review (2 Runden) fand+fixte 2 echte Probleme: (a) `eval.split`'s Zielfenster aufeinanderfolgender Origins überlappen, wodurch dieselbe Beobachtung sowohl FIT als auch TEST sein konnte (`_drop_overlapping_targets` entfernt das); (b) EXTRAPOLATION-Zeilen fehlten im Residuen-Filter (jetzt `feval._scored`, wie jede andere Metrik in `eval.py`). Jede density_class hat garantiert einen Tabellen-Eintrag (Fallback auf den gepoolten Wert für eine im FIT-Split fehlende Klasse), damit Stufe 5 die JSON ohne KeyError-Risiko direkt laden kann.
 **4.2 Nachweis** (S): Coverage-Tabelle je Horizont, Haus, Dichteklasse; Abweichungen > 3 pp dokumentiert.
+- **Status: erledigt 2026-11-21** (`docs/forecast-calibration-report.md`). **Reales Ergebnis (local_level, as_of=2026-11-20):** Horizont "next" verfehlt das [77,83]-Band in JEDER Dichteklasse (auch `10+`) → `INSUFFICIENT_DATA` überall. Horizont "12m" trifft das Band in allen 4 Dichteklassen → `forecast` überall. Dokumentierte, bewusst nicht korrigierte Einschränkung (KISS): nur 2-4 Rolling-Origins verfügbar, der TEST-Origin hat strukturell kürzere realisierte `gap_days` als die FIT-Origins (Rechtszensierung nahe `as_of`) -- sichtbar im Report, nicht aufgelöst, da eine echte Auflösung (rotierende Origins) eine zweite, aufwendigere Validierungs-Architektur bräuchte.
 **4.3 Drift-Monitor** (S): Bei jedem Lauf Coverage der *eingetretenen* Prognosen der Vorperiode messen; < 70 % bei 80 %-Intervallen ⇒ Warnung im Run-Report.
+- **Status: bewusst zurückgestellt (KISS)** -- ein Drift-Monitor beobachtet einen laufenden Serving-Betrieb, den es (Stufe 5 unbegonnen) noch nicht gibt. Nachzuziehen, sobald Stufe 5 live ist.
 
 ### Stufe 5 – Serving
 
