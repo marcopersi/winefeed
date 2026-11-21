@@ -3,6 +3,9 @@ Funktionen ueber einem synthetischen ``eval.evaluate``-Rueckgabe-
 DataFrame, keine DB noetig (dieselbe Shape wie eval.py's echte
 Pro-Ziel-Zeilen: ``origin``, ``density_class``, ``y_true``, ``q0.5``,
 ...)."""
+# pylint: disable=protected-access
+# -- protected-access: exercising calibrate's internal _correction/
+# _split_fit_test/_drop_overlapping_targets/_KNOWN_DENSITY_CLASSES.
 import unittest
 
 import pandas as pd
