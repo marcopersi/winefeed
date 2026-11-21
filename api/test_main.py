@@ -31,6 +31,14 @@ class TestSearch(unittest.TestCase):
                 lot_kind TEXT, vintage_status TEXT, vintage_final INTEGER,
                 price_per_bottle_eur REAL, price_kind TEXT,
                 bottle_size_dl REAL, sold INTEGER);
+            CREATE TABLE price_forecasts (
+                id INTEGER PRIMARY KEY, wine_ref_id INTEGER,
+                vintage INTEGER, size_class REAL, horizon TEXT,
+                method TEXT, model_version TEXT, n_obs INTEGER,
+                last_obs_date TEXT, median_eur REAL, q025_eur REAL,
+                q10_eur REAL, q25_eur REAL, q75_eur REAL, q90_eur REAL,
+                q975_eur REAL, flags TEXT,
+                created_at TEXT);
             INSERT INTO wines VALUES
                 (1, 'Château Montrose', 'Château Montrose', 'Saint-Estèphe'),
                 (2, 'Montrose 2015', NULL, NULL),
@@ -81,6 +89,18 @@ class TestSearch(unittest.TestCase):
                 -- wine 3: one priceable lot.
                 (6, 3, 1, '2020-06-01', 200.0, NULL, 'EUR',
                  'SINGLE', 'STRUCTURED', 2019, 200.0, NULL, 7.5, 1);
+            INSERT INTO price_forecasts VALUES
+                -- wine 1, vintage 2020: "12m" has a real calibrated
+                -- forecast, "next" is INSUFFICIENT_DATA (Stufe-3 rule) --
+                -- the real-world shape found in docs/
+                -- forecast-calibration-report.md.
+                (1, 1, 2020, 7.5, '12m', 'local_level',
+                 'local_level-conformal-v1', 5, '2022-01-01', 5.0,
+                 4.0, 4.3, 4.6, 5.4, 5.7, 6.0, NULL, '2026-11-20T00:00:00Z'),
+                (2, 1, 2020, 7.5, 'next', 'local_level',
+                 'local_level-conformal-v1', 5, '2022-01-01', NULL,
+                 NULL, NULL, NULL, NULL, NULL, NULL, 'INSUFFICIENT_DATA',
+                 '2026-11-20T00:00:00Z');
         """)
         conn.commit()
         conn.close()
@@ -236,6 +256,61 @@ class TestSearch(unittest.TestCase):
     def test_top_wines_respects_n(self):
         resp = self.client.get("/wines/top", params={"n": 1})
         self.assertEqual(len(resp.json()["results"]), 1)
+
+    def test_forecast_default_vintage_is_most_traded(self):
+        resp = self.client.get("/wines/1/forecast")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["vintage"], 2020)
+        self.assertEqual(body["size_class"], 7.5)
+
+    def test_forecast_returns_calibrated_band_for_available_horizon(self):
+        resp = self.client.get("/wines/1/forecast", params={"vintage": 2020})
+        twelve_m = resp.json()["forecasts"]["12m"]
+        self.assertIsNone(twelve_m["flags"])
+        self.assertEqual(twelve_m["median"], 5.0)
+        self.assertEqual(twelve_m["q10"], 4.3)
+        self.assertEqual(twelve_m["q90"], 5.7)
+        self.assertEqual(twelve_m["n_obs"], 5)
+
+    def test_forecast_insufficient_data_horizon_has_no_point_value(self):
+        # Plan 5.4: "Antwort ohne Punktwert bei INSUFFICIENT_DATA" --
+        # every quantile null, never a missing key.
+        resp = self.client.get("/wines/1/forecast", params={"vintage": 2020})
+        nxt = resp.json()["forecasts"]["next"]
+        self.assertEqual(nxt["flags"], "INSUFFICIENT_DATA")
+        for field in ("median", "q025", "q10", "q25", "q75", "q90", "q975"):
+            self.assertIsNone(nxt[field])
+
+    def test_forecast_wine_without_any_row_is_insufficient_data(self):
+        # wine 3 is priceable (shows up in /search, /prices) but has no
+        # price_forecasts row at all -- must come back as
+        # INSUFFICIENT_DATA for both horizons, not a missing key/500.
+        resp = self.client.get("/wines/3/forecast")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["vintage"], 2019)
+        for horizon in ("next", "12m"):
+            self.assertEqual(body["forecasts"][horizon]["flags"],
+                             "INSUFFICIENT_DATA")
+            self.assertIsNone(body["forecasts"][horizon]["median"])
+
+    def test_forecast_unknown_wine_is_insufficient_data_not_error(self):
+        resp = self.client.get("/wines/9999/forecast")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertIsNone(body["vintage"])
+        for horizon in ("next", "12m"):
+            self.assertEqual(body["forecasts"][horizon]["flags"],
+                             "INSUFFICIENT_DATA")
+
+    def test_forecast_explicit_vintage_narrows_lookup(self):
+        resp = self.client.get("/wines/1/forecast", params={"vintage": 2021})
+        body = resp.json()
+        self.assertEqual(body["vintage"], 2021)
+        for horizon in ("next", "12m"):
+            self.assertEqual(body["forecasts"][horizon]["flags"],
+                             "INSUFFICIENT_DATA")
 
     def test_unreachable_db_returns_503_not_raw_500(self):
         main.DB_PATH = "/no-such-directory-xyz/no.sqlite"

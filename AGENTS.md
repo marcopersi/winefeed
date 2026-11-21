@@ -33,3 +33,19 @@
 - Preis-Annotation in `data/build_db.py`: `_annotate_fx` (NLG→EUR),
   `_apply_premium_policy` (Premium/Fees), `_apply_tax` (MwSt aufs Aufgeld),
   `_fill_lot_date` (auction_date → lot_date).
+
+## Preis-Prognose (Stufe 0-5, docs/price-prediction-plan.md)
+
+- Stufe 0-4 (Datengrundlage, Baselines, local_level/Kalman, Kalibrierung)
+  sind abgeschlossen; Stufe 3 bewusst als REGEL statt Modell (KISS,
+  siehe Plan-Dokument). `data/forecast/calibrate.py` erzeugt
+  `data/forecast/calibration_table.json` (manuell/selten neu laufen
+  lassen, backtest-schwer -- nicht Teil von CI).
+- Stufe 5 (Serving): `data/forecast/build_price_forecasts.py` füllt die
+  `price_forecasts`-Tabelle (EUR-pro-Flasche, haus-neutral) direkt in
+  der frisch gebauten Master-DB -- läuft in CI als eigener Schritt NACH
+  dem DB-Build in `process.yml`, mit der committeten
+  `calibration_table.json`. API: `GET /wines/{id}/forecast`
+  (`api/main.py`). UI: `ForecastChart.jsx` (nur Horizont "12m" verdrahtet
+  -- "next" verfehlt aktuell sein Coverage-Band in jeder Dichteklasse,
+  siehe `docs/forecast-calibration-report.md`).

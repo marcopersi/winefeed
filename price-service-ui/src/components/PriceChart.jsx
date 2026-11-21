@@ -11,13 +11,13 @@ export function formatDate(isoDate) {
   return m ? `${m[3]}.${m[2]}.${m[1]}` : isoDate;
 }
 
-function ChartTooltip({ active, payload }) {
-  if (!active || !payload || !payload.length) {
-    return null;
-  }
-  const point = payload[0].payload;
+// Shared with ForecastChart.jsx, whose fan chart plots the same kind of
+// historical point alongside its own forecast marker -- keeps the one
+// real auction point's tooltip looking identical in both charts instead
+// of two markups that can quietly drift apart.
+export function HistoryTooltipBody({ point }) {
   return (
-    <div className="chart-tooltip">
+    <>
       <p className="chart-tooltip-date">{formatDate(point.lot_date)}</p>
       <p className="chart-tooltip-value">
         <span className="chart-tooltip-swatch" aria-hidden="true" />
@@ -29,6 +29,17 @@ function ChartTooltip({ active, payload }) {
       <p className="chart-tooltip-provider">
         {[point.provider, point.location].filter(Boolean).join(" · ")}
       </p>
+    </>
+  );
+}
+
+function ChartTooltip({ active, payload }) {
+  if (!active || !payload || !payload.length) {
+    return null;
+  }
+  return (
+    <div className="chart-tooltip">
+      <HistoryTooltipBody point={payload[0].payload} />
     </div>
   );
 }
