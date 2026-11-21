@@ -76,6 +76,10 @@ PROVIDERS = [
     # -- see ingest/fetchers/aguttes.py. No bot protection observed in
     # manual testing (plain curl_cffi, no login).
     "aguttes",
+    # astebolaffi: own fetcher (bespoke Laravel app) for its "Vini Rari e
+    # Pregiati" department -- see ingest/fetchers/astebolaffi.py. No bot
+    # protection observed in manual testing (plain curl_cffi, no login).
+    "astebolaffi",
 ]
 # christies IS in PROVIDERS now (Nov 2026) -- see the comment on its entry
 # above. run_christies_backfill.py remains for occasional re-backfills; it

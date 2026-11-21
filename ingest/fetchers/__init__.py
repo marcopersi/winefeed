@@ -1,6 +1,7 @@
 """Fetcher registry."""
 from .ackerwines import AckerwinesFetcher
 from .aguttes import AguttesFetcher
+from .astebolaffi import AsteBolaffiFetcher
 from .baghera import BagheraFetcher
 from .beschcannes import BeschCannesFetcher
 from .bestwineauctions import BestwineauctionsFetcher
@@ -77,6 +78,10 @@ FETCHERS = {
     # ingest/fetchers/aguttes.py) -- NOT the Drouot white-label template
     # (Next.js + Artisio backend instead), own fetcher.
     "aguttes": AguttesFetcher(),
+    # Aste Bolaffi's "Vini Rari e Pregiati" department (see
+    # ingest/fetchers/astebolaffi.py) -- bespoke Laravel app, own
+    # contiguous auction-id block, no bot protection.
+    "astebolaffi": AsteBolaffiFetcher(),
 }
 
 
