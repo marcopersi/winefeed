@@ -2076,6 +2076,67 @@ def load_aguttes(b, limit):
             break
 
 
+def load_astebolaffi(b, limit):
+    """Aste Bolaffi's "Vini Rari e Pregiati" department (see
+    ingest/fetchers/astebolaffi.py) -- EUR, hammer price only.
+
+    The fetcher already resolved, PER LOT, which of the two per-lot fee
+    regimes applied (margin scheme -- a progressive, VAT-inclusive
+    commission, confirmed per the house's own terms page -- or ordinary
+    VAT -- a flat commission plus VAT on both the hammer price and the
+    commission, read straight off that lot's own on-page disclosure) and
+    already computed the resulting ``buyer_premium``/``vat_on_hammer``/
+    ``vat_on_premium`` amounts, so this loader only sums them -- no
+    regime logic here.
+    """
+    n = 0
+    for f in _json_files("AsteBolaffi"):
+        d = load_json(f)
+        b.set_source(f)
+        a = d.get("auction", {})
+        if not a.get("id"):
+            # Same guard as load_whiskyauction/_load_drouot_template_json:
+            # without it a malformed file becomes the phantom auction_id
+            # "None", silently merging its lots with any other malformed
+            # file's.
+            continue
+        aid = str(a["id"])
+        a_id = b.add_auction("astebolaffi", aid, a.get("name"),
+                             parse_date(a.get("date")), "EUR", "HAMMER")
+        for lot in d.get("lots", []):
+            hammer = to_float(lot.get("hammer_price"))
+            buyer_premium = to_float(lot.get("buyer_premium"))
+            vat_on_hammer = to_float(lot.get("vat_on_hammer"))
+            vat_on_premium = to_float(lot.get("vat_on_premium"))
+            realised_price = total_price = None
+            price_source = None
+            if hammer is not None and buyer_premium is not None:
+                realised_price = round(hammer + buyer_premium, 2)
+                total_price = round(
+                    realised_price + (vat_on_hammer or 0)
+                    + (vat_on_premium or 0), 2)
+                price_source = "DERIVED"
+            b.add_lot(a_id, {
+                "lot_no": lot.get("lot_no"), "wine": lot.get("wine"),
+                "vintage": to_int(lot.get("vintage")),
+                "quantity": lot.get("quantity"),
+                "estimate_low": to_float(lot.get("estimate_low")),
+                "hammer_price": hammer,
+                "buyer_premium": buyer_premium,
+                "tax_amount": ((vat_on_hammer or 0) + (vat_on_premium or 0))
+                if (vat_on_hammer is not None or vat_on_premium is not None)
+                else None,
+                "realised_price": realised_price,
+                "total_price": total_price,
+                "price_source": price_source,
+                "price_basis": "HAMMER", "currency": "EUR",
+                "sold": 1 if lot.get("sold") else 0,
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+
 def _load_weinauktion_json(b, provider, limit, aid_prefix=""):
     """Load the weinauktion-platform API JSON (steinfels / weinboerse).
 
@@ -4578,6 +4639,7 @@ HOUSES = [
     ("maisons-laffitte", load_maisons_laffitte),
     ("art-richelieu", load_art_richelieu),
     ("aguttes", load_aguttes),
+    ("astebolaffi", load_astebolaffi),
 ]
 
 

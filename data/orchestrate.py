@@ -69,6 +69,10 @@ ARCHIVE_DIRS = {
     # Aguttes: own fetcher (Next.js + Artisio backend, not the Drouot
     # white-label template) -- see ingest/fetchers/aguttes.py.
     "aguttes": "Aguttes",
+    # Aste Bolaffi: own fetcher (bespoke Laravel app, contiguous
+    # cross-department auction-id block) -- see
+    # ingest/fetchers/astebolaffi.py.
+    "astebolaffi": "AsteBolaffi",
 }
 
 
