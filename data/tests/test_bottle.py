@@ -19,6 +19,16 @@ class TestBottleFormat(unittest.TestCase):
     def test_dm(self):
         self.assertEqual(b.parse_bottle_format("Château X (2 DM)"), (2, 30.0))
 
+    def test_dmg(self):
+        # Aguttes' own abbreviation (e.g. "1 Dmg CHÂTEAU..."), confirmed
+        # real (78 lots, 0 collisions outside Aguttes archive-wide) --
+        # review finding: this must resolve the same as "DM", not
+        # require a second, hand-maintained dl-mapping in that
+        # fetcher's own code.
+        self.assertEqual(
+            b.parse_bottle_format("1 Dmg CHÂTEAU LYNCH BAGES - 2009"),
+            (1, 30.0))
+
     def test_hb(self):
         self.assertEqual(b.parse_bottle_format("Château X (6 HB)"),
                          (6, 3.75))

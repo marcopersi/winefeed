@@ -2026,6 +2026,7 @@ def load_aguttes(b, limit):
                     "lot_no": lot.get("lot_no"), "wine": lot.get("wine"),
                     "vintage": to_int(lot.get("vintage")),
                     "quantity": lot.get("quantity"),
+                    "mixed_lot": 1 if lot.get("mixed_lot") else None,
                     "estimate_low": to_float(lot.get("estimate_low")),
                     "estimate_high": to_float(lot.get("estimate_high")),
                     "realised_price": to_float(lot.get("realised_price")),
@@ -2043,23 +2044,27 @@ def load_aguttes(b, limit):
             rate = lot.get("premium_rate")
             buyer_premium = tax_amount = realised_price = total_price = None
             price_source = None
-            # All three of hammer/rate/vat_rate are required: a
-            # buyer_premium without a known VAT rate would be a real
-            # (HT) number, but total_price would then silently read as
-            # the FULL TTC price while actually missing ~20% VAT on the
-            # premium -- worse than leaving it NULL (see
+            # Review fix: only tax_amount/total_price (the TTC figure)
+            # actually need vat_rate -- buyer_premium/realised_price
+            # (the VAT-EXCLUSIVE, premium-INCLUSIVE price
+            # _fill_price_per_bottle actually reads) only need
+            # hammer/rate. Gating realised_price behind vat_rate too
+            # silently dropped price_per_bottle_eur for every lot with a
+            # known premium but no parsed VAT text (see
             # ingest/fetchers/aguttes.py on why VAT is never baked into
             # the quoted premium rate here).
-            if hammer is not None and rate is not None and vat_rate is not None:
+            if hammer is not None and rate is not None:
                 buyer_premium = round(hammer * rate, 2)
-                tax_amount = round(buyer_premium * vat_rate, 2)
                 realised_price = round(hammer + buyer_premium, 2)
-                total_price = round(realised_price + tax_amount, 2)
                 price_source = "DERIVED"
+                if vat_rate is not None:
+                    tax_amount = round(buyer_premium * vat_rate, 2)
+                    total_price = round(realised_price + tax_amount, 2)
             b.add_lot(a_id, {
                 "lot_no": lot.get("lot_no"), "wine": lot.get("wine"),
                 "vintage": to_int(lot.get("vintage")),
                 "quantity": lot.get("quantity"),
+                "mixed_lot": 1 if lot.get("mixed_lot") else None,
                 "estimate_low": to_float(lot.get("estimate_low")),
                 "estimate_high": to_float(lot.get("estimate_high")),
                 "hammer_price": hammer,
