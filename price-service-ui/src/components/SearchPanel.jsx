@@ -62,6 +62,11 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
   const displayedVintage = requestedVintage ?? resolvedVintage;
   const [forecast, setForecast] = useState(null);
   const [forecastLoading, setForecastLoading] = useState(!!selectedWine);
+  // Kept apart from `forecast === null` (review finding): that also
+  // means "the backend itself returned INSUFFICIENT_DATA", a real
+  // answer ForecastChart should show as-is, not the same request-
+  // failed state as a timeout/503 that never got an answer at all.
+  const [forecastError, setForecastError] = useState(false);
 
   // Cross-tab navigation: the leaderboard can hand us a wine to open here.
   useEffect(() => {
@@ -196,11 +201,13 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
         const resp = await fetchForecast(selectedWine.wine_id, requestedVintage);
         if (!cancelled) {
           setForecast(resp.data.forecasts?.[FORECAST_HORIZON] ?? null);
+          setForecastError(false);
         }
       } catch (error) {
         console.error("forecast error:", error);
         if (!cancelled) {
           setForecast(null);
+          setForecastError(true);
         }
       } finally {
         if (!cancelled) {
@@ -225,6 +232,7 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
     setPricesError(false);
     setPricesLoading(true);
     setForecast(null);
+    setForecastError(false);
     setForecastLoading(true);
     setRequestedVintage(vintage);
   }
@@ -326,6 +334,7 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
             <ForecastChart
               prices={prices}
               forecast={forecast}
+              error={forecastError}
               horizonLabel={FORECAST_HORIZON_LABEL}
             />
           )}

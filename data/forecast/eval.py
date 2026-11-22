@@ -153,7 +153,15 @@ def split(df, origin, horizon):
     future row (D3: "nächste Auktionsbeobachtung", no second one);
     for "12m" it is every row in ``[origin, origin + 12 calendar
     months)`` -- calendar months (D3's own "+12 Monate" wording), not
-    a fixed 365-day window."""
+    a fixed 365-day window.
+
+    No ``as_of`` parameter: this function alone cannot enforce
+    ``target_date <= as_of``, so the "next" target (unlike "12m",
+    already bounded by ``admits_horizon``) can come back dated AFTER a
+    HISTORICAL ``as_of`` -- ``evaluate_series``, this function's only
+    caller, applies that cutoff itself right after calling ``split``.
+    A future direct caller of ``split`` for a historical-``as_of``
+    backtest on "next" would need to apply the same cutoff itself."""
     train = df[df["date"] < origin]
     if horizon == HORIZON_NEXT:
         targets = df[df["date"] >= origin].iloc[:1]
@@ -315,6 +323,16 @@ def evaluate_series(df, series_key, forecaster, horizon, as_of, model_name,
         if not admits_horizon(origin, horizon, as_of):
             continue
         train, targets = split(df, origin, horizon)
+        # Review fix: "12m" targets are already bounded by `admits_
+        # horizon` (origin + 12 months <= as_of), but "next" has no
+        # such window -- its target is just whatever row comes next in
+        # `df`, which can be dated AFTER `as_of` for a HISTORICAL as_of
+        # (a reproducibility/backtest re-run against the live, since-
+        # grown DB, not a snapshot). Without this, a past backtest would
+        # score itself against sales that hadn't happened yet "as of"
+        # that date -- the same future-leak this module's rolling-
+        # origin design otherwise exists to prevent (G1).
+        targets = targets[targets["date"] <= pd.Timestamp(as_of)]
         if targets.empty:
             continue
         if not _is_active_as_of(train, origin):

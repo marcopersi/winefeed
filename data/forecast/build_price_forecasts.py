@@ -143,17 +143,20 @@ def forecast_row(series_key, df, horizon, calib_horizon, as_of, created_at,
         "q975_eur": None,
         "flags": "INSUFFICIENT_DATA", "created_at": created_at,
     }
+    dclass = feval.density_class(n_obs)
+    decision = _decision(calib_horizon, dclass)
+    if decision != "forecast":
+        # Disabled density class (committed calibration's own decision
+        # table) -- never ask the forecaster at all, not even to throw
+        # its result away: the fit (and in local_level's case, an
+        # actual Kalman smoother run) is real CI work, not free.
+        return row
     forecast = forecaster(df, as_of, horizon)
     if forecast is None:
         return row
-    dclass = feval.density_class(n_obs)
-    decision = _decision(calib_horizon, dclass)
     flags = None
     if feval.extrapolation_flag(forecast, df):
         flags = "EXTRAPOLATION"
-    if decision != "forecast":
-        row["flags"] = "INSUFFICIENT_DATA"
-        return row
     median_log = forecast[0.50]
     row["median_eur"] = math.exp(median_log)
     for level, (lo_col, hi_col) in _LEVEL_COLUMNS.items():

@@ -46,7 +46,7 @@ function ChartTooltip({ active, payload }) {
 
 // Fades/slides the chart in once its data has actually arrived, instead of
 // popping into place the instant the fetch resolves.
-function useRevealOnData(hasData) {
+export function useRevealOnData(hasData) {
   const [visible, setVisible] = useState(false);
   const frame = useRef(null);
 

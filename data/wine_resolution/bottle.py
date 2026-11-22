@@ -15,7 +15,10 @@ BOTTLE_FORMATS = {
     "FLASCHE": 7.5, "FLASCHEN": 7.5,
     "HB": 3.75, "HFBT": 3.75, "HFLT": 3.75, "HALF": 3.75,
     "MAG": 15.0, "MAGN": 15.0, "MAGNUM": 15.0, "MAGNUMS": 15.0, "MG": 15.0,
-    "DM": 30.0, "DOUBLEMAGNUM": 30.0,
+    # "DMG" (Aguttes' own abbreviation, e.g. "1 Dmg CHÂTEAU...") -- always
+    # with a leading count, same as "DM"; checked archive-wide, 0 real
+    # collisions outside Aguttes (78 real lots there).
+    "DM": 30.0, "DMG": 30.0, "DOUBLEMAGNUM": 30.0,
     "IMP": 60.0, "IMPERIALE": 60.0, "METH": 60.0, "METHUSELAH": 60.0,
     "REHOBOAM": 45.0,
     "SALR": 90.0, "SALMANAZAR": 90.0,

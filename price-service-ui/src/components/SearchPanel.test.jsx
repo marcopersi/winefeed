@@ -247,4 +247,29 @@ describe("SearchPanel vintage picker", () => {
     await screen.findByText(/no price history/i);
     expect(screen.queryByLabelText(/vintage/i)).not.toBeInTheDocument();
   });
+
+  it("shows a load-failure note, not 'not enough data', when the forecast fetch fails", async () => {
+    // Review finding: a failed/timed-out forecast request used to set
+    // `forecast` to null, which ForecastChart renders identically to a
+    // real INSUFFICIENT_DATA answer -- telling the user their wine
+    // lacks data when the service simply failed to load it.
+    axios.get.mockImplementation((url) => {
+      if (url === "/wines/1/vintages") {
+        return Promise.resolve({ data: { vintages: [] } });
+      }
+      if (url === "/wines/1/prices") {
+        return Promise.resolve({
+          data: { vintage: 2015, prices: [{ lot_date: "2015-01-01", price: 100, currency: "EUR" }] },
+        });
+      }
+      if (url === "/wines/1/forecast") {
+        return Promise.reject(new Error("network error"));
+      }
+      return Promise.resolve({ data: { results: [] } });
+    });
+
+    render(<SearchPanel selectedWine={WINE_A} onSelectWine={() => {}} />);
+    expect(await screen.findByText(/couldn't load the 12-month estimate/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not enough data/i)).not.toBeInTheDocument();
+  });
 });

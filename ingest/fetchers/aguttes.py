@@ -61,10 +61,45 @@ _NEXT_DATA = re.compile(
     re.DOTALL)
 
 _VINTAGE = re.compile(r"\b(1[5-9]\d{2}|20\d{2})\b")
-_QUANTITY = re.compile(
-    r"^(\d+)\s*(?:bouteilles?|blles?|b\.?|magnums?|mags?|dmg|"
-    r"j[ée]ro(?:boams?)?|jh|demis?|double\s*mags?|"
-    r"imp(?:[ée]riales?)?)\b", re.I)
+
+# Unit words after a leading count. bottle_size_dl is deliberately NOT
+# derived here -- build_wines.py's own _parse_bottle_formats already
+# runs wine_resolution.bottle.parse_bottle_format over every lot's
+# raw_wine/description as a COALESCE fallback (confirmed real: it
+# already resolves "Mag"/"Imp" correctly; only "Dmg" was missing from
+# BOTTLE_FORMATS, added there instead of duplicating a second,
+# hand-maintained dl-mapping here). jeroboam/demi stay unsized by
+# BOTTLE_FORMATS' own deliberate choice (3l Champagne vs 5l Bordeaux
+# for jeroboam, no single value; "Demi-Sec" collision risk for demi).
+_UNIT = (r"bouteilles?|blles?|b\.?|magnums?|mags?|dmg|double\s*mags?|"
+        r"j[ée]ro(?:boams?)?|jh|demis?|imp(?:[ée]riales?)?")
+_QUANTITY = re.compile(r"^(\d+)\s*(?:" + _UNIT + r")\b", re.I)
+
+# Review finding: a bundled lot repeats this same "<N> <unit> WINE..."
+# shape once per sub-lot concatenated into one ``wine`` string
+# (confirmed real, Aguttes archive: 2,381 of 18,448 lots -- e.g.
+# "1 B WINE A - 1990 ... 1 B WINE B - 1990 ..."), so >=2 occurrences
+# anywhere in the text means several distinct wines/vintages were
+# glued together, not one. A real second sub-lot always starts with an
+# upper-case wine name right after the matched unit; a false match like
+# "... 17343 bouteilles produites)" (a production-count aside) has a
+# LOWER-case word there instead -- checked in Python via ``str.isupper``
+# below, not folded into the regex itself, so it is Unicode-aware (an
+# accented capital like "Échezeaux" counts; ``[A-Z]`` would not).
+# Confirmed real, same archive: 0 false positives after this check.
+_BUNDLE_MARKER = re.compile(r"(?:^|\s)\d+\s*(?i:" + _UNIT + r")\b(\s+)")
+
+
+def _is_bundled(wine_text):
+    wine_text = wine_text or ""
+    n_sub_lots = 0
+    for m in _BUNDLE_MARKER.finditer(wine_text):
+        rest = wine_text[m.end():]
+        if rest and rest[0].isupper():
+            n_sub_lots += 1
+            if n_sub_lots >= 2:
+                return True
+    return False
 
 
 class MalformedResponse(RuntimeError):
@@ -275,6 +310,7 @@ class AguttesFetcher:
         return {
             "lot_no": raw.get("lot_no"), "wine": wine_text,
             "vintage": vintage, "quantity": quantity,
+            "mixed_lot": 1 if _is_bundled(wine_text) else 0,
             "estimate_low": _to_float(raw.get("low")),
             "estimate_high": _to_float(raw.get("high")),
             "hammer_price": hammer_price, "sold": sold,
@@ -299,6 +335,7 @@ class AguttesFetcher:
         return {
             "lot_no": lot_no, "wine": wine_text,
             "vintage": vintage, "quantity": quantity,
+            "mixed_lot": 1 if _is_bundled(wine_text) else 0,
             "estimate_low": _to_float(raw.get("low_estimate")),
             "estimate_high": _to_float(raw.get("high_estimate")),
             "realised_price": price if sold else None, "sold": sold,

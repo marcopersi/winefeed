@@ -184,6 +184,75 @@ class FetchTests(unittest.TestCase):
         result = AguttesFetcher().fetch(session, ref)
         self.assertIsNone(result.data["lots"][0]["vintage"])
 
+    def test_magnum_and_jeroboam_quantity_is_still_extracted(self):
+        # bottle_size_dl itself is NOT this fetcher's job (see module
+        # docstring) -- wine_resolution/bottle.py's shared
+        # parse_bottle_format, run by build_wines.py over every lot's
+        # raw_wine text, derives it from the same "Mag"/"Dmg"/"Jero"
+        # wording; this only checks the quantity count still parses.
+        auction = _auction_meta()
+        lots = [
+            _lot("1", "1 Mag CHÂTEAU PALMER - 1979 - GCC3 Margaux"),
+            _lot("2", "1 JERO CHÂTEAUNEUF DU PAPE - 2019 - Domaine X"),
+        ]
+        html = _catalogue_html(auction, lots)
+        ref = self._ref()
+        session = FakeSession(catalogue_pages={(ref.url, 1): html})
+        result = AguttesFetcher().fetch(session, ref)
+        self.assertEqual(result.data["lots"][0]["quantity"], 1)
+        self.assertEqual(result.data["lots"][1]["quantity"], 1)
+
+    def test_two_bundled_wines_are_flagged_mixed_lot(self):
+        # Review finding: confirmed real (Aguttes archive, 2,381 of
+        # 18,448 lots) -- a bundled description repeats "N <unit>
+        # WINE..." once per sub-lot with no other separator.
+        auction = _auction_meta()
+        lots = [_lot("4", "1 B WINE A - 1990 - Region "
+                           "1 B WINE B - 1990 - Region")]
+        html = _catalogue_html(auction, lots)
+        ref = self._ref()
+        session = FakeSession(catalogue_pages={(ref.url, 1): html})
+        result = AguttesFetcher().fetch(session, ref)
+        self.assertEqual(result.data["lots"][0]["mixed_lot"], 1)
+
+    def test_single_wine_is_not_flagged_mixed_lot(self):
+        auction = _auction_meta()
+        lots = [_lot("1", "1 B CHÂTEAU PALMER - 1979 - GCC3 Margaux")]
+        html = _catalogue_html(auction, lots)
+        ref = self._ref()
+        session = FakeSession(catalogue_pages={(ref.url, 1): html})
+        result = AguttesFetcher().fetch(session, ref)
+        self.assertEqual(result.data["lots"][0]["mixed_lot"], 0)
+
+    def test_production_count_aside_is_not_mistaken_for_a_bundled_wine(self):
+        # Confirmed real false-positive risk: "<N> bouteilles produites"
+        # is a production-count note, not a second sub-lot -- the
+        # lower-case word right after "bouteilles" (not a new wine's
+        # upper-case name) must keep this a single-wine lot.
+        auction = _auction_meta()
+        lots = [_lot(
+            "1", "1 B LA TACHE (Pass Import Japon| 17343 bouteilles "
+                "produites) - 2002 - Domaine de la Romanée-Conti")]
+        html = _catalogue_html(auction, lots)
+        ref = self._ref()
+        session = FakeSession(catalogue_pages={(ref.url, 1): html})
+        result = AguttesFetcher().fetch(session, ref)
+        self.assertEqual(result.data["lots"][0]["mixed_lot"], 0)
+
+    def test_bundled_second_wine_starting_with_an_accented_capital_counts(self):
+        # Review finding: the uppercase check is done via Python's
+        # Unicode-aware str.isupper(), not a regex [A-Z] class, so a
+        # sub-lot name starting with an accented capital ("É...") still
+        # counts as a real second sub-lot.
+        auction = _auction_meta()
+        lots = [_lot("1", "1 B CHÂTEAU A - 1990 - Region "
+                           "1 B Échezeaux - 1990 - Region")]
+        html = _catalogue_html(auction, lots)
+        ref = self._ref()
+        session = FakeSession(catalogue_pages={(ref.url, 1): html})
+        result = AguttesFetcher().fetch(session, ref)
+        self.assertEqual(result.data["lots"][0]["mixed_lot"], 1)
+
     def test_tiered_premium_steps_down_above_threshold(self):
         auction = _auction_meta(premiums=[
             {"percent": 25, "amount_over": 0},
@@ -320,6 +389,25 @@ class DrouotGatewayFetchTests(unittest.TestCase):
         lot = result.data["lots"][0]
         self.assertFalse(lot["sold"])
         self.assertIsNone(lot["realised_price"])
+
+    def test_magnum_quantity_is_still_extracted(self):
+        vente = _drouot_vente()
+        lots = [_drouot_lot(1, "1 Mag CHABLIS LA FOREST - 2005 - Domaine X")]
+        html = _drouot_gateway_html(vente, lots)
+        ref = self._ref()
+        session = FakeSession(catalogue_pages={(ref.url, 1): html})
+        result = AguttesFetcher().fetch(session, ref)
+        self.assertEqual(result.data["lots"][0]["quantity"], 1)
+
+    def test_two_bundled_wines_are_flagged_mixed_lot(self):
+        vente = _drouot_vente()
+        lots = [_drouot_lot(
+            1, "1 B WINE A - 1990 - Region 1 B WINE B - 1990 - Region")]
+        html = _drouot_gateway_html(vente, lots)
+        ref = self._ref()
+        session = FakeSession(catalogue_pages={(ref.url, 1): html})
+        result = AguttesFetcher().fetch(session, ref)
+        self.assertEqual(result.data["lots"][0]["mixed_lot"], 1)
 
     def test_number_extension_is_appended_to_lot_no(self):
         vente = _drouot_vente()
