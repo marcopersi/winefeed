@@ -3,13 +3,25 @@ import { fetchForecast, fetchPrices, fetchVintages, searchWines } from "../lib/a
 import ForecastChart from "./ForecastChart.jsx";
 import PriceChart from "./PriceChart.jsx";
 
-// Only "12m" is wired up here: as of the Stufe-4 calibration run
-// (docs/forecast-calibration-report.md), the "next" horizon fails its
-// held-out coverage band in every density class and would show
-// "Not enough data" for literally every wine -- not worth a horizon
-// picker nobody could use yet. Revisit once "next" has real coverage.
-const FORECAST_HORIZON = "12m";
-const FORECAST_HORIZON_LABEL = "12-month estimate";
+// Both horizons are wired up: the backend (price_forecasts /
+// calibrate.py) already serves each density_class its own
+// forecast/INSUFFICIENT_DATA decision per horizon, and ForecastChart's
+// own INSUFFICIENT_DATA handling already renders that correctly either
+// way -- so no UI-side gate is needed to keep "next" hidden for the
+// classes it still doesn't cover. "next" used to be hidden entirely
+// here because it failed its held-out coverage band in EVERY density
+// class; as of the 2026-11-22 review-fix recalibration it passes for
+// "10+" (see docs/forecast-calibration-report.md), so it is now shown
+// too -- listed second (not first) since "12m" covers every density
+// class and "next" still only covers one of the five, so the horizon
+// that actually has an estimate for most wines leads. `tick` is the
+// chart's own x-axis category label for that horizon's point (kept
+// short/plain, unlike `label`'s prose use in "Not enough data yet for
+// a {label} estimate.").
+const FORECAST_HORIZONS = [
+  { key: "12m", label: "12-month", tick: "+12 months" },
+  { key: "next", label: "next-sale", tick: "Next sale" },
+];
 
 function SearchIcon() {
   return (
@@ -60,11 +72,14 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
   // The vintage picker's value/gate: the user's own pick once made,
   // otherwise whatever the backend resolved for the open series.
   const displayedVintage = requestedVintage ?? resolvedVintage;
-  const [forecast, setForecast] = useState(null);
+  // Keyed by horizon ("next"/"12m", FORECAST_HORIZONS' own keys) --
+  // one request (`fetchForecast`) returns both, so one loading/error
+  // pair below covers both charts.
+  const [forecasts, setForecasts] = useState({});
   const [forecastLoading, setForecastLoading] = useState(!!selectedWine);
-  // Kept apart from `forecast === null` (review finding): that also
-  // means "the backend itself returned INSUFFICIENT_DATA", a real
-  // answer ForecastChart should show as-is, not the same request-
+  // Kept apart from `forecasts[key] === undefined` (review finding):
+  // that also means "the backend itself returned INSUFFICIENT_DATA", a
+  // real answer ForecastChart should show as-is, not the same request-
   // failed state as a timeout/503 that never got an answer at all.
   const [forecastError, setForecastError] = useState(false);
 
@@ -129,7 +144,7 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
     setVintages([]);
     setRequestedVintage(null);
     setResolvedVintage(null);
-    setForecast(null);
+    setForecasts({});
     setForecastLoading(!!selectedWine);
   }
 
@@ -200,13 +215,13 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
       try {
         const resp = await fetchForecast(selectedWine.wine_id, requestedVintage);
         if (!cancelled) {
-          setForecast(resp.data.forecasts?.[FORECAST_HORIZON] ?? null);
+          setForecasts(resp.data.forecasts ?? {});
           setForecastError(false);
         }
       } catch (error) {
         console.error("forecast error:", error);
         if (!cancelled) {
-          setForecast(null);
+          setForecasts({});
           setForecastError(true);
         }
       } finally {
@@ -231,7 +246,7 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
     setPrices([]);
     setPricesError(false);
     setPricesLoading(true);
-    setForecast(null);
+    setForecasts({});
     setForecastError(false);
     setForecastLoading(true);
     setRequestedVintage(vintage);
@@ -333,9 +348,8 @@ export default function SearchPanel({ selectedWine, onSelectWine }) {
           {!pricesLoading && !pricesError && prices.length > 0 && !forecastLoading && (
             <ForecastChart
               prices={prices}
-              forecast={forecast}
+              horizons={FORECAST_HORIZONS.map((h) => ({ ...h, forecast: forecasts[h.key] }))}
               error={forecastError}
-              horizonLabel={FORECAST_HORIZON_LABEL}
             />
           )}
         </div>

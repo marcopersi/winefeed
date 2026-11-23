@@ -6,9 +6,22 @@ const PRICES = [
   { lot_date: "2024-01-01", price: 100, currency: "EUR", provider: "x", location: "y" },
 ];
 
+const AVAILABLE_FORECAST = {
+  flags: null, median: 120, q025: 80, q10: 95, q25: 105,
+  q75: 135, q90: 145, q975: 160,
+};
+
+const TWELVE_MONTH = { key: "12m", label: "12-month", tick: "+12 months" };
+const NEXT_SALE = { key: "next", label: "next-sale", tick: "Next sale" };
+
 describe("ForecastChart", () => {
-  it("shows an empty note when the horizon has no forecast at all", () => {
-    render(<ForecastChart prices={PRICES} forecast={null} horizonLabel="12-month estimate" />);
+  it("shows an empty note when no horizon has a forecast", () => {
+    render(
+      <ForecastChart
+        prices={PRICES}
+        horizons={[{ ...TWELVE_MONTH, forecast: null }]}
+      />,
+    );
     expect(screen.getByText(/not enough data/i)).toBeInTheDocument();
   });
 
@@ -16,7 +29,11 @@ describe("ForecastChart", () => {
     // Review finding: a failed/timed-out request must not look like a
     // wine that genuinely has too little data for an estimate.
     render(
-      <ForecastChart prices={PRICES} forecast={null} error horizonLabel="12-month estimate" />,
+      <ForecastChart
+        prices={PRICES}
+        horizons={[{ ...TWELVE_MONTH, forecast: null }]}
+        error
+      />,
     );
     expect(screen.queryByText(/not enough data/i)).not.toBeInTheDocument();
     expect(screen.getByText(/couldn't load/i)).toBeInTheDocument();
@@ -29,23 +46,18 @@ describe("ForecastChart", () => {
     render(
       <ForecastChart
         prices={PRICES}
-        forecast={{
-          flags: null, median: 120, q025: 80, q10: 95, q25: 105,
-          q75: 135, q90: 145, q975: 160,
-        }}
-        horizonLabel="12-month estimate"
+        horizons={[{ ...TWELVE_MONTH, forecast: AVAILABLE_FORECAST }]}
       />,
     );
     await waitFor(() =>
       expect(document.querySelector(".chart-card.is-visible")).toBeTruthy());
   });
 
-  it("shows an empty note when flagged INSUFFICIENT_DATA", () => {
+  it("shows an empty note when every horizon is flagged INSUFFICIENT_DATA", () => {
     render(
       <ForecastChart
         prices={PRICES}
-        forecast={{ flags: "INSUFFICIENT_DATA", median: null }}
-        horizonLabel="12-month estimate"
+        horizons={[{ ...TWELVE_MONTH, forecast: { flags: "INSUFFICIENT_DATA", median: null } }]}
       />,
     );
     expect(screen.getByText(/not enough data/i)).toBeInTheDocument();
@@ -55,11 +67,7 @@ describe("ForecastChart", () => {
     render(
       <ForecastChart
         prices={PRICES}
-        forecast={{
-          flags: null, median: 120, q025: 80, q10: 95, q25: 105,
-          q75: 135, q90: 145, q975: 160,
-        }}
-        horizonLabel="12-month estimate"
+        horizons={[{ ...TWELVE_MONTH, forecast: AVAILABLE_FORECAST }]}
       />,
     );
     expect(screen.queryByText(/not enough data/i)).not.toBeInTheDocument();
@@ -70,13 +78,55 @@ describe("ForecastChart", () => {
     render(
       <ForecastChart
         prices={PRICES}
-        forecast={{
-          flags: "EXTRAPOLATION", median: 500, q025: 300, q10: 350,
-          q25: 400, q75: 600, q90: 650, q975: 700,
-        }}
-        horizonLabel="12-month estimate"
+        horizons={[{
+          ...TWELVE_MONTH,
+          forecast: {
+            flags: "EXTRAPOLATION", median: 500, q025: 300, q10: 350,
+            q25: 400, q75: 600, q90: 650, q975: 700,
+          },
+        }]}
       />,
     );
     expect(screen.getByText(/treat it with/i)).toBeInTheDocument();
+  });
+
+  it("plots two available horizons together without error", async () => {
+    // The main remaining risk of merging both horizons into one chart:
+    // Recharts' Scatter/ErrorBar must handle two real (non-null) points
+    // in the same series, not just the one point the single-horizon
+    // case always exercised before.
+    render(
+      <ForecastChart
+        prices={PRICES}
+        horizons={[
+          { ...TWELVE_MONTH, forecast: AVAILABLE_FORECAST },
+          { ...NEXT_SALE, forecast: { ...AVAILABLE_FORECAST, median: 90 } },
+        ]}
+      />,
+    );
+    await waitFor(() =>
+      expect(document.querySelector(".chart-card.is-visible")).toBeTruthy());
+    expect(document.querySelectorAll(".chart-card").length).toBe(1);
+    expect(screen.queryByText(/not enough data/i)).not.toBeInTheDocument();
+  });
+
+  it("plots an available horizon and names a still-missing one in a note below the chart, in one card", () => {
+    // Review finding (2026-11-23): one chart per horizon repeated the
+    // SAME price-history line once per horizon -- a dense wine (both
+    // horizons available) showed it three times across PriceChart and
+    // two ForecastCharts. One merged chart plots every available
+    // horizon's point together and only one history line.
+    render(
+      <ForecastChart
+        prices={PRICES}
+        horizons={[
+          { ...TWELVE_MONTH, forecast: AVAILABLE_FORECAST },
+          { ...NEXT_SALE, forecast: { flags: "INSUFFICIENT_DATA", median: null } },
+        ]}
+      />,
+    );
+    expect(document.querySelectorAll(".chart-card").length).toBe(1);
+    expect(screen.getByText(/not enough data yet for a next-sale estimate/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not enough data yet for a 12-month estimate/i)).not.toBeInTheDocument();
   });
 });
