@@ -46,7 +46,10 @@
   der frisch gebauten Master-DB -- läuft in CI als eigener Schritt NACH
   dem DB-Build in `process.yml`, mit der committeten
   `calibration_table.json`. API: `GET /wines/{id}/forecast`
-  (`api/main.py`). UI: `ForecastChart.jsx` (nur Horizont "12m" verdrahtet
-  -- "next" verfehlt sein Coverage-Band noch in 4 von 5 Dichteklassen
-  (nur "10+" trifft es seit dem Review-Fix 2026-11-22, s.u.), siehe
-  `docs/forecast-calibration-report.md`).
+  (`api/main.py`). UI: `ForecastChart.jsx` -- seit 2026-11-23 sind beide
+  Horizonte ("next"/"12m") in `SearchPanel.jsx` verdrahtet (`price_
+  forecasts` liefert je Horizont/Dichteklasse ohnehin schon eine eigene
+  forecast/INSUFFICIENT_DATA-Entscheidung, `ForecastChart` zeigt das pro
+  Horizont korrekt an). "next" trifft sein Coverage-Band weiterhin nur
+  in der Dichteklasse "10+" (die anderen 4 zeigen dort "Not enough
+  data", kein Fehler -- 3.6), siehe `docs/forecast-calibration-report.md`.

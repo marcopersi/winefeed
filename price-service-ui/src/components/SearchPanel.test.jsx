@@ -269,7 +269,48 @@ describe("SearchPanel vintage picker", () => {
     });
 
     render(<SearchPanel selectedWine={WINE_A} onSelectWine={() => {}} />);
-    expect(await screen.findByText(/couldn't load the 12-month estimate/i)).toBeInTheDocument();
+    expect(await screen.findByText(/couldn't load the price estimate/i)).toBeInTheDocument();
     expect(screen.queryByText(/not enough data/i)).not.toBeInTheDocument();
+  });
+
+  it("plots the 12-month estimate and names next-sale as still missing, in one chart", async () => {
+    // "next" used to be hidden entirely (every density class failed its
+    // held-out coverage band); the backend now serves it a real
+    // forecast/INSUFFICIENT_DATA decision per density class just like
+    // "12m". Both now render through ONE ForecastChart (review finding,
+    // 2026-11-23: one chart per horizon repeated the same price-history
+    // line once per horizon).
+    axios.get.mockImplementation((url) => {
+      if (url === "/wines/1/vintages") {
+        return Promise.resolve({ data: { vintages: [] } });
+      }
+      if (url === "/wines/1/prices") {
+        return Promise.resolve({
+          data: { vintage: 2015, prices: [{ lot_date: "2015-01-01", price: 100, currency: "EUR" }] },
+        });
+      }
+      if (url === "/wines/1/forecast") {
+        return Promise.resolve({
+          data: {
+            forecasts: {
+              next: { flags: "INSUFFICIENT_DATA", median: null },
+              "12m": {
+                flags: null, median: 120, q025: 80, q10: 95, q25: 105,
+                q75: 135, q90: 145, q975: 160,
+              },
+            },
+          },
+        });
+      }
+      return Promise.resolve({ data: { results: [] } });
+    });
+
+    render(<SearchPanel selectedWine={WINE_A} onSelectWine={() => {}} />);
+    expect(
+      await screen.findByText(/not enough data yet for a next-sale estimate/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/not investment advice/i)).toBeInTheDocument();
+    // One merged forecast card (PriceChart's own .chart-card is separate).
+    expect(document.querySelectorAll(".chart-card.forecast-chart").length).toBe(1);
   });
 });
