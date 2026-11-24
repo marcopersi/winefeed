@@ -86,6 +86,16 @@ jobs:
         # the full multi-month cumulative archive for every OTHER house
         # with just that one run's idealwine delta.
         if: always() && steps.download_archive.outcome != 'failure'
+        # Confirmed real: without this, a failed step still fails the whole
+        # JOB (and so the workflow run's own conclusion), even though
+        # Upload archive/Commit manifest below already run regardless via
+        # their own if: always() gating -- and process.yml only triggers
+        # on `workflow_run.conclusion == 'success'`, so one idealwine
+        # failure silently skips the DB rebuild for every OTHER house too
+        # (confirmed live: run 45364027030, 2026-11-24 -- idealwine hit a
+        # dead `algolia.idealwine.com` DNS entry, all 27 real auction-house
+        # providers fetched cleanly, but process.yml still skipped).
+        continue-on-error: true
         env:
           ARCHIVE_PATH: ${{ runner.temp }}/archive
           MANIFEST_PATH: ${{ github.workspace }}/data/ingest_manifest.json
