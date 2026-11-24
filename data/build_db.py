@@ -27,7 +27,9 @@ import sys
 import zipfile
 
 import openpyxl
+import pdfplumber
 from bs4 import BeautifulSoup
+from collections import defaultdict
 
 from wine_resolution.bottle import BOTTLE_FORMATS
 
@@ -770,6 +772,40 @@ def _json_files(house, pattern=None):
             and not f.endswith("wines_directory.json")]
 
 
+def _dedupe_auction_files(files, id_fn):
+    """Several houses' archives carry the SAME real auction twice under
+    two different paths: an old, pre-manifest dated-folder capture
+    (e.g. "HDH/2014/02_Februar/1402.json") and a newer flat-path
+    re-fetch from the current automated pipeline (e.g. "HDH/1402.json")
+    -- the manifest has no record of these old ids (they predate it
+    entirely), so run_ingest.py never recognizes them as "already
+    fetched" and keeps refetching the full back-catalog. Each "one file
+    = one auction" loader (hdh, finarte, winefields, koppe, besch-
+    cannes, the live pandolfini loader) was loading BOTH, doubling
+    every lot in 119 confirmed auctions (~240k rows, 94 of them hdh
+    alone) -- see .opencode/plans/historical-data-backfill.md, Phase 0,
+    for the full audit. Fixed by keeping only the file with the most
+    lots per auction id (every case checked by hand was the fuller
+    capture strictly matching or exceeding the thinner one -- never a
+    disjoint, non-overlapping lot set), instead of changing per-house
+    load order/priority, which would need the same fix repeated once
+    per loader.
+
+    ``id_fn(d)`` extracts the auction id a parsed file's top-level dict
+    would produce (mirroring each loader's own ``aid = str(a.get(...))``
+    line) so the grouping matches exactly what ``add_auction`` would
+    key on.
+    """
+    best = {}
+    for f in files:
+        d = load_json(f)
+        aid = id_fn(d)
+        n_lots = len(d.get("lots", []))
+        if aid not in best or n_lots > best[aid][1]:
+            best[aid] = (f, n_lots)
+    return sorted(f for f, _ in best.values())
+
+
 # --- baghera.ch live PDF parsing ------------------------------------- #
 # The 29 legacy auctions (ids 25-175) were captured by a now-lost ad-hoc
 # script as pre-parsed JSON with hammer/buyer_premium/total_price already
@@ -1008,7 +1044,9 @@ def load_ackerwines(b, limit):
 
 def load_hdh(b, limit):
     n = 0
-    for f in _json_files("HDH"):
+    for f in _dedupe_auction_files(
+            _json_files("HDH"),
+            lambda d: str(d.get("auction", {}).get("sale_number"))):
         d = load_json(f)
         b.set_source(f)
         a = d.get("auction", {})
@@ -1086,7 +1124,9 @@ def _winauktionator_qty_size(fmt):
 
 def load_winefields(b, limit):
     n = 0
-    for f in _json_files("Winefields"):
+    for f in _dedupe_auction_files(
+            _json_files("Winefields"),
+            lambda d: str(d.get("auction", {}).get("auction_id"))):
         d = load_json(f)
         b.set_source(f)
         a = d.get("auction", {})
@@ -1116,7 +1156,9 @@ def load_winefields(b, limit):
 
 def load_beschcannes(b, limit):
     n = 0
-    for f in _json_files("BeschCannes", "**/auction-*.json"):
+    for f in _dedupe_auction_files(
+            _json_files("BeschCannes", "**/auction-*.json"),
+            lambda d: str(d.get("auction", {}).get("id"))):
         d = load_json(f)
         b.set_source(f)
         a = d.get("auction", {})
@@ -1730,7 +1772,9 @@ def load_zacky(b, limit):
 
 def load_finarte(b, limit):
     n = 0
-    for f in _json_files("Finarte"):
+    for f in _dedupe_auction_files(
+            _json_files("Finarte"),
+            lambda d: str(d.get("auction", {}).get("slug"))):
         d = load_json(f)
         b.set_source(f)
         a = d.get("auction", {})
@@ -1785,7 +1829,9 @@ def load_dorotheum(b, limit):
 
 def load_pandolfini(b, limit):
     n = 0
-    for f in _json_files("Pandolfini"):
+    for f in _dedupe_auction_files(
+            _json_files("Pandolfini"),
+            lambda d: str(d.get("auction", {}).get("id"))):
         d = load_json(f)
         b.set_source(f)
         a = d.get("auction", {})
@@ -1811,9 +1857,278 @@ def load_pandolfini(b, limit):
             break
 
 
+def _pdf_lot_price_table(path):
+    """Parses a simple multi-column "LOT  PRICE  LOT  PRICE ..." post-
+    sale results table (Pandolfini's sold-unsold-list/Resultat/Ottobre
+    PDFs; Sothebys' own *-Results.pdf use the same layout) into
+    {lot_no: price}. Lot numbers missing from the table are the
+    unsold/withdrawn ones -- these tables only ever print sold lots.
+    """
+    text_parts = []
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            text_parts.append(page.extract_text() or "")
+    out = {}
+    for line in "\n".join(text_parts).split("\n"):
+        for lot_s, price_s in re.findall(r'(\d{1,4})\s+([\d.,]+)\b', line):
+            price = euro_int(price_s)
+            # A stray extra numeric token on a line would shift every
+            # later (lot, price) pairing on it with no way to detect
+            # that from the regex alone; a lot number repeating within
+            # one table, each time with a DIFFERENT price, is the
+            # signature such a shift would leave, so surface it loudly
+            # instead of silently keeping whichever pairing matched
+            # last. Every real table checked by hand (3 Pandolfini + a
+            # spot check) never repeats a lot number at all.
+            if price is None:
+                continue
+            if lot_s in out and out[lot_s] != price:
+                print(f"WARN _pdf_lot_price_table: lot {lot_s} in {path} "
+                      f"parsed with two different prices "
+                      f"({out[lot_s]} then {price}) -- possible column "
+                      f"misalignment, keeping the later one")
+            # "0" is how a withdrawn/passed lot is sometimes printed in
+            # this table rather than being omitted outright (unlike a
+            # real sale, which is never literally zero) -- treating it
+            # as "no price" avoids recording a false sale at EUR 0.
+            if price:
+                out[lot_s] = price
+    return out
+
+
+def _pandolfini_catalog_lots(path, col_bounds=(0, 150, 320, 1000),
+                              marker_min_size=14):
+    """Parses Pandolfini's pre-sale, 3-column photo-catalog PDFs (lot
+    name/description/estimate -- no results) into {lot_no: [text lines]}.
+
+    Lot numbers are set in a ~22pt display font, far larger than any
+    other text on the page (~8.5pt); using that instead of a monotonic
+    digit-sequence heuristic (the first prototype, see
+    .opencode/plans/historical-data-backfill.md Phase 1 #1) avoids two
+    false-positive classes found by hand: a stray single-digit quantity
+    line (e.g. "6 bt" wrapping onto two lines puts a bare "6" on its own
+    line) being mistaken for a lot marker and silently truncating the
+    PRIOR lot's real content, and an asterisk-suffixed lot number
+    ("180*", used for a themed sub-section in at least one catalog) not
+    matching a plain-digit marker at all. Both fixes took 255/255 and
+    280/280 lots recovered (from 194/255 and 91-of-256-sold) on the two
+    catalogs this was built against.
+    """
+    lots = {}
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            words = page.extract_words()
+            size_by_pos = {
+                (round(c["x0"], 1), round(c["top"], 1)): c["size"]
+                for c in page.chars
+            }
+            cols = defaultdict(list)
+            for w in words:
+                for i in range(3):
+                    if col_bounds[i] <= w["x0"] < col_bounds[i + 1]:
+                        cols[i].append(w)
+                        break
+            for ws in cols.values():
+                ws.sort(key=lambda w: w["top"])
+                lines, cur_top, cur = [], None, []
+                for w in ws:
+                    if cur_top is None or abs(w["top"] - cur_top) < 3:
+                        cur.append(w)
+                        cur_top = cur_top if cur_top is not None else w["top"]
+                    else:
+                        lines.append(cur)
+                        cur, cur_top = [w], w["top"]
+                if cur:
+                    lines.append(cur)
+                block = None
+                for line in lines:
+                    texts = [w["text"] for w in sorted(line, key=lambda w: w["x0"])]
+                    size = size_by_pos.get(
+                        (round(line[0]["x0"], 1), round(line[0]["top"], 1)))
+                    is_marker = (len(texts) == 1
+                                 and re.match(r'^\d{1,3}\*?$', texts[0])
+                                 and size is not None and size >= marker_min_size)
+                    if is_marker:
+                        if block:
+                            _pandolfini_catalog_store(lots, block, path)
+                        block = {"lot_no": texts[0].rstrip("*"), "lines": []}
+                    elif block:
+                        block["lines"].append(" ".join(texts))
+                if block:
+                    _pandolfini_catalog_store(lots, block, path)
+    return lots
+
+
+def _pandolfini_catalog_store(lots, block, path):
+    """A lot number repeating within one catalog (e.g. a stray
+    large-font digit elsewhere in a column misdetected as a second
+    marker) would silently drop the first block's content with no
+    warning -- mirrors the analogous check already in
+    _pdf_lot_price_table. Not observed in either catalog this was
+    built against, but cheap insurance against a future one."""
+    lot_no = block["lot_no"]
+    if lot_no in lots and lots[lot_no] != block["lines"]:
+        print(f"WARN _pandolfini_catalog_lots: lot {lot_no} in {path} "
+              f"detected twice with different content -- keeping the "
+              f"later one, first was {lots[lot_no]!r}")
+    lots[lot_no] = block["lines"]
+
+
+def _pandolfini_catalog_fields(lines):
+    """Lot name is the first 1-2 text lines of a catalog block (producer
+    +/- vintage, or a "Selezione ..." collective title +/- category);
+    the rest (vintages/quantities/estimate/condition notes) is kept
+    verbatim as description rather than hand-splitting further -- same
+    "let the downstream normalizer read the free text" convention
+    load_pandolfini (the live JSON loader) already relies on."""
+    est_low = est_high = None
+    for l in lines:
+        m = re.search(r'Euro\s+([\d.,]+)(?:\s*/\s*([\d.,]+))?', l)
+        if m:
+            est_low = euro_int(m.group(1))
+            est_high = euro_int(m.group(2)) if m.group(2) else est_low
+            break
+    wine = " ".join(lines[:2]).strip() or None
+    description = " ".join(lines[2:]).strip() or None
+    return wine, description, est_low, est_high
+
+
+def load_pandolfini_legacy(b, limit):
+    """Three pre-API Pandolfini auctions, confirmed real and previously
+    unparsed by the 2026-11-24 archive-vs-loader audit (see
+    .opencode/plans/historical-data-backfill.md, Phase 1 #1). A fourth
+    candidate, 29-30.10.2018 ("Catalogo_vini_ottobre_bassa.pdf"), was
+    checked and excluded: all 188 pages are pre-sale estimates only
+    ("Euro X/Y"), no results of any kind were ever archived for it, so
+    there is nothing to recover.
+
+    Two different source shapes:
+    - 2015-12-11 and 2016-10-20 (Ottobre2016): the site's post-sale
+      "Results" page was never archived at all for these -- only a
+      flat post-sale price table (lot number + price, no wine names)
+      and the separate pre-sale photo catalog (wine names/descriptions/
+      estimates, no prices) survive. Joined by lot number via
+      _pdf_lot_price_table + _pandolfini_catalog_lots.
+    - 2016-04-15: the site's old static "Results_N.html"/"Result_N.html"
+      pages *do* carry name+price together already (no catalog join
+      needed) -- cross-checked against Resultat_2016.pdf's own 261-sold-
+      lot price table, which matches this source's 261 sold rows
+      exactly, confirming it is already the complete sold set.
+    """
+    n = 0
+
+    CATALOG_AUCTIONS = [
+        ("legacy-2015-12-11", "2015-12-11",
+         "2015/11.12.2015/sold-unsold-list-2015.pdf",
+         "2015/11.12.2015/Catalogo_vini_bassa.pdf"),
+        ("legacy-2016-10-20", "2016-10-20",
+         "2016/Oktober/Ottobre2016.pdf",
+         "2016/Oktober/PANDOLFINI_OTT_2016_-_VINI.pdf"),
+    ]
+    for aid, date_str, price_rel, catalog_rel in CATALOG_AUCTIONS:
+        price_path = os.path.join(ARCHIVE, "Pandolfini", price_rel)
+        catalog_path = os.path.join(ARCHIVE, "Pandolfini", catalog_rel)
+        if not (os.path.exists(price_path) and os.path.exists(catalog_path)):
+            continue
+        prices = _pdf_lot_price_table(price_path)
+        catalog = _pandolfini_catalog_lots(catalog_path)
+        a_id = b.add_auction("pandolfini", aid, f"Pandolfini {date_str}",
+                             parse_date(date_str), "EUR",
+                             "HAMMER_PLUS_BUYERS_PREMIUM")
+        b.set_source(catalog_path)
+        # Every lot's name/description/estimate comes from catalog_path
+        # (the default set above), but a SOLD lot's realised_price and
+        # sold=1 status come from the separate price_path table instead
+        # -- pointing every row at catalog_path regardless would make a
+        # wrong realised_price impossible to trace back to the file it
+        # actually came from.
+        price_source = os.path.relpath(price_path, ARCHIVE)
+        catalog_source = os.path.relpath(catalog_path, ARCHIVE)
+        for lot_no, lines in catalog.items():
+            wine, desc, est_low, est_high = _pandolfini_catalog_fields(lines)
+            price = prices.get(lot_no)
+            b.add_lot(a_id, {
+                "lot_no": lot_no,
+                "wine": wine,
+                "description": desc,
+                "estimate_low": est_low,
+                "estimate_high": est_high,
+                "realised_price": price,
+                "source_file": price_source if price is not None else catalog_source,
+                "price_basis": "HAMMER_PLUS_BUYERS_PREMIUM",
+                "currency": "EUR",
+                "sold": 1 if price is not None else 0,
+            })
+        n += 1
+        if limit and n >= limit:
+            return
+
+    files = sorted(glob.glob(os.path.join(
+        ARCHIVE, "Pandolfini", "2016", "15.04.2016", "Result_*.html")))
+    if files:
+        a_id = b.add_auction("pandolfini", "legacy-2016-04-15",
+                             "Pandolfini 2016-04-15", parse_date("2016-04-15"),
+                             "EUR", "HAMMER_PLUS_BUYERS_PREMIUM")
+        for f in files:
+            b.set_source(f)
+            # Declared charset is iso-8859-1 but the euro sign (and other
+            # 0x80-0x9F bytes) only decode correctly as cp1252 -- a common
+            # mislabel on old Windows-era static pages; utf-8/latin-1
+            # both silently mangle "Estimate"/"Price realized" into an
+            # unparseable "\x80"/"�", which earlier made euro_int()
+            # fail silently and return None for every single lot.
+            html = open(f, encoding="cp1252").read()
+            soup = BeautifulSoup(html, "html.parser")
+            for p in soup.select("p.lotItemTiles"):
+                num = p.select_one("span.numberLot")
+                title = p.select_one("span.title")
+                if not num or not title:
+                    continue
+                desc = p.select_one("span.desc")
+                est = p.select_one("span.estimate")
+                stato = p.select_one("span.statoLotto b")
+                desc_text = desc.get_text(" ", strip=True) if desc else None
+                est_low = est_high = None
+                if est:
+                    est_text = est.get_text(" ", strip=True)
+                    est_text = est_text.replace("Estimate", "").strip()
+                    parts = est_text.split("/")
+                    if len(parts) == 2:
+                        est_low = euro_int(parts[0])
+                        est_high = euro_int(parts[1])
+                    elif len(parts) == 1 and parts[0]:
+                        # A handful of lots show one value, not a range
+                        # (no "/") -- store it as both bounds rather than
+                        # silently dropping a real, parseable estimate.
+                        est_low = est_high = euro_int(parts[0])
+                sold = 0
+                realised = None
+                if stato and "venduto" in (stato.get("class") or []):
+                    stato_text = stato.get_text(" ", strip=True)
+                    stato_text = stato_text.replace("Price realized:", "").strip()
+                    realised = euro_int(stato_text)
+                    sold = 1
+                b.add_lot(a_id, {
+                    "lot_no": num.get_text(strip=True),
+                    "wine": title.get_text(strip=True),
+                    "description": desc_text,
+                    "estimate_low": est_low,
+                    "estimate_high": est_high,
+                    "realised_price": realised,
+                    "price_basis": "HAMMER_PLUS_BUYERS_PREMIUM",
+                    "currency": "EUR",
+                    "sold": sold,
+                })
+        n += 1
+        if limit and n >= limit:
+            return
+
+
 def load_koppe(b, limit):
     n = 0
-    for f in _json_files("Koppe"):
+    for f in _dedupe_auction_files(
+            _json_files("Koppe"),
+            lambda d: str(d.get("auction", {}).get("id"))):
         d = load_json(f)
         b.set_source(f)
         a = d.get("auction", {})
@@ -3112,8 +3427,19 @@ def load_sylvies_fetched(b, limit):
     ones) is what makes load_sylvies_txt skip a month this loader
     already covered with the live fetcher's correctly-parsed mixed
     lots, instead of double-loading it from the lower-fidelity capture.
+
+    Must run AFTER load_sylvies_html, for the same reason in reverse:
+    the 2026-11-24 archive audit found the live fetcher had re-fetched
+    all 6 of load_sylvies_html's "full-fidelity" 2012 months into its
+    own .json files too (sylvies_2012-02/03/04/08/10/11, ~12k lots),
+    which this loader then loaded a second time on top of html's --
+    load_sylvies_html's own docstring already calls those 6 months
+    authoritative, so this loader skips any month html already covered
+    instead of adding a second, redundant copy (see
+    .opencode/plans/historical-data-backfill.md, Phase 0).
     """
     n = 0
+    covered = _sylvies_html_covered_months(b.conn)
     for f in _json_files("sylvies"):
         d = load_json(f)
         a = d.get("auction") or {}
@@ -3125,6 +3451,8 @@ def load_sylvies_fetched(b, limit):
                   f"{a.get('name')!r} in {f}")
             continue
         year, month = key
+        if (year, month) in covered:
+            continue
         b.set_source(f)
         a_id = b.add_auction("sylvies", f"sylvies_{year}-{month:02d}",
                              f"sylvies {year}-{month:02d}",
@@ -4622,6 +4950,7 @@ HOUSES = [
     ("finarte", load_finarte),
     ("dorotheum", load_dorotheum),
     ("pandolfini", load_pandolfini),
+    ("pandolfini-legacy", load_pandolfini_legacy),
     ("koppe", load_koppe),
     ("dobiaschofsky", load_dobiaschofsky),
     ("munich-wine-company", load_munich_wine_company),
