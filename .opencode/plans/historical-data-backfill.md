@@ -209,27 +209,124 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
 
 </details>
 
-### 3. MunichWineCompany — ~11 Auktionen, 2016–2023
-- [ ] Rohdateien: 673 HTML (`live-wineauction-pN.html`, `Resultatfile*.html`), in Monatsordnern (April2023, Juni2016, Nov2016-2019, Sep2015/2016/2019-2021)
-- [ ] Kein wiederverwendbarer Konverter (`pythonParser.py` ist unfertiger Prototyp, nicht nutzbar) — Parser von Grund auf
-- [ ] Kein Überlapp mit bestehender DB (DB beginnt ~2024/2025) — reiner Zugewinn
-- [ ] Parser schreiben, Sanity-Check, committen
+### 3. MunichWineCompany — ✅ erledigt (8 von 8 wirklich erhaltenen Auktionen, 8.394 neue Lots)
+- [x] Vollständige Dateityp-Prüfung über ALLE 27 Monatsordner (nicht nur die
+  vom Erst-Audit vermuteten ~11): April2023 (64 Dateien), September2020
+  (57), September2021 (61) sind **zu 100% tote Fehlerseiten** (exakt
+  944 Bytes, identischer "veralteter Link"-Platzhaltertext) — keine
+  echten Daten, nichts zu holen. Die numerischen Jahresordner (2007-2024)
+  enthalten `.json` und sind bereits vom bestehenden Loader erfasst.
+  März2016/September2015/Oktober2018/Maerz2021 sind einzelne PDF/XLS-
+  Dateien (anderes Format) — nicht verfolgt, niedrigeres Volumen, bei
+  Bedarf separat.
+- [x] **8 wirklich echte historische Auktionen** gefunden und geladen.
+  **Senior-Review fand 3 weitere echte Bugs, alle gefixt:** (1) Region/
+  Mengenangabe waren an falscher Position gelesen (fixe `body[N]`-Indizes
+  statt Muster-Suche) und kamen bei praktisch jedem Lot als `None` zurück
+  — jetzt per Pattern-Suche robust gegen variable Zeilenzahl gefunden;
+  (2) 3 der 8 Daten (Juni2016, September2019, November2019) waren bereits
+  SPARSAMER im bestehenden JSON-Loader vorhanden (z.B. Juni2016: nur 160
+  von 1.176 Lots, unter numerischen IDs `154`/`156`) — hätte doppelt
+  gezählt; jetzt fragt der Loader vor dem Laden die schon vorhandenen
+  `lot_no`s für dasselbe Datum ab und überspringt sie, statt die
+  7x-vollständigere HTML-Fassung entweder zu duplizieren oder ganz zu
+  verwerfen; (3) Herkunfts-Datei zeigte für JEDEN Lot auf die zuletzt
+  verarbeitete Seite statt die tatsächliche — jetzt pro Lot korrekt
+  mitgeführt. **Finale Zahl nach allen Fixes: 7.974 neue Lots** (nicht
+  8.394 — die Differenz sind genau die beim bestehenden JSON-Loader schon
+  vorhandenen, korrekt nicht doppelt geladenen Lots).
+- [x] Format: Fliesstext-Listen-Seiten (kein Spalten-Layout wie bei
+  Pandolfini/Sothebys — viel einfacher), Lot-Block endet immer am Link
+  "» merken", Preis als "Zuschlag bei EUR X" (= hammer, nur bei verkauft)
+  bzw. nur "EUR X - Y" (Schätzung) bei unverkauft.
+- [x] **Zweite Senior-Review (Multi-Agent) fand 6 weitere echte Bugs, alle
+  gefixt:** Pagination-Ziffern ("11","12",...,"19") konnten fälschlich als
+  Losnummer erkannt werden (jetzt ausgeschlossen: echte Losnummer steht
+  nie direkt vor einer weiteren nackten Zahl); Region-Regex erkannte eine
+  nackte Jahreszahl in Klammern wie "(2015)" fälschlich als Region (jetzt
+  Ziffer-Only ausgeschlossen); Dedup gegen den bestehenden JSON-Loader
+  verglich lot_no ohne führende Nullen zu normalisieren; Titel-Suche brach
+  beim ERSTEN title-Tag ab statt bei einem mit erkennbarem Datum (hätte
+  den Datums-Dedup für genau die 3 überlappenden Monate lautlos
+  deaktiviert); doppelte Preis-Parsing-Funktion entfernt (euro_int
+  wiederverwendet statt eigene Kopie); Dedup zwischen den zwei
+  Namenskonventionen (live-wineauction-pN.html vs. ResultatfileN.html)
+  bevorzugt jetzt explizit die Kopie MIT Zuschlag statt blind die zuletzt
+  verarbeitete Datei zu nehmen. Alle Fixes erneut gegen das echte Archiv
+  verifiziert (gleiche 7.974 Lots, 0 Cross-Auktion-Duplikate, 0
+  Jahreszahl-als-Region-Fälle).
+- [x] **Fund: November2017 ist eine ECHTE, aber UNVOLLSTÄNDIGE Aufnahme**:
+  alle 68 archivierten Seiten enthalten identisch dieselben ersten ~20
+  Lots — ein Paginierungs-Bug im ursprünglichen Scrape-Lauf selbst (nicht
+  mein Parsing), der Rest dieser Auktion wurde nie wirklich erfasst.
+  Geladen mit den echten 20 Lots, nicht übersprungen, aber als bekannte
+  Lücke dokumentiert — nicht weiter rekonstruierbar ohne die Originalseite.
+- [x] Sanity-Check: rohe Lot-Nummern-Lücken pro Auktion geprüft — Juni2016
+  (0 Lücken, 1-1176 lückenlos), September2016/November2018 (2-3 Lücken,
+  plausibel = vom Haus zurückgezogene/nie vergebene Nummern wie bei
+  Koppe/Pandolfini), November2016/Oktober2018 (~160-260 verstreute
+  Einzel-Lücken, gleiche plausible Erklärung, KEIN systematisches Muster
+  wie bei November2017). 0 doppelte `lot_no` über alle 8 Auktionen.
+  `PRAGMA integrity_check` ok. Datum korrekt aus Titel-Text extrahiert
+  (Bug gefixt: einstellige Tage/Monate wie "4.06.2016" wurden zunächst
+  nicht erkannt).
+- [ ] Noch nicht in die echte Master-DB eingespielt — läuft im finalen
+  Rebuild am Ende von Phase 1.
 
-### 4. Koppe — mehrjährige Lücke (2015–2020) + 3 Auktionen 2026 (Wayback)
-- [ ] Teil A: Rohdateien 2015–2020 (`Resultatfile*.html`, `Auktionskatalog*.pdf`, `Ergebnis*.pdf`) im Archiv unter Jahresordnern — Umfang noch zu quantifizieren (Dateianzahl zählen, Stichprobe öffnen)
-- [ ] Teil B: Auktionen intern 518/519/520 (= ids 5/6/7, Jan–März 2026) — von der Live-Seite nach Retention-Fenster entfernt, nur via Wayback-Machine-CDX-API rekonstruierbar (altes URL-Schema `?site=auktion&section=cat&cat={id}&p={n}` / `?site=auktiondetail&...`, Snapshots vorhanden zurück bis 2019, speziell für `cat=518` 46 Snapshot-Zeilen bestätigt)
-- [ ] Beide Teile: Parser schreiben (Teil A: lokales HTML/PDF; Teil B: Wayback-Fetch + Parsing), Sanity-Check, committen
+### 4. Koppe — ⏸ Umfang viel grösser als geschätzt, noch nicht begonnen
+- [x] Teil A neu vermessen (2026-11-24): nicht nur "2015-2020" — die Katalog/
+  Ergebnis-PDF-Paare reichen durchgehend von **2015 bis 2024** (gezählt:
+  40+ Paare, u.a. `Ergebnis.pdf`/`katalog.pdf` pro Monatsordner 2015-2019,
+  dann durchnummeriert 414-454, 483-488 ab 2020). Format: Ergebnis-PDF ist
+  eine einfache "Lotnr./Preis"-Tabelle (wiederverwendbar mit
+  `_pdf_lot_price_table`, bereits gebaut für Pandolfini), ABER die
+  Katalog-PDF hat dasselbe schwierige 2-spaltige "Marker-mitten-im-Block"-
+  Layout wie Sothebys (Losnummer klein, vor der Mengenangabe, kein grosser
+  Font wie bei Pandolfini) — mit identischem Aufwandsrisiko.
+- [ ] Teil B (3 Auktionen 2026, Wayback): unverändert offen, Fund von
+  gestern — `cat=518/519/520`, altes URL-Schema, Snapshots bis 2019
+  zurück vorhanden, 46 Snapshot-Zeilen für `cat=518` bestätigt.
+- [ ] **Entscheidung: zurückgestellt zusammen mit Sothebys** (Punkt 2) —
+  gleiche Begründung: 2-spaltiges Marker-mitten-im-Block-Katalog-Layout,
+  jetzt für ~40 Auktionen statt einer Handvoll. Nicht jetzt in diese
+  Session gequetscht.
 
-### 5. Steinfels — ~54 Auktionen, #325–#378, ca. 2004–2015
-- [ ] Rohdateien: `Katalog_*.pdf`, `Lotliste_*.xls(x)`, `Resultate_*.pdf`
-- [ ] Bestätigt echt: `Katalog_384_252.pdf` (Lot 1–861+)
-- [ ] Technisches Hindernis: manche `Lotliste_*.xls` sind altes Binär-`.xls`, nicht `.xlsx` — openpyxl liest das nicht, braucht `xlrd` o.ä. oder Konvertierung
-- [ ] Parser schreiben, Sanity-Check, committen
+### 5. Steinfels — ⏸ Format uneinheitlich über die Jahre, noch nicht begonnen
+- [x] Lotliste/Ergebnis-Paare für ALLE Jahre gesichtet (2009-2022, nicht nur
+  "#325-378"): **sehr positiver Teilbefund** — ab 2014 liegt die Katalog-
+  Seite als **strukturierte Tabelle** vor (`Lotliste_*.xls(x)`: LotNr,
+  Produkt, Appellation, Jahrgang, Lot Menge, Schätzung — mit `xlrd` lesbar,
+  kein PDF-Spalten-Problem!) UND die Ergebnis-Seite ist eine **saubere,
+  nicht-interleaved Tabelle** (`Lot Nr. | Produkt | Menge | Jahrgang |
+  Zuschlag`, pdftotext -layout reicht, kein Sothebys-artiges Problem).
+  Für EINE Stichprobe (Auktion 384, Juni 2017) bestätigt: 2065 Lots,
+  klar lesbar, Preis direkt in der letzten Spalte.
+- [x] **Aber**: 2009-2013 haben NUR Ergebnis-PDFs, KEINE Lotliste — unklar
+  ob die Ergebnis-PDF dort überhaupt Weinnamen enthält oder nur Lot+Preis
+  (noch nicht geprüft). Dateinamen/Struktur uneinheitlich über die Jahre
+  (teils mehrere Resultate-PDFs pro Auktion = eine pro Seite, z.B. Juni
+  2016 mit 20 Einzeldateien; doppelte Dateien mit "(1)"-Suffix;
+  xls/xlsx-Mix).
+- [ ] **Entscheidung: zurückgestellt** — nicht wegen Format-Schwierigkeit
+  (das ist hier tatsächlich gut lösbar!), sondern wegen Session-Länge und
+  der Uneinheitlichkeit über ~13 Jahre, die sorgfältiges Jahr-für-Jahr-
+  Vorgehen braucht statt eines einzigen generischen Parsers. Nächster
+  logischer Startpunkt für eine Folge-Session: ab 2014 (xls+PDF-Tabelle,
+  am einfachsten), dann rückwärts zu 2009-2013 (nur-PDF, Umfang prüfen).
 
-### 6. Weinboerse — ~20 Auktionen, #78–#101, ca. 2010–2019
-- [ ] Rohdateien: gleiches Katalog/Resultate/Gebote-PDF/XLS-Muster wie Steinfels — noch nicht einzeln geöffnet/bestätigt, als erster Schritt hier nachholen
-- [ ] Da AUEX-Plattform wie Steinfels (user-bestätigt): ggf. Parser-Code von Steinfels (Punkt 5) wiederverwendbar
-- [ ] Parser schreiben, Sanity-Check, committen
+### 6. Weinboerse — ⏸ erster Blick positiv, noch nicht begonnen
+- [x] Erste Ergebnis-PDF geprüft (`89_Resultate.pdf`, 2014): **Name UND
+  Preis stehen in DERSELBEN Tabelle** (2-spaltig, "Lot | CHF | Anz. |
+  Jahr | Beschreibung", Produzent als Fliesstext-Zwischenüberschrift
+  oberhalb mehrerer Lots) — kein Zwei-Dokumente-Join nötig wie bei
+  Koppe/Sothebys, strukturell näher an Steinfels. Dateinamen aber sehr
+  uneinheitlich über die Jahre ("89_Resultate.pdf", "WB 89.pdf",
+  "wb-91.pdf", teils "Gebote"-xls = Gebote, nicht Resultate, später
+  kombinierte "Resultate©Katalog"-PDFs).
+- [ ] **Entscheidung: zurückgestellt** — Format sieht lösbar aus (gute
+  Nachricht für die Folge-Session), aber Dateinamen-Chaos über die Jahre
+  braucht ebenfalls sorgfältige Jahr-für-Jahr-Arbeit, nicht in dieser
+  ohnehin schon sehr langen Session begonnen.
 
 ### Abschluss Phase 1 (nach Punkt 6)
 - [ ] EIN finaler, vollständiger `build_db.py`-Lauf gegen die Samsung-Disk

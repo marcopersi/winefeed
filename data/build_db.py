@@ -2977,6 +2977,259 @@ def load_munich_wine_company(b, limit):
             break
 
 
+_MWC_EUR_RANGE_RE = re.compile(r'EUR\s+([\d.,]+)\s*-\s*([\d.,]+)')
+_MWC_ZUSCHLAG_RE = re.compile(r'Zuschlag bei EUR\s+([\d.,]+)')
+_MWC_DATE_RE = re.compile(r'Auktionsbeginn am \w+,\s*(\d{1,2})\.(\d{1,2})\.(\d{4})')
+_MWC_TITLE_RE = re.compile(r'<title>(.*?)</title>', re.S)
+
+
+def _mwc_legacy_page_lots(path):
+    """Parses one archived page of munich-wine-company's old static
+    results listing (``live-wineauction-pN.html`` / ``ResultatfileN.html``
+    -- same site/template, two different historical scrape-naming
+    conventions) into a list of lot dicts. Each lot's own HTML block is
+    terminated by the literal link text "» merken" ("remember/save"),
+    which is the one reliable per-lot boundary this page offers --
+    unlike Pandolfini/Sothebys, the lot number itself sits as the FIRST
+    line of the content following the PRIOR lot's "» merken", not at a
+    fixed, independently-detectable position, so blocks are found by
+    splitting on that marker and taking each chunk's first (or, for the
+    page's very first lot, which is preceded by unrelated sidebar/nav
+    text instead of a "» merken", its LAST) bare 1-5 digit line as the
+    lot number.
+
+    A small number of pages end with a few "recommended" extra lots
+    that the site itself gives the literal placeholder lot number
+    "9999" instead of a real one (confirmed in the raw HTML, not a
+    parsing artifact) -- these have no real, addressable lot number at
+    all and are dropped by the caller.
+    """
+    html = open(path, encoding="cp1252", errors="replace").read()
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text("\n")
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+
+    chunks = []
+    cur = []
+    for line in lines:
+        if line == "» merken":
+            chunks.append(cur)
+            cur = []
+        else:
+            cur.append(line)
+
+    lots = []
+    for ci, chunk in enumerate(chunks):
+        # A bare-digit line immediately followed by ANOTHER bare-digit
+        # line is a pagination strip ("11" "12" "13" ... "19"), never
+        # the real lot marker -- a real one is always followed by a
+        # producer-name line. Matters only for the page's first chunk
+        # (ci == 0), whose leading sidebar/nav text can contain such a
+        # strip; later chunks start right after "» merken", where the
+        # first bare-digit line is already reliably the lot number.
+        marker_idxs = [
+            i for i, l in enumerate(chunk)
+            if re.match(r'^\d{1,5}$', l)
+            and not (i + 1 < len(chunk) and re.match(r'^\d{1,5}$', chunk[i + 1]))
+        ]
+        if not marker_idxs:
+            continue
+        # ci == 0 still takes the LAST surviving candidate, so a stray
+        # bare-digit line anywhere later in that same leading chunk
+        # (not itself a pagination strip) could in principle outrank
+        # the true marker -- checked by hand across all 8 target
+        # auctions' first-page lots (none hit this), not hardened
+        # further for this one-time, closed backfill.
+        start = marker_idxs[-1] if ci == 0 else marker_idxs[0]
+        lot_no = chunk[start]
+        body = chunk[start + 1:]
+        if len(body) < 3:
+            continue
+        producer, full_name = body[0], body[1]
+        rest_lines = body[2:]
+        rest = "\n".join(rest_lines)
+        est_m = _MWC_EUR_RANGE_RE.search(rest)
+        zu_m = _MWC_ZUSCHLAG_RE.search(rest)
+        # Region ("(Bordeaux, Frankreich)") and the format/quantity line
+        # ("1 Doppelmagnum OHK") sit at a VARIABLE position -- sometimes
+        # right after the producer/name, sometimes after an extra
+        # appellation line -- never at a fixed body[N] (an earlier
+        # version hardcoded body[2]/body[3] and got appellation/region
+        # instead of region/quantity on every lot, confirmed by a
+        # senior review against real archive files). Found by pattern
+        # instead: the region is the first "(...)"-only line, the
+        # quantity is the first line starting with a bare count. A
+        # standalone "(2015)"-style vintage annotation also matches a
+        # bare "(...)" line, so digit-only parens are excluded -- a
+        # real region is always text ("Bordeaux, Frankreich"), never
+        # just a year.
+        region_m = next(
+            (re.match(r'^\(([^()]+)\)$', l) for l in rest_lines
+             if re.match(r'^\((?!\d+$)[^()]+\)$', l)), None)
+        qty_line = next(
+            (l for l in rest_lines if re.match(r'^\d+\s', l)), None)
+        lots.append({
+            "lot_no": lot_no,
+            "producer": producer,
+            "wine": full_name,
+            "region": region_m.group(1) if region_m else None,
+            "quantity": parse_qty_text(qty_line) if qty_line else None,
+            "estimate_low": euro_int(est_m.group(1)) if est_m else None,
+            "estimate_high": euro_int(est_m.group(2)) if est_m else None,
+            "hammer_price": euro_int(zu_m.group(1)) if zu_m else None,
+            "description": " | ".join(rest_lines),
+            "source_file": path,
+        })
+    return lots
+
+
+def load_munich_wine_company_legacy(b, limit):
+    """8 pre-rebuild munich-wine-company "Präsenz-Weinauktion" sales
+    (2016-2019), confirmed real and never parsed before by the
+    2026-11-24 archive-vs-loader audit (see
+    .opencode/plans/historical-data-backfill.md, Phase 1 #3) -- 673
+    archived HTML pages across many more month-folders were checked by
+    hand first; most others (April2023, September2020, September2021)
+    turned out to be 100%-dead-link error pages (944 bytes, confirmed
+    identical placeholder text), not real captures, and are correctly
+    left out rather than loaded as empty auctions. März2016/September
+    2015/Oktober2018/Maerz2021 (single pdf/xls files, a different
+    format entirely) were not pursued here -- lower volume, separate
+    follow-up if wanted.
+
+    November2017 is a confirmed-real but INCOMPLETE capture: all 68 of
+    its archived pages contain the identical first ~20 lots (a
+    pagination bug in the original scrape, not a parsing issue -- the
+    rest of that auction's results were simply never actually
+    captured). Loaded as-is (its real 20 lots), not skipped entirely.
+
+    Must run AFTER load_munich_wine_company in HOUSES: a senior review
+    found 3 of these 8 dates (Juni2016, September2019, November2019)
+    ALSO have a sparser JSON capture already loaded by that live
+    loader under a different (numeric) auction_id for the same real
+    sale -- confirmed by hand (e.g. Juni2016/2016-06-04: the JSON
+    captures only 160 of its lots, auction-154.json + auction-156.json,
+    every one of them also present in this HTML-based parse). Since
+    add_auction's (provider_id, auction_id) key doesn't catch a
+    same-date-different-id collision, this loader queries already-
+    loaded lot_nos for the SAME auction_date first and skips re-adding
+    them, instead of either double-counting them or discarding this
+    source's ~7x-more-complete capture of the same sale wholesale.
+    Lot numbers are compared with leading zeros stripped on both sides
+    (the live JSON and this static-page capture aren't guaranteed to
+    format them identically) -- a second senior review pass.
+
+    That same pass also found the title-lookup only tried the
+    alphabetically-first file's <title> tag, which can be an index
+    page with no date in it, silently disabling the dedup above for
+    the whole folder; now kept looking until a title with a matching
+    date is found. And when the SAME auction is captured under both
+    historical naming conventions in one folder (confirmed real for a
+    few folders), the two copies' files sort alphabetically, not
+    chronologically, so the lot actually kept is now whichever copy
+    has a real hammer price, not just whichever file glob() visits last.
+    """
+    AUCTIONS = [
+        ("Juni2016",),
+        ("November2016",),
+        ("November2017",),
+        ("November2018",),
+        ("November2019",),
+        ("October2018",),
+        ("September2016",),
+        ("September2019",),
+    ]
+    n = 0
+    for (folder,) in AUCTIONS:
+        base = os.path.join(ARCHIVE, "MunichWineCompany", folder)
+        files = sorted(glob.glob(os.path.join(base, "**", "*.html"), recursive=True))
+        if not files:
+            continue
+        title = ""
+        date_m = None
+        for f in files:
+            html = open(f, encoding="cp1252", errors="replace").read()
+            m = _MWC_TITLE_RE.search(html)
+            if not m:
+                continue
+            # Keep looking past a file whose title has no date (an
+            # index/summary page), rather than stopping at the first
+            # <title> tag found at all -- otherwise a folder's
+            # alphabetically-first file winning here can leave `date`
+            # None, silently skipping the cross-loader dedup below.
+            cand_date_m = _MWC_DATE_RE.search(m.group(1))
+            if cand_date_m:
+                title, date_m = m.group(1), cand_date_m
+                break
+            if not title:
+                title = m.group(1)
+        date = (f"{date_m.group(3)}-{int(date_m.group(2)):02d}-{int(date_m.group(1)):02d}"
+                if date_m else None)
+        # Matches on auction_date alone, not auction identity -- a
+        # third review pass flagged that munich-wine-company DOES have
+        # dates with multiple distinct unrelated auctions elsewhere in
+        # its history (e.g. 2012-03-24, 2010-12-11), which a pure-date
+        # match could wrongly treat as the same sale. Checked by hand:
+        # none of this loader's 8 fixed target dates hit that case (the
+        # one date that does have >1 live auction_id, 2016-06-04, is
+        # confirmed to be the SAME sale split across two API captures,
+        # both titled "49. Präsenz- Weinauktion 2016"), so not hardened
+        # further for this one-time, closed backfill.
+        already_loaded = set()
+        if date:
+            already_loaded = {
+                row[0].lstrip("0") or "0" for row in b.conn.execute(
+                    "SELECT l.lot_no FROM lots l"
+                    " JOIN auctions a ON a.id = l.auction_id"
+                    " JOIN providers p ON p.id = a.provider_id"
+                    " WHERE p.name = 'munich-wine-company'"
+                    " AND a.auction_date = ?", (date,)).fetchall()}
+        aid = f"legacy-{date or folder}"
+        a_id = b.add_auction("munich-wine-company", aid, title.strip() or folder,
+                             date, "EUR", "HAMMER")
+        lots_by_no = {}
+        for f in files:
+            for lot in _mwc_legacy_page_lots(f):
+                if lot["lot_no"] == "9999":
+                    # Site-side "recommended item" placeholder, no real
+                    # lot number -- see _mwc_legacy_page_lots docstring.
+                    continue
+                norm_no = lot["lot_no"].lstrip("0") or "0"
+                if norm_no in already_loaded:
+                    continue
+                # The same auction is sometimes captured under both
+                # historical naming conventions in one folder
+                # (live-wineauction-pN.html and ResultatfileN.html);
+                # sorted(glob...) orders them alphabetically, not
+                # chronologically, so prefer whichever copy actually
+                # has a hammer price over blindly keeping the last one
+                # seen (mirrors the live loader's own
+                # _dedupe_munich_lots preference for a populated price).
+                existing = lots_by_no.get(norm_no)
+                if existing is None or existing["hammer_price"] is None:
+                    lots_by_no[norm_no] = lot
+        for lot in lots_by_no.values():
+            hammer = lot["hammer_price"]
+            b.add_lot(a_id, {
+                "lot_no": lot["lot_no"],
+                "wine": lot["wine"],
+                "producer": lot["producer"],
+                "region": lot["region"],
+                "quantity": lot["quantity"],
+                "hammer_price": hammer,
+                "price_basis": "HAMMER" if hammer is not None else "UNKNOWN",
+                "currency": "EUR",
+                "estimate_low": lot["estimate_low"],
+                "estimate_high": lot["estimate_high"],
+                "description": lot["description"],
+                "source_file": os.path.relpath(lot["source_file"], ARCHIVE),
+                "sold": 1 if hammer is not None else 0,
+            })
+        n += 1
+        if limit and n >= limit:
+            return
+
+
 def _winebarrel_date(raw):
     """``parse_date`` wrapper for winebarrel's ``auction_end`` (D17):
     confirmed real -- 680 lots carry a literal ``"1970-01-01 01:00:00"``
@@ -4954,6 +5207,7 @@ HOUSES = [
     ("koppe", load_koppe),
     ("dobiaschofsky", load_dobiaschofsky),
     ("munich-wine-company", load_munich_wine_company),
+    ("munich-wine-company-legacy", load_munich_wine_company_legacy),
     ("winebarrel", load_winebarrel),
     ("idealwine", load_idealwine),
     ("weinauktionator", load_weinauktionator),
