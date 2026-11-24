@@ -3235,6 +3235,11 @@
       "fetched_at": "2026-11-05T12:28:46.272617+00:00",
       "url": "https://api.ackerwines.com/api/NapaLots/Browse?auctionId=1777"
     },
+    "1778": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:14:21.394196+00:00",
+      "url": "https://api.ackerwines.com/api/NapaLots/Browse?auctionId=1778"
+    },
     "1779": {
       "etag": "",
       "fetched_at": "2026-11-05T12:29:34.991194+00:00",
@@ -3249,6 +3254,26 @@
       "etag": "",
       "fetched_at": "2026-11-05T12:30:56.296148+00:00",
       "url": "https://api.ackerwines.com/api/NapaLots/Browse?auctionId=1781"
+    },
+    "1802": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:15:59.029945+00:00",
+      "url": "https://api.ackerwines.com/api/NapaLots/Browse?auctionId=1802"
+    },
+    "1803": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:19:21.453214+00:00",
+      "url": "https://api.ackerwines.com/api/NapaLots/Browse?auctionId=1803"
+    },
+    "1804": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:20:43.365078+00:00",
+      "url": "https://api.ackerwines.com/api/NapaLots/Browse?auctionId=1804"
+    },
+    "1805": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:22:17.430226+00:00",
+      "url": "https://api.ackerwines.com/api/NapaLots/Browse?auctionId=1805"
     },
     "20": {
       "etag": "",
@@ -3455,9 +3480,251 @@
       "fetched_at": "2026-11-05T07:54:08.963370+00:00",
       "url": "https://api.ackerwines.com/api/NapaLots/Browse?auctionId=74"
     },
-    "__last_run_at__": "2026-11-05T12:34:03.844489+00:00"
+    "__last_run_at__": "2026-11-24T10:23:45.894287+00:00"
   },
-  "aguttes": {},
+  "aguttes": {
+    "04afa71c-91fd-4f49-9503-20d84ffb8f58": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:33:41.679260+00:00",
+      "url": "https://www.aguttes.com/catalogue/04afa71c-91fd-4f49-9503-20d84ffb8f58"
+    },
+    "075b6559-2ffb-411d-9fbe-f38ac6fde338": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:33:07.122379+00:00",
+      "url": "https://www.aguttes.com/catalogue/075b6559-2ffb-411d-9fbe-f38ac6fde338"
+    },
+    "0ae05636-dd7f-46ac-9975-952ac99cdb39": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:37:27.383407+00:00",
+      "url": "https://www.aguttes.com/catalogue/0ae05636-dd7f-46ac-9975-952ac99cdb39"
+    },
+    "0e5d4d73-c91e-41b6-9ce2-c42098b01305": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:40:44.042787+00:00",
+      "url": "https://www.aguttes.com/catalogue/0e5d4d73-c91e-41b6-9ce2-c42098b01305"
+    },
+    "10cd9fc5-c331-4287-9f04-a0db853c6860": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:29:53.905501+00:00",
+      "url": "https://www.aguttes.com/catalogue/10cd9fc5-c331-4287-9f04-a0db853c6860"
+    },
+    "137ecf52-bdd4-43a6-8357-580522ab29c5": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:27:23.596055+00:00",
+      "url": "https://www.aguttes.com/catalogue/137ecf52-bdd4-43a6-8357-580522ab29c5"
+    },
+    "13b4e000-778e-4ba7-9311-ff05e829ba56": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:35:31.144943+00:00",
+      "url": "https://www.aguttes.com/catalogue/13b4e000-778e-4ba7-9311-ff05e829ba56"
+    },
+    "172e92df-b174-4536-9468-8d6be780fc9a": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:40:51.568253+00:00",
+      "url": "https://www.aguttes.com/catalogue/172e92df-b174-4536-9468-8d6be780fc9a"
+    },
+    "17f020f0-b210-48b5-a1a6-99340eab0a34": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:40:44.987667+00:00",
+      "url": "https://www.aguttes.com/catalogue/17f020f0-b210-48b5-a1a6-99340eab0a34"
+    },
+    "1a3eb43d-a43c-4a58-94d9-942fd6b91a80": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:34:40.732252+00:00",
+      "url": "https://www.aguttes.com/catalogue/1a3eb43d-a43c-4a58-94d9-942fd6b91a80"
+    },
+    "1d51366c-89ec-4b07-9c4f-b9664b691532": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:38:45.908072+00:00",
+      "url": "https://www.aguttes.com/catalogue/1d51366c-89ec-4b07-9c4f-b9664b691532"
+    },
+    "249833f4-7dd5-41ed-8073-138f5cd19244": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:39:20.842299+00:00",
+      "url": "https://www.aguttes.com/catalogue/249833f4-7dd5-41ed-8073-138f5cd19244"
+    },
+    "29af247a-49b4-48cf-87b0-27a169573e56": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:31:51.755601+00:00",
+      "url": "https://www.aguttes.com/catalogue/29af247a-49b4-48cf-87b0-27a169573e56"
+    },
+    "2fd55660-dd90-4630-a9f8-be510c28202b": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:35:06.863815+00:00",
+      "url": "https://www.aguttes.com/catalogue/2fd55660-dd90-4630-a9f8-be510c28202b"
+    },
+    "3fe0593c-5e5b-4b0a-83c0-222da96291d1": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:32:13.012291+00:00",
+      "url": "https://www.aguttes.com/catalogue/3fe0593c-5e5b-4b0a-83c0-222da96291d1"
+    },
+    "4436dc5d-c819-4ec0-a4e1-f8f3e3c2506b": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:36:28.037942+00:00",
+      "url": "https://www.aguttes.com/catalogue/4436dc5d-c819-4ec0-a4e1-f8f3e3c2506b"
+    },
+    "4ec82a62-5542-4146-aa40-fa0ddc5caf4c": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:36:10.685570+00:00",
+      "url": "https://www.aguttes.com/catalogue/4ec82a62-5542-4146-aa40-fa0ddc5caf4c"
+    },
+    "5020c79a-72c7-4bac-9298-17ae645f125e": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:35:53.163096+00:00",
+      "url": "https://www.aguttes.com/catalogue/5020c79a-72c7-4bac-9298-17ae645f125e"
+    },
+    "53988d7c-86a6-41e8-bd34-5424df7f2324": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:28:49.898563+00:00",
+      "url": "https://www.aguttes.com/catalogue/53988d7c-86a6-41e8-bd34-5424df7f2324"
+    },
+    "5b071a47-4d0b-422e-bec5-1a648baf2324": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:29:06.494843+00:00",
+      "url": "https://www.aguttes.com/catalogue/5b071a47-4d0b-422e-bec5-1a648baf2324"
+    },
+    "5b2c9499-1c5d-44b9-b237-40325aac3694": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:28:09.259894+00:00",
+      "url": "https://www.aguttes.com/catalogue/5b2c9499-1c5d-44b9-b237-40325aac3694"
+    },
+    "5cc7c4f6-8e8a-4193-9f1c-bd8149db5ce7": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:29:26.691018+00:00",
+      "url": "https://www.aguttes.com/catalogue/5cc7c4f6-8e8a-4193-9f1c-bd8149db5ce7"
+    },
+    "5d2e8896-a89f-4f0b-b2ae-4c4f743e6cd7": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:40:52.658724+00:00",
+      "url": "https://www.aguttes.com/catalogue/5d2e8896-a89f-4f0b-b2ae-4c4f743e6cd7"
+    },
+    "620bfb4c-eb7d-415f-96d3-ccb6d0ff987a": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:33:20.370708+00:00",
+      "url": "https://www.aguttes.com/catalogue/620bfb4c-eb7d-415f-96d3-ccb6d0ff987a"
+    },
+    "65624c7f-173f-443d-8e0b-d8aef02b3496": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:37:47.079804+00:00",
+      "url": "https://www.aguttes.com/catalogue/65624c7f-173f-443d-8e0b-d8aef02b3496"
+    },
+    "68db690e-cb61-4b0a-be10-2d60aa1e599d": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:31:35.157686+00:00",
+      "url": "https://www.aguttes.com/catalogue/68db690e-cb61-4b0a-be10-2d60aa1e599d"
+    },
+    "6f9af9f9-4734-4d59-a07c-b4296ec46a24": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:37:08.098034+00:00",
+      "url": "https://www.aguttes.com/catalogue/6f9af9f9-4734-4d59-a07c-b4296ec46a24"
+    },
+    "7d6b8df4-5417-4b11-a68b-68d2cbc76089": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:30:22.553082+00:00",
+      "url": "https://www.aguttes.com/catalogue/7d6b8df4-5417-4b11-a68b-68d2cbc76089"
+    },
+    "8b3d09db-c64a-4fa6-be9e-8af2351a45d6": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:37:47.836320+00:00",
+      "url": "https://www.aguttes.com/catalogue/8b3d09db-c64a-4fa6-be9e-8af2351a45d6"
+    },
+    "8f852946-9f1f-433f-9cd2-71ca057dd806": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:30:44.757250+00:00",
+      "url": "https://www.aguttes.com/catalogue/8f852946-9f1f-433f-9cd2-71ca057dd806"
+    },
+    "953fdece-b936-4795-aef0-0365ea5b9e88": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:34:20.191704+00:00",
+      "url": "https://www.aguttes.com/catalogue/953fdece-b936-4795-aef0-0365ea5b9e88"
+    },
+    "9f1beb4e-d636-4e59-b6ef-4af70db6f6ad": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:38:13.941576+00:00",
+      "url": "https://www.aguttes.com/catalogue/9f1beb4e-d636-4e59-b6ef-4af70db6f6ad"
+    },
+    "__last_run_at__": "2026-11-24T10:40:52.658736+00:00",
+    "a04bdf93-1bb9-471b-9b38-9089dbde446e": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:27:10.416481+00:00",
+      "url": "https://www.aguttes.com/catalogue/a04bdf93-1bb9-471b-9b38-9089dbde446e"
+    },
+    "aacf7257-30c4-4bb5-812b-c88a34413d2d": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:40:33.970865+00:00",
+      "url": "https://www.aguttes.com/catalogue/aacf7257-30c4-4bb5-812b-c88a34413d2d"
+    },
+    "aafe13ea-9476-4ca6-9171-cdc085f4b0bf": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:39:01.679300+00:00",
+      "url": "https://www.aguttes.com/catalogue/aafe13ea-9476-4ca6-9171-cdc085f4b0bf"
+    },
+    "b0a3671b-700f-4d99-b109-9fb9fbb7e1a8": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:31:08.149237+00:00",
+      "url": "https://www.aguttes.com/catalogue/b0a3671b-700f-4d99-b109-9fb9fbb7e1a8"
+    },
+    "b545bd82-8002-4ad0-b3b8-7b5a8a3c0327": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:36:48.384277+00:00",
+      "url": "https://www.aguttes.com/catalogue/b545bd82-8002-4ad0-b3b8-7b5a8a3c0327"
+    },
+    "b7aaa8f7-4ea1-4f4c-b138-0cc6b229faff": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:39:38.177744+00:00",
+      "url": "https://www.aguttes.com/catalogue/b7aaa8f7-4ea1-4f4c-b138-0cc6b229faff"
+    },
+    "c11e5161-c154-407d-9bf8-b890b796be65": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:27:46.376014+00:00",
+      "url": "https://www.aguttes.com/catalogue/c11e5161-c154-407d-9bf8-b890b796be65"
+    },
+    "c9e703a1-7108-4b6d-9c65-256ead371db7": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:34:01.824077+00:00",
+      "url": "https://www.aguttes.com/catalogue/c9e703a1-7108-4b6d-9c65-256ead371db7"
+    },
+    "d17324e1-876e-4cac-a995-78db0e212178": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:38:30.690195+00:00",
+      "url": "https://www.aguttes.com/catalogue/d17324e1-876e-4cac-a995-78db0e212178"
+    },
+    "d8655e02-d362-48c6-a29d-4cd732f3d296": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:32:42.173045+00:00",
+      "url": "https://www.aguttes.com/catalogue/d8655e02-d362-48c6-a29d-4cd732f3d296"
+    },
+    "e3d87b8d-db2e-4891-8999-5976b956f453": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:31:25.163442+00:00",
+      "url": "https://www.aguttes.com/catalogue/e3d87b8d-db2e-4891-8999-5976b956f453"
+    },
+    "ec05fe7a-b3b8-4810-b69e-328f4cc6b262": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:40:03.935117+00:00",
+      "url": "https://www.aguttes.com/catalogue/ec05fe7a-b3b8-4810-b69e-328f4cc6b262"
+    },
+    "f5f979e3-289c-4e5e-9232-412d8c4d0b88": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:26:43.657381+00:00",
+      "url": "https://www.aguttes.com/catalogue/f5f979e3-289c-4e5e-9232-412d8c4d0b88"
+    },
+    "f9325792-07af-49b0-a990-ccff2fe57154": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:28:28.890398+00:00",
+      "url": "https://www.aguttes.com/catalogue/f9325792-07af-49b0-a990-ccff2fe57154"
+    },
+    "fc8a6eb5-87ff-43e6-be74-3502674b9d1a": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:30:25.022832+00:00",
+      "url": "https://www.aguttes.com/catalogue/fc8a6eb5-87ff-43e6-be74-3502674b9d1a"
+    },
+    "fe26df16-2b23-452f-8a1f-879707a9c19d": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:40:31.809580+00:00",
+      "url": "https://www.aguttes.com/catalogue/fe26df16-2b23-452f-8a1f-879707a9c19d"
+    }
+  },
   "art-richelieu": {
     "102926": {
       "etag": "",
@@ -3524,9 +3791,181 @@
       "fetched_at": "2026-11-19T10:48:33.317913+00:00",
       "url": "https://www.art-richelieu.fr/catalogue/99118-vins-disques-livres-autographes-timbres-cartes-postales"
     },
-    "__last_run_at__": "2026-11-19T10:53:58.238148+00:00"
+    "__last_run_at__": "2026-11-24T10:25:04.117337+00:00"
   },
-  "astebolaffi": {},
+  "astebolaffi": {
+    "605": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:44:04.163424+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/605"
+    },
+    "606": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:46:21.988006+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/606"
+    },
+    "607": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:48:55.150590+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/607"
+    },
+    "608": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:50:34.897437+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/608"
+    },
+    "609": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:52:24.641637+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/609"
+    },
+    "610": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:53:56.240964+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/610"
+    },
+    "611": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:55:44.826531+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/611"
+    },
+    "612": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:56:17.970541+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/612"
+    },
+    "613": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:57:10.521982+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/613"
+    },
+    "614": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:57:31.675289+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/614"
+    },
+    "615": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:59:06.598328+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/615"
+    },
+    "616": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:59:30.948732+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/616"
+    },
+    "617": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:00:52.413619+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/617"
+    },
+    "618": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:01:52.728198+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/618"
+    },
+    "619": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:02:55.725436+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/619"
+    },
+    "620": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:03:54.277557+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/620"
+    },
+    "621": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:05:36.023546+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/621"
+    },
+    "622": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:06:14.956003+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/622"
+    },
+    "623": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:07:59.093840+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/623"
+    },
+    "624": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:08:33.439811+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/624"
+    },
+    "625": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:10:22.196518+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/625"
+    },
+    "626": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:10:59.149750+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/626"
+    },
+    "627": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:12:32.615744+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/627"
+    },
+    "628": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:15:24.125895+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/628"
+    },
+    "629": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:17:32.443466+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/629"
+    },
+    "630": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:17:48.554170+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/630"
+    },
+    "631": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:19:02.726258+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/631"
+    },
+    "632": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:19:25.705539+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/632"
+    },
+    "633": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:22:15.907235+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/633"
+    },
+    "634": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:24:44.588643+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/634"
+    },
+    "635": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:26:21.254065+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/635"
+    },
+    "636": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:26:37.702857+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/636"
+    },
+    "637": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:28:31.763785+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/637"
+    },
+    "638": {
+      "etag": "",
+      "fetched_at": "2026-11-24T11:28:46.176371+00:00",
+      "url": "https://www.astebolaffi.it/it/auction/638"
+    },
+    "__last_run_at__": "2026-11-24T11:28:46.176385+00:00"
+  },
   "baghera": {
     "100": {
       "etag": "",
@@ -3673,7 +4112,7 @@
       "fetched_at": "static-archive-preseed",
       "url": ""
     },
-    "__last_run_at__": "2026-11-02T13:32:51.893825+00:00"
+    "__last_run_at__": "2026-11-24T09:36:37.094019+00:00"
   },
   "besch-cannes": {
     "397": {
@@ -3736,7 +4175,17 @@
       "fetched_at": "2026-10-11T13:43:17.612729+00:00",
       "url": "https://www.cannesauction.com/auctions/418-vente-aux-encheres-speciale-de-l-agrasc-a-nice"
     },
-    "__last_run_at__": "2026-11-01T17:13:56.062380+00:00"
+    "424": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:30:23.386376+00:00",
+      "url": "https://www.cannesauction.com/auctions/424-vente-aux-encheres-speciale-de-l-agrasc"
+    },
+    "425": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:30:17.830462+00:00",
+      "url": "https://www.cannesauction.com/auctions/425-vente-aux-encheres-speciale-de-l-agrasc"
+    },
+    "__last_run_at__": "2026-11-24T09:30:23.386393+00:00"
   },
   "bestwineauctions": {
     "100175": {
@@ -7038,6 +7487,11 @@
       "etag": "",
       "fetched_at": "2026-11-03T01:35:34.293016+00:00",
       "url": "https://auction.bestwineauctions.com/en/lot-details/102017/Italy/Tuscany/rosso-di-montalcino-la-cerbaiola-2021-salvioni-6-bottles-oc-6"
+    },
+    "102018": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:50:44.792934+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/102018/Italy/Tuscany/rosso-di-montalcino-la-cerbaiola-2023-salvioni-3-bottles"
     },
     "102019": {
       "etag": "",
@@ -11638,6 +12092,11 @@
       "etag": "",
       "fetched_at": "2026-11-03T02:14:49.466615+00:00",
       "url": "https://auction.bestwineauctions.com/en/lot-details/110547/Germany/All regions/rudesheim-berg-schlossberg-riesling-2017-georg-breuer-6-bottles"
+    },
+    "110548": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:54:45.516774+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/110548/Germany/All regions/rudesheim-berg-schlossberg-riesling-2017-georg-breuer-6-bottles"
     },
     "110549": {
       "etag": "",
@@ -29699,6 +30158,46 @@
       "fetched_at": "2026-11-02T23:33:54.128894+00:00",
       "url": "https://auction.bestwineauctions.com/en/lot-details/65565/France/Bordeaux Sweet/yquem-2016-mc-1-half-bottle"
     },
+    "65566": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:00:37.132495+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/65566/Germany/All regions/albalonga-trockenbeerenauslese-2003-wittmann-1-x-0375ltr"
+    },
+    "65567": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:00:33.543683+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/65567/Germany/All regions/dalsheimer-hubacker-riesling-auslese-weisse-kapsel-2002-keller-2-bottles"
+    },
+    "65568": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:00:29.830847+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/65568/Germany/All regions/graacher-himmelreich-riesling-tba-2005-joh-jos-prum-1-half-bottle"
+    },
+    "65569": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:00:25.951880+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/65569/Germany/All regions/huxelrebe-trockenbeerenauslese-1997-wittmann-1-x-0375ltr"
+    },
+    "65570": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:00:22.132239+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/65570/Germany/All regions/riesling-eiswein-2000-kracher-1-x-0375ltr"
+    },
+    "65571": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:00:18.258960+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/65571/Germany/All regions/rudesheim-berg-schlossberg-riesling-1993-georg-breuer-1-x-3000ltr"
+    },
+    "65572": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:00:14.435096+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/65572/Germany/All regions/scharzhofberger-riesling-spatlese-2015-egon-muller-1-magnum"
+    },
+    "65573": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:00:11.666369+00:00",
+      "url": "https://auction.bestwineauctions.com/en/lot-details/65573/Germany/All regions/welschriesling-trockenbeerenauslese-n8-2005-alois-kracher-1-x-0375ltr"
+    },
     "65574": {
       "etag": "",
       "fetched_at": "2026-11-03T02:59:05.058063+00:00",
@@ -46949,7 +47448,7 @@
       "fetched_at": "2026-11-03T02:32:31.681648+00:00",
       "url": "https://auction.bestwineauctions.com/en/lot-details/99061/Portugal/Portugese Wines/churchills-vintage-port-2000-churchills-2-bottles"
     },
-    "__last_run_at__": "2026-11-03T03:10:22.968272+00:00"
+    "__last_run_at__": "2026-11-24T10:02:44.450635+00:00"
   },
   "christies": {
     "20043": {
@@ -48382,7 +48881,7 @@
       "fetched_at": "2026-10-12T13:46:06.085085+00:00",
       "url": "https://www.christies.com/en/auction/auction-31122"
     },
-    "__last_run_at__": "2026-10-12T13:46:06.085101+00:00"
+    "__last_run_at__": "2026-11-24T10:23:46.592488+00:00"
   },
   "crait-muller": {
     "101468": {
@@ -48450,12 +48949,17 @@
       "fetched_at": "2026-11-19T08:23:03.304335+00:00",
       "url": "https://www.crait-muller.com/catalogue/183692-mannettes-tableaux-vins-jouets-argenterie-bijoux-asie"
     },
+    "185074": {
+      "etag": "",
+      "fetched_at": "2026-11-24T10:24:27.938396+00:00",
+      "url": "https://www.crait-muller.com/catalogue/185074-vins-bijoux-et-mode"
+    },
     "86888": {
       "etag": "",
       "fetched_at": "2026-11-19T08:19:28.242001+00:00",
       "url": "https://www.crait-muller.com/catalogue/86888-timbres-jules-verne-dessins-tableaux-mobilier-and-objets"
     },
-    "__last_run_at__": "2026-11-19T10:53:10.132602+00:00"
+    "__last_run_at__": "2026-11-24T10:24:27.938411+00:00"
   },
   "denzauktionen": {
     "156": {
@@ -48988,10 +49492,10 @@
       "fetched_at": "static-archive-preseed",
       "url": ""
     },
-    "__last_run_at__": "2026-11-02T07:52:14.110329+00:00"
+    "__last_run_at__": "2026-11-24T09:34:03.250186+00:00"
   },
   "dobiaschofsky": {
-    "__last_run_at__": "2026-11-01T17:13:56.064395+00:00",
+    "__last_run_at__": "2026-11-24T09:30:23.500216+00:00",
     "wein": {
       "etag": "",
       "fetched_at": "2026-10-11T13:44:00.478129+00:00",
@@ -49099,13 +49603,23 @@
       "fetched_at": "2026-11-01T17:13:18.742576+00:00",
       "url": "https://www.dorotheum.com/de/a/127549/"
     },
-    "__last_run_at__": "2026-11-01T17:13:32.297141+00:00"
+    "__last_run_at__": "2026-11-24T09:29:55.501859+00:00"
   },
   "finarte": {
+    "01": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:30:14.561928+00:00",
+      "url": "https://www.finarte.it/auction/modern-contemporary-art-milan-2026-12-01"
+    },
     "02": {
       "etag": "",
       "fetched_at": "2026-10-11T13:42:40.648691+00:00",
       "url": "https://www.finarte.it/auction/the-wine-odyssey-finest-wines-spirits-online-2025-04-02"
+    },
+    "03": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:30:16.149147+00:00",
+      "url": "https://www.finarte.it/auction/prints-multiples-milan-2026-12-03"
     },
     "04": {
       "etag": "",
@@ -49192,6 +49706,11 @@
       "fetched_at": "2026-10-11T13:42:08.439086+00:00",
       "url": "https://www.finarte.it/auction/easy-design-milan-2026-10-23"
     },
+    "25": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:30:13.064140+00:00",
+      "url": "https://www.finarte.it/auction/antique-and-collectible-silver-milan-2026-11-25"
+    },
     "26": {
       "etag": "",
       "fetched_at": "2026-10-11T13:42:46.421784+00:00",
@@ -49212,7 +49731,7 @@
       "fetched_at": "2026-10-11T13:42:44.312048+00:00",
       "url": "https://www.finarte.it/auction/wines-old-but-gold-milan-2025-01-30"
     },
-    "__last_run_at__": "2026-11-01T17:13:55.032611+00:00"
+    "__last_run_at__": "2026-11-24T09:30:16.149164+00:00"
   },
   "franzwermuth": {
     "1": {
@@ -49280,7 +49799,7 @@
       "fetched_at": "2026-11-02T08:51:34.689639+00:00",
       "url": "https://www.franzwermuth.ch/Auktionen/Coll8_3.11.2018_Ergebnis.pdf"
     },
-    "__last_run_at__": "2026-11-02T08:53:35.385837+00:00"
+    "__last_run_at__": "2026-11-24T09:34:08.787583+00:00"
   },
   "hdh": {
     "1109": {
@@ -49763,7 +50282,12 @@
       "fetched_at": "2026-10-11T13:17:23.599123+00:00",
       "url": "https://hdhauctions.com/wp-content/uploads/2026/09/2609_AuctionResults.pdf"
     },
-    "__last_run_at__": "2026-11-01T17:09:20.847086+00:00"
+    "2611": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:20:19.174009+00:00",
+      "url": "https://hdhauctions.com/wp-content/uploads/2026/11/2611_AuctionResults.pdf"
+    },
+    "__last_run_at__": "2026-11-24T09:22:29.122984+00:00"
   },
   "idealwine": {
     "checked_at": "2026-11-02T15:27:40Z",
@@ -49790,7 +50314,17 @@
       "fetched_at": "2026-10-13T19:18:35.520529+00:00",
       "url": "https://www.weinauktion.de/de/auktionen/13"
     },
-    "__last_run_at__": "2026-11-01T17:09:22.526179+00:00"
+    "14": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:26:35.647924+00:00",
+      "url": "https://www.weinauktion.de/de/auktionen/14"
+    },
+    "15": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:24:23.388043+00:00",
+      "url": "https://www.weinauktion.de/de/auktionen/15"
+    },
+    "__last_run_at__": "2026-11-24T09:26:35.647944+00:00"
   },
   "langtons": {
     "8212": {
@@ -49903,6 +50437,61 @@
       "fetched_at": "2026-11-01T17:10:06.878301+00:00",
       "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8247&name=F27UR018&clearSearch=true&isAjax=true"
     },
+    "8262": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:29:42.347795+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8262&name=F27LS020&clearSearch=true&isAjax=true"
+    },
+    "8263": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:29:26.489560+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8263&name=F27MP020&clearSearch=true&isAjax=true"
+    },
+    "8264": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:29:22.771669+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8264&name=F27BY020&clearSearch=true&isAjax=true"
+    },
+    "8265": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:29:05.235385+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8265&name=F27CB020&clearSearch=true&isAjax=true"
+    },
+    "8266": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:28:32.079350+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8266&name=F27FR021&clearSearch=true&isAjax=true"
+    },
+    "8267": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:28:21.917368+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8267&name=F27EA021&clearSearch=true&isAjax=true"
+    },
+    "8268": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:27:42.243825+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8268&name=F27IT021&clearSearch=true&isAjax=true"
+    },
+    "8269": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:27:10.318588+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8269&name=F27BX021&clearSearch=true&isAjax=true"
+    },
+    "8270": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:27:03.408674+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8270&name=F27SV021&clearSearch=true&isAjax=true"
+    },
+    "8271": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:27:02.641468+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8271&name=F27LC021&clearSearch=true&isAjax=true"
+    },
+    "8272": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:26:47.815327+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8272&name=F27BG021&clearSearch=true&isAjax=true"
+    },
     "8281": {
       "etag": "",
       "fetched_at": "2026-10-11T13:40:53.794571+00:00",
@@ -49933,7 +50522,12 @@
       "fetched_at": "2026-11-01T17:09:57.779276+00:00",
       "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8339&name=F27BP018&clearSearch=true&isAjax=true"
     },
-    "__last_run_at__": "2026-11-01T17:13:04.087920+00:00"
+    "8359": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:28:37.886908+00:00",
+      "url": "https://www.langtons.com.au/on/demandware.store/Sites-langtons-Site/en_AU/Auction-ShowDetails?id=8359&name=F27SV020&clearSearch=true&isAjax=true"
+    },
+    "__last_run_at__": "2026-11-24T09:29:42.347812+00:00"
   },
   "maisons-laffitte": {
     "100114": {
@@ -51086,7 +51680,7 @@
       "fetched_at": "2026-11-19T09:24:59.362151+00:00",
       "url": "https://www.yvelines-encheres.com/catalogue/99258-vente-online-vins-et-spiritueux-livres-estampes-et-tableaux"
     },
-    "__last_run_at__": "2026-11-19T10:53:52.743817+00:00"
+    "__last_run_at__": "2026-11-24T10:24:52.534410+00:00"
   },
   "munich-wine-company": {
     "340": {
@@ -51094,7 +51688,12 @@
       "fetched_at": "2026-11-02T09:06:04.653096+00:00",
       "url": "https://cms.munichwinecompany.eu/api/auctions/340/wines?all=1"
     },
-    "__last_run_at__": "2026-11-02T09:06:04.833294+00:00"
+    "341": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:34:05.535656+00:00",
+      "url": "https://cms.munichwinecompany.eu/api/auctions/341/wines?all=1"
+    },
+    "__last_run_at__": "2026-11-24T09:34:05.798443+00:00"
   },
   "pandolfini": {
     "1376": {
@@ -51127,7 +51726,12 @@
       "fetched_at": "2026-11-01T17:13:45.574393+00:00",
       "url": "https://www.pandolfini.it/uk/auction-1464/coup-de-thtre--fine-and-rare-wine.asp?action=reset"
     },
-    "__last_run_at__": "2026-11-01T17:13:47.621408+00:00"
+    "1480": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:30:09.037908+00:00",
+      "url": "https://www.pandolfini.it/uk/auction-1480/smartwine-2-0--autumn-gifts.asp?action=reset"
+    },
+    "__last_run_at__": "2026-11-24T09:30:09.037923+00:00"
   },
   "steinfels": {
     "768": {
@@ -51145,7 +51749,17 @@
       "fetched_at": "2026-11-01T17:07:05.026620+00:00",
       "url": "https://auktionen.steinfelsweine.ch/api/lots?cat_id=805"
     },
-    "__last_run_at__": "2026-11-01T17:07:05.026638+00:00"
+    "840": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:20:02.804717+00:00",
+      "url": "https://auktionen.steinfelsweine.ch/api/lots?cat_id=840"
+    },
+    "873": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:20:03.841307+00:00",
+      "url": "https://auktionen.steinfelsweine.ch/api/lots?cat_id=873"
+    },
+    "__last_run_at__": "2026-11-24T09:20:03.841329+00:00"
   },
   "sylvies": {
     "141": {
@@ -52071,7 +52685,7 @@
       "fetched_at": "2026-11-19T08:33:58.005088+00:00",
       "url": "https://www.vasari-auction.com/catalogue/97016-un-diner-de-saint-valentin-by-vasari-auction-vins-champagne"
     },
-    "__last_run_at__": "2026-11-19T10:53:13.430526+00:00"
+    "__last_run_at__": "2026-11-24T10:24:35.268449+00:00"
   },
   "weinauktionator": {
     "34": {
@@ -52104,7 +52718,7 @@
       "fetched_at": "2026-10-11T13:17:11.083829+00:00",
       "url": "https://www.weinauktionator.de/de/info/results/xlsx/39/weinauktionator_results_39.xlsx"
     },
-    "__last_run_at__": "2026-11-01T17:07:13.461940+00:00"
+    "__last_run_at__": "2026-11-24T09:20:05.147374+00:00"
   },
   "weinboerse": {
     "303": {
@@ -52112,7 +52726,7 @@
       "fetched_at": "2026-11-01T17:07:12.749457+00:00",
       "url": "https://auktion.weinauktion.ch/api/lots?cat_id=303"
     },
-    "__last_run_at__": "2026-11-01T17:07:12.749472+00:00"
+    "__last_run_at__": "2026-11-24T09:20:04.543205+00:00"
   },
   "whiskyauction": {
     "102": {
@@ -52245,7 +52859,7 @@
       "fetched_at": "2026-11-18T18:17:22.000140+00:00",
       "url": "https://whisky.auction/auctions/auction/98"
     },
-    "__last_run_at__": "2026-11-18T18:17:25.461926+00:00"
+    "__last_run_at__": "2026-11-24T10:23:47.235819+00:00"
   },
   "winebarrel": {
     "1": {
@@ -81583,6 +82197,11 @@
       "fetched_at": "static-dump-preseed",
       "url": ""
     },
+    "6289": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:59.193231+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/6289"
+    },
     "629": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
@@ -82777,6 +83396,11 @@
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
+    },
+    "6504": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:59.343116+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/6504"
     },
     "6505": {
       "etag": "",
@@ -85288,6 +85912,11 @@
       "fetched_at": "static-dump-preseed",
       "url": ""
     },
+    "6958": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:59.491667+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/6958"
+    },
     "6959": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
@@ -85358,6 +85987,11 @@
       "fetched_at": "static-dump-preseed",
       "url": ""
     },
+    "6971": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:59.640227+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/6971"
+    },
     "6972": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
@@ -85407,6 +86041,11 @@
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
+    },
+    "6981": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:59.789483+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/6981"
     },
     "6982": {
       "etag": "",
@@ -85467,6 +86106,11 @@
       "etag": "",
       "fetched_at": "2026-11-01T18:38:24.459073+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/6992"
+    },
+    "6993": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:59.938216+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/6993"
     },
     "6994": {
       "etag": "",
@@ -85582,6 +86226,11 @@
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
+    },
+    "7013": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:34:00.087560+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7013"
     },
     "7014": {
       "etag": "",
@@ -86718,6 +87367,11 @@
       "fetched_at": "2026-11-01T18:38:18.838167+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7222"
     },
+    "7223": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:34:00.234896+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7223"
+    },
     "7224": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
@@ -86763,6 +87417,11 @@
       "fetched_at": "static-dump-preseed",
       "url": ""
     },
+    "7232": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:34:00.383671+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7232"
+    },
     "7233": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
@@ -86777,6 +87436,11 @@
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
+    },
+    "7236": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:34:00.529894+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7236"
     },
     "7237": {
       "etag": "",
@@ -86857,6 +87521,11 @@
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
+    },
+    "7251": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:34:00.676101+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7251"
     },
     "7252": {
       "etag": "",
@@ -86987,6 +87656,16 @@
       "etag": "",
       "fetched_at": "2026-11-01T18:38:16.173918+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7280"
+    },
+    "7281": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:58.008190+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7281"
+    },
+    "7283": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:58.156148+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7283"
     },
     "7284": {
       "etag": "",
@@ -88373,6 +89052,11 @@
       "fetched_at": "2026-11-01T18:38:20.777676+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7536"
     },
+    "7537": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:56.565670+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7537"
+    },
     "754": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
@@ -88387,6 +89071,11 @@
       "etag": "",
       "fetched_at": "2026-11-01T18:38:30.814828+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7545"
+    },
+    "7546": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:58.305613+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7546"
     },
     "7547": {
       "etag": "",
@@ -88422,6 +89111,11 @@
       "etag": "",
       "fetched_at": "2026-11-01T18:38:19.396519+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7553"
+    },
+    "7554": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:54.625806+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7554"
     },
     "7556": {
       "etag": "",
@@ -88588,6 +89282,16 @@
       "fetched_at": "2026-11-01T18:38:19.814866+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7595"
     },
+    "7597": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:56.713534+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7597"
+    },
+    "7598": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:56.862474+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7598"
+    },
     "76": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
@@ -88607,6 +89311,11 @@
       "etag": "",
       "fetched_at": "2026-11-01T18:38:32.536273+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7607"
+    },
+    "7608": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:54.328141+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7608"
     },
     "761": {
       "etag": "",
@@ -88638,6 +89347,16 @@
       "fetched_at": "2026-11-01T18:38:32.897148+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7623"
     },
+    "7624": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:55.815572+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7624"
+    },
+    "7625": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:54.774583+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7625"
+    },
     "7627": {
       "etag": "",
       "fetched_at": "2026-11-01T18:38:33.021118+00:00",
@@ -88653,10 +89372,20 @@
       "fetched_at": "2026-11-01T18:38:16.617021+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7630"
     },
+    "7633": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:54.177507+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7633"
+    },
     "7634": {
       "etag": "",
       "fetched_at": "2026-11-01T18:38:16.803372+00:00",
       "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7634"
+    },
+    "7637": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:54.476454+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7637"
     },
     "7638": {
       "etag": "",
@@ -88668,25 +89397,140 @@
       "fetched_at": "static-dump-preseed",
       "url": ""
     },
+    "7640": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:58.452948+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7640"
+    },
+    "7642": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:57.009878+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7642"
+    },
+    "7643": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:54.923236+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7643"
+    },
+    "7644": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:57.157618+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7644"
+    },
+    "7646": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:58.602240+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7646"
+    },
     "765": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
+    },
+    "7651": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:57.306203+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7651"
+    },
+    "7654": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:55.964198+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7654"
+    },
+    "7655": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:55.071395+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7655"
+    },
+    "7656": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:53.881430+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7656"
+    },
+    "7657": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:55.220132+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7657"
+    },
+    "7658": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:56.114302+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7658"
+    },
+    "7659": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:55.371538+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7659"
     },
     "766": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
     },
+    "7660": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:58.749668+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7660"
+    },
+    "7662": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:57.710340+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7662"
+    },
+    "7665": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:57.858401+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7665"
+    },
+    "7667": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:53.733924+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7667"
+    },
+    "7668": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:58.896772+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7668"
+    },
+    "7669": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:55.519956+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7669"
+    },
     "767": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
     },
+    "7677": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:55.668358+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7677"
+    },
+    "7678": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:59.045019+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7678"
+    },
     "768": {
       "etag": "",
       "fetched_at": "static-dump-preseed",
       "url": ""
+    },
+    "7680": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:56.263557+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7680"
+    },
+    "7682": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:54.030041+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7682"
+    },
+    "7687": {
+      "etag": "",
+      "fetched_at": "2026-11-24T09:33:56.416604+00:00",
+      "url": "https://www.winebarrel.ch/de/weinauktionen/auktionsarchiv/auction/7687"
     },
     "769": {
       "etag": "",
@@ -89968,7 +90812,7 @@
       "fetched_at": "static-dump-preseed",
       "url": ""
     },
-    "__last_run_at__": "2026-11-01T18:38:36.504011+00:00"
+    "__last_run_at__": "2026-11-24T09:34:00.676118+00:00"
   },
   "winefields": {
     "1-79YM6Y": {
@@ -90001,6 +90845,6 @@
       "fetched_at": "2026-10-11T13:41:25.606062+00:00",
       "url": "https://auctions.winefields.com/auctions/1-AO56VE/wf77-fine-rare-wines-part-i"
     },
-    "__last_run_at__": "2026-11-01T17:13:16.224017+00:00"
+    "__last_run_at__": "2026-11-24T09:29:55.341919+00:00"
   }
 }
