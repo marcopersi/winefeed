@@ -145,7 +145,43 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   übergreifende Datenqualitätsfrage (nicht Teil von "fehlende Auktionen
   nachladen"), separat vormerken, nicht hier blockieren.
 
-### 2. Sothebys — ~10 Auktionen, 2011–2015 — **grösser/härter als erster Audit dachte**
+### 2. Sothebys — ⏸ zurückgestellt nach Versuch (deutlich aufwändiger als erwartet, siehe unten)
+- [x] Nutzer-Entscheidung im Chat bestätigt: genereller spalten-bewusster
+  Parser sollte gebaut werden (gilt für Sothebys UND Pandolfini-Ottobre2016
+  — Letzteres ist bereits fertig, siehe Punkt 1).
+- [x] Katalog-Layout analysiert: 2-spaltig (nicht 3 wie Pandolfini), Los-
+  Nummer sitzt MITTEN im Block (nach Weinname/Beschreibung, vor den 3
+  "per lot: <WÄHRUNG><Spanne>"-Zeilen GBP/USD/EUR) statt am Blockanfang —
+  brauchte eine eigene Segmentierungslogik (Pandolfinis "Marker startet
+  Block" passt hier nicht).
+- [x] Font-Unterscheidung gefunden (Los-Nummer in "...-Book", Fliesstext in
+  "...-Light", gleiche Grösse 9.5pt — anders als Pandolfini, wo die Grösse
+  selbst der Marker war).
+- [ ] **Abgebrochen nach drei Iterationen, weil die Spaltenposition NICHT
+  konstant ist**: Recto/Verso-Seiten (Druck-Bindung) verschieben die
+  Spalten-x-Positionen zwischen z.B. x0≈35/301 und x0≈48/314 abwechselnd,
+  UND die Font-Namen-Zuordnung über Zeichen-Position war zusätzlich
+  fehleranfällig (Rundungs-Mismatch) — mit `extract_words(extra_attrs=...)`
+  statt manueller Zeichen-Positions-Lookup-Tabelle gefixt, aber selbst
+  danach nur **151 von 403 Lots** auf der ersten geprüften Auktion
+  (L11710, 05.10.2011) zuverlässig erkannt — zu unvollständig für einen
+  stillen Import, und mit noch unbekannter Ursache für die verbleibende
+  Lücke.
+- [ ] **Entscheidung: zurückgestellt, NICHT weiter Zeit investiert jetzt** —
+  Begründung: 10 Auktionen mit mindestens 2 Katalog-Vorlagen (L-London,
+  weitere HK/N-Varianten ungeprüft) bei bereits 3 gefundenen Encoding-/
+  Positions-Problemen auf nur EINER Auktion ist ein deutlich größeres,
+  unsicheres Aufwands-Fass als Pandolfini war. Steinfels/Weinboerse (vom
+  Nutzer am Anfang der Session explizit als wichtig genannt, AUEX-Plattform)
+  und MunichWineCompany/Koppe-Rest haben Priorität — Sothebys wird NACH
+  diesen fortgesetzt, nicht verworfen. Alle Zwischenergebnisse/Skripte
+  liegen im Scratchpad (`sothebys_catalog3.py`), nicht committed (noch
+  nicht zuverlässig genug für Produktionscode).
+
+<details>
+<summary>Ursprünglicher Befund vor dem Parser-Versuch (unverändert als Kontext)</summary>
+
+~10 Auktionen, 2011–2015 — **grösser/härter als erster Audit dachte**
 - [ ] Rohdateien klassifiziert (2026-11-24, voller Scan aller 32 PDFs via
   pdftotext + Grep): zwei Dateitypen pro Auktion (plus ein paar
   Nicht-Treffer wie der 2015 Annual Report und eine Navigationsseite,
@@ -169,13 +205,9 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   - Nicht relevant (geprüft, verworfen): `Sotheby's Wine 2015 Annual Report.pdf`,
     `Sotheby's | Auctions...pdf` (Navigationsseite), `04042015.pdf`/`14112015.pdf`
     (noch unklar, niedrige Priorität, kein Results-Pendant gefunden)
-- [ ] **Entscheidung nötig, siehe Chat:** lohnt sich ein genereller,
-  spalten-bewusster PDF-Katalog-Parser (pdfplumber-Wortkoordinaten, wie im
-  Pandolfini-Prototyp begonnen) jetzt zu bauen — er würde SOWOHL
-  Sothebys (alle ~10 Auktionen) ALS AUCH das zurückgestellte
-  Pandolfini-Ottobre2016 lösen? Oder Sothebys vorerst zurückstellen,
-  weil der Aufwand grösser ist als ursprünglich eingeschätzt?
-- [ ] Parser schreiben, Sanity-Check, committen (sobald Entscheidung steht)
+- [ ] Parser-Versuch: siehe oben, abgebrochen bei 151/403 Lots, zurückgestellt.
+
+</details>
 
 ### 3. MunichWineCompany — ~11 Auktionen, 2016–2023
 - [ ] Rohdateien: 673 HTML (`live-wineauction-pN.html`, `Resultatfile*.html`), in Monatsordnern (April2023, Juni2016, Nov2016-2019, Sep2015/2016/2019-2021)
