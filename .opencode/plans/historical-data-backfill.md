@@ -380,19 +380,112 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   Auktionen geladen, geprüft über die jeweilige `auction_id`, nicht das
   Datum.
 
-### 6. Weinboerse — ⏸ erster Blick positiv, noch nicht begonnen
-- [x] Erste Ergebnis-PDF geprüft (`89_Resultate.pdf`, 2014): **Name UND
-  Preis stehen in DERSELBEN Tabelle** (2-spaltig, "Lot | CHF | Anz. |
-  Jahr | Beschreibung", Produzent als Fliesstext-Zwischenüberschrift
-  oberhalb mehrerer Lots) — kein Zwei-Dokumente-Join nötig wie bei
-  Koppe/Sothebys, strukturell näher an Steinfels. Dateinamen aber sehr
-  uneinheitlich über die Jahre ("89_Resultate.pdf", "WB 89.pdf",
-  "wb-91.pdf", teils "Gebote"-xls = Gebote, nicht Resultate, später
-  kombinierte "Resultate©Katalog"-PDFs).
-- [ ] **Entscheidung: zurückgestellt** — Format sieht lösbar aus (gute
-  Nachricht für die Folge-Session), aber Dateinamen-Chaos über die Jahre
-  braucht ebenfalls sorgfältige Jahr-für-Jahr-Arbeit, nicht in dieser
-  ohnehin schon sehr langen Session begonnen.
+### 6. Weinboerse — ✅ erledigt (13 Auktionen, 2010-2019, 17.493 neue Lots)
+- [x] **Format schwieriger als der erste Blick vermuten liess**: anders
+  als Steinfels ist die Ergebnis-Tabelle ZWEI-SPALTIG (zwei komplette
+  "Lot CHF Anz. Jahr Beschreibung"-Tabellen nebeneinander auf jeder
+  Seite), mit Produzent als eigener Fliesstext-Zwischenüberschrift
+  OBERHALB mehrerer Lots (nicht Teil der Tabelle) UND Fällen, in denen
+  Menge/Jahrgang/Beschreibung eines Lots komplett auf die nächste Zeile
+  umbrechen (nicht nur die Beschreibung). Trotzdem kein Zwei-Dokumente-
+  Join nötig (Name+Preis in derselben Tabelle) — das unterscheidet es
+  von Koppe/Sothebys.
+- [x] **Generischer 2-Spalten-Parser gebaut** (`_wb_legacy_split_halves`
+  + `_wb_legacy_parse_stream`): jede Seite wird anhand der zweiten
+  "Lot"-Kopfzeilen-Position in zwei unabhängige, einspaltige Zeilen-
+  Ströme zerlegt, die dann je für sich wie eine normale Tabelle verar-
+  beitet werden. **Senior-Review (automatisch vor Commit) fand und
+  bestätigte mehrere echte, nicht offensichtliche Bugs**, alle vor dem
+  Commit gefixt und gegen das komplette 13-Auktionen-Set erneut
+  verifiziert:
+  - Produzenten-Kopfzeilen-Erkennung über GROSSSCHREIBUNG (erster
+    Versuch) ist nachweislich falsch — "DOMAINE D'AUVENAY (Leroy)" und
+    "ARTHUR BAROLET et Fils" sind echte Produzenten-Zeilen mit
+    Kleinbuchstaben; über Einrückung (Spalte 0 = Kopfzeile, eingerückt =
+    Beschreibungs-Fortsetzung) gelöst statt über Fallunterscheidung.
+  - CHF-Tausendertrennzeichen ist manchmal ein Leerzeichen statt Apostroph
+    (z.B. "1 140" = CHF 1140) — ohne Fix wurde das als "Preis=1,
+    Menge=140" fehlinterpretiert und hat die GANZE Zeile falsch
+    zerlegt. Gefixt über eine 3-Ziffern-Fortsetzungsregel (eine echte
+    Mengenangabe ist praktisch nie 3-stellig).
+  - Format-Kürzel-Liste war unvollständig (nur Fl./MG/DM/Div./Imp./Jero.
+    angenommen) — echte Gegenprüfung über den gesamten Korpus fand auch
+    IMP/IM, JER, ME (Melchior), BAL/BA (Balthazar); fehlende Kürzel
+    führten dazu, dass die GANZE Zeile beim Fehlen eines Treffers als
+    Produzenten-Kopfzeile fehlklassifiziert und das Lot komplett
+    verworfen wurde (vor dem Fix: 14-32% "fehlende" Lot-Nummern pro
+    Auktion, nach Prüfung gegen den Rohtext ALLE echte Parserfehler,
+    keine echten Lücken).
+  - Eine seltene (~0.5% der Lots), nicht zuverlässig auflösbare
+    Spalten-Kollision (Preis- und Mengen-Ziffern ohne Leerzeichen
+    zusammengeklebt, z.B. "3006 MG" = CHF 300/6x ODER CHF 30/06x —
+    beides plausibel) wird jetzt erkannt und Lot-Nr./Einheit/Jahrgang/
+    Beschreibung trotzdem gespeichert, Preis/Menge bewusst NICHT geraten
+    (`None` statt eine falsche Zahl).
+  - **Bug nach der Review selbst gefunden und gefixt** (Dict-Key-
+    Mismatch: `"fl.": ...` in der Grössen-Tabelle vs. `.rstrip(".")`
+    beim Lookup, der den Punkt vorher entfernt) — hat **bottle_size_dl
+    für JEDE "Fl."-Zeile (den mit Abstand häufigsten Fall, >9000 Lots)
+    auf `None` gesetzt**, obwohl alles andere korrekt war.
+  - **2. Senior-Review-Runde fand 2 weitere echte, mit echten Zahlen
+    belegte Befunde:** (1) Die Anz.-Spalte erlaubt (wie bei Steinfels)
+    einen angehängten Grössen-Bruch ("24 3/8" = 24 Flaschen à 3/8-Liter)
+    — der Code prüfte dafür nur `unit`, nicht `anz` selbst, wo der Bruch
+    beim Fehlen eines Buchstaben-Kürzels tatsächlich landet (707 von
+    17.493 Lots, 4%) — `bottle_size_dl` blieb für alle 707 `None` statt
+    3.75dl. (2) Bei "JER" (Jeroboam) wurde blind zwischen Bordeaux-
+    (50dl) und Champagne-Konvention (30dl) geraten, obwohl die
+    tatsächliche Grösse praktisch immer direkt in der Beschreibung
+    steht ("4.5L, OHK...") — bei allen 10 geprüften "4.5L"-Fällen wurde
+    fälschlich 50dl statt der korrekten 45dl vergeben. Beide gefixt
+    (Bruch aus `anz` extrahieren, explizite "NL"-Grösse vor der
+    Konventions-Vermutung lesen) und erneut verifiziert: `bottle_size_dl`
+    Fill-Rate jetzt 98% (vorher 94%, vor dem ersten Fix 0%).
+- [x] **3 weitere Auktionen geprüft und als NICHT wiederherstellbar
+  bestätigt** (keine Annahme, echte Dateiprüfung): 79 (13.11.2010) ist
+  entgegen dem ersten Eindruck (Dateiname "79.pdf" sah wie ein Resultate-
+  File aus) tatsächlich NUR ein 48-seitiger Vorverkaufskatalog, keine
+  einzige Ergebnis-Tabelle enthalten; 81 (Resultate-Datei ist
+  byte-identisch mit Auktion 80's eigener Datei — eine echte
+  Archiv-Verwechslung, nur die separate "Nachbörse"-Restposten-Liste mit
+  Ausrufpreisen statt Zuschlägen liegt für 81 vor, nicht verwendet); 85
+  und 90 sind beide reine Auktionskataloge ohne zugehörige Resultate-
+  Datei. 95 und 100 haben nur leere "Gebote"-Vorlagen (0 bzw. 6 von
+  ~1500 Zeilen mit echtem Gebot, der Rest reine Formular-Nullen) — kein
+  echtes Ergebnis archiviert.
+- [x] **Datierung**: wie bei Steinfels wo möglich über Primärquelle
+  bestätigt (Katalog/Ankündigung mit explizitem Datum für 86, 87, 91, 96,
+  98, 99), sonst über PDF-Erstellungsdatum zurückgerechnet auf den
+  vorherigen Samstag (dem einzigen Auktionstag dieses Hauses) — diese
+  Heuristik wurde an den 5 primärquellen-bestätigten Fällen exakt
+  nachgewiesen (0 Abweichung), bevor sie für 78/80/82/84/89/101
+  (keine Primärquelle verfügbar) verwendet wurde. **Auktion 93 ist ein
+  echter, dokumentierter Quellen-Konflikt**: Auktion 90's eigener
+  Katalog (14 Monate im Voraus gedruckt) plante 93 für "05.09.2015",
+  aber 93's eigene Ergebnis-Datei wurde laut Metadaten erst "Do 3. Dez
+  2015" erstellt — eine 3-Monats-Lücke, die zu JEDER anderen Auktion
+  dieses Hauses (durchgehend 1-5 Tage Erstellungs-Verzug) im Widerspruch
+  steht. Das metadaten-gestützte Datum (28.11.2015) wurde übernommen,
+  die Unsicherheit im Code dokumentiert statt stillschweigend eine
+  Variante zu wählen.
+- [x] **Kollisions-Check**: `load_weinboerse_legacy` nutzt bewusst das
+  Präfix `legacy-` statt der blossen Haus-Auktionsnummer — Auktion
+  "101" (diese Session, "WB 101" vom 09.11.2019) hätte sonst exakt mit
+  der schon vorhandenen `auction_id="101"` der bestehenden Plattform-
+  Loader-Zählung kollidiert, die aber eine GÄNZLICH ANDERE, 2024er
+  Auktion ("WB 111", 09.11.2024) ist — ohne Präfix wären zwei echte,
+  unabhängige Auktionen über `add_auction`s INSERT-OR-IGNORE-Fallback
+  stillschweigend verschmolzen worden.
+- [x] **Sanity-Check** (in-memory gegen das echte Archiv): **17.493 neue
+  Lots über 13 Auktionen**, `PRAGMA integrity_check` ok, 0 Lot-Nummer-
+  Duplikate. Fehlende Lot-Nummern pro Auktion (0-0.3% nach allen Fixes)
+  Stichprobe für Stichprobe gegen den Rohtext verifiziert als echte,
+  im Haus selbst zurückgezogene Nummern, keine Parser-Fehler. Fill-Raten:
+  Weinname 90%, Produzent 99.6%, Preis 99.4% (98 ambige Spalten-
+  Kollisionsfälle bewusst ohne Preis/Menge gespeichert statt geraten),
+  Jahrgang 88%, Menge 99.4%, Grösse 98%. Stichproben (Lot 1/2/9 von
+  Auktion 89, Lot "0" von Auktion 82) Zeile für Zeile gegen den Rohtext
+  verifiziert.
 
 ### Abschluss Phase 1 (nach Punkt 6)
 - [ ] EIN finaler, vollständiger `build_db.py`-Lauf gegen die Samsung-Disk

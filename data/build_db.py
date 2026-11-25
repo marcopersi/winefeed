@@ -2886,6 +2886,305 @@ def load_weinboerse(b, limit):
         _load_weinauktion_json(b, "weinboerse", remaining)
 
 
+_WB_LEGACY_HEADER_RE = re.compile(r"Lot\s+(CHF|Fr\.)\s+Anz\.")
+# Confirmed real unit abbreviations across the whole 2010-2019 corpus
+# (counted directly, not guessed): "Fl."=bottle, "MG"=Magnum,
+# "DM"=Doppelmagnum, "Div."/"Div"/"Divers"=mixed assortment (no single
+# size), "IMP"/"IM"=Imperiale, "JER"=Jeroboam (Bordeaux/Champagne
+# ambiguous, same split as ``_WA_AMBIGUOUS_FORMAT_KEYS``), "ME"=Melchior,
+# "BAL"/"BA"=Balthazar. Order matters (longest/most-specific first) so
+# e.g. "IMP" isn't swallowed by a premature "IM" match.
+_WB_LEGACY_UNIT_ALT = r"(?:Divers|Div\.?|IMP|IM|BAL|BA|JER|ME|MG|DM|Fl\.)"
+# CHF thousands separator is sometimes a space, not an apostrophe (e.g.
+# "1 140") -- confirmed real, not a parsing artifact: unlike apostrophe
+# grouping this reads identically to "a price token, then the Anz.
+# column's own number" unless the continuation is required to be exactly
+# 3 digits long (a real Anz. is essentially never 3 digits).
+_WB_LEGACY_CHF_RE = r"\d{1,3}(?:[\s'’]\d{3})*"
+_WB_LEGACY_FULL_ROW_RE = re.compile(
+    rf"^\s*(?P<lot>\d{{1,5}})\s+(?P<chf>{_WB_LEGACY_CHF_RE})\s+"
+    rf"(?P<anz>\d+(?:\s*\d+/\d+)?)\s*(?P<unit>{_WB_LEGACY_UNIT_ALT})?\s*"
+    rf"(?P<jahr>\d{{4}})?\s*(?P<desc>.*)$")
+_WB_LEGACY_LOT_PRICE_ONLY_RE = re.compile(
+    rf"^\s*(?P<lot>\d{{1,5}})\s+(?P<chf>{_WB_LEGACY_CHF_RE})\s*$")
+# A rarer column collision (confirmed real on ~0.5% of lots, not fixable
+# with confidence): the CHF and Anz. digit runs render with NO space
+# between them at all (e.g. "3006 MG" = CHF 300, 6x MG -- or could just
+# as easily be CHF 30, 06x -- genuinely ambiguous which digit belongs to
+# which column). Lot number, unit, vintage and description are still
+# unambiguous, so this recovers those and leaves price/quantity unset
+# rather than guessing a specific split (same principle as the Steinfels
+# source-truncation finding: no confident data beats fabricated data).
+_WB_LEGACY_AMBIGUOUS_CONCAT_RE = re.compile(
+    rf"^\s*(?P<lot>\d{{1,5}})\s+(?P<concat>[\d'’]+)\s+(?P<unit>{_WB_LEGACY_UNIT_ALT})\s*"
+    rf"(?P<jahr>\d{{4}})?\s*(?P<desc>.*)$")
+# Same column collision, but the Anz. column is a bare fraction (e.g.
+# "3/8", fractional-bottle size) instead of a lettered unit.
+_WB_LEGACY_AMBIGUOUS_CONCAT_FRAC_RE = re.compile(
+    r"^\s*(?P<lot>\d{1,5})\s+(?P<concat>[\d'’]+)\s+(?P<frac>\d+/\d+)\s*"
+    r"(?P<jahr>\d{4})?\s*(?P<desc>.*)$")
+_WB_LEGACY_CONT_FIELDS_RE = re.compile(
+    rf"^\s*(?P<anz>\d+(?:\s*\d+/\d+)?)\s*(?P<unit>{_WB_LEGACY_UNIT_ALT})?\s*"
+    rf"(?P<jahr>\d{{4}})?\s*(?P<desc>.*)$")
+
+# (auction_id suffix, auction_date, path relative to the Weinboerse
+# archive folder) -- the house's pre-2020 auction series (#78-101,
+# 2010-2019), archived as results PDFs never read by any existing loader
+# (``load_weinboerse`` only reads the 2020+ weinauktion-platform API
+# dumps). Dates confirmed directly from a paired catalog/announcement
+# PDF where one exists (78/80/82/84/101 had none archived -- confirmed
+# instead from each file's own PDF creation-date metadata, rounded back
+# to the preceding Saturday, the house's exclusive auction day; this
+# heuristic was independently verified exact against 5 auctions that DID
+# have a primary-source date: 86, 87, 91, 96, 98, 99). 93 is a real,
+# checked source conflict: auction 90's own catalog (printed ~14 months
+# ahead) planned 93 for "05.09.2015", but 93's own results file was
+# created "Thu Dec 3 2015" -- a 3-month gap, wildly inconsistent with
+# every other auction's confirmed 1-5 DAY creation lag (including 91's,
+# created almost exactly a year earlier on "Wed Dec 3 2014" for its own
+# confirmed Nov-29 auction) -- kept the metadata-implied 2015-11-28
+# instead of the stale forward schedule, on the strength of that pattern,
+# but this one date is less certain than the rest.
+_WB_LEGACY_AUCTIONS = [
+    ("78", "2010-09-04", "2010/78.pdf"),
+    ("80", "2011-05-21", "2011/80.pdf"),
+    ("82", "2011-11-12", "2011/82.pdf"),
+    ("84", "2012-09-08", "2012/84.pdf"),
+    ("86", "2013-04-27", "2013/86.pdf"),
+    ("87", "2013-09-07", "2013/87.pdf"),
+    ("89", "2014-04-12", "2014/89_Resultate.pdf"),
+    ("91", "2014-11-29", "2014/wb-91.pdf"),
+    ("93", "2015-11-28", "2015/WB 93_Resultate.pdf"),
+    ("96", "2017-05-06", "2017/April/8081629_WB_96.pdf"),
+    ("98", "2018-05-05", "2018/Mai/8905181-Resultat_WB_98.pdf"),
+    ("99", "2018-11-10", "2018/November/9284075-Resultate_WB_99.pdf"),
+    ("101", "2019-11-09", "2019/oktober/10062620-Resultate_WB_101.pdf"),
+]
+# dl per bottle for this house's own abbreviations (distinct from
+# ``_WA_FORMAT_DL``'s full German/French words -- same houses' platform,
+# but this pre-2020 PDF series abbreviates). "div"/"divers" (mixed
+# assortment) deliberately has no entry -- handled via mixed_lot instead.
+_WB_LEGACY_UNIT_DL = {
+    "fl": BOTTLE_FORMATS["BOTTLE"], "mg": BOTTLE_FORMATS["MAGNUM"],
+    "dm": BOTTLE_FORMATS["DOUBLEMAGNUM"],
+    "imp": BOTTLE_FORMATS["IMPERIALE"], "im": BOTTLE_FORMATS["IMPERIALE"],
+    "me": BOTTLE_FORMATS["MELCHIOR"],
+    "bal": BOTTLE_FORMATS["BALTHAZAR"], "ba": BOTTLE_FORMATS["BALTHAZAR"],
+}
+
+
+def _wb_legacy_split_halves(path):
+    """Split a two-column (side-by-side) results PDF's own text into two
+    independent single-column line streams.
+
+    Confirmed real, fixed here (same root cause as the Steinfels legacy
+    parser's own page-break fix): ``pdftotext`` prepends the page-break
+    form-feed directly onto the next page's first line with no newline,
+    which would otherwise merge into whichever half that line's content
+    happens to fall in.
+    """
+    out = subprocess.run(["pdftotext", "-layout", path, "-"],
+                         capture_output=True, text=True, check=True).stdout
+    out = out.replace("\x0c", "\n")
+    left_lines, right_lines = [], []
+    right_start = None
+    for line in out.split("\n"):
+        if _WB_LEGACY_HEADER_RE.search(line):
+            lot1 = line.find("Lot")
+            lot2 = line.find("Lot", lot1 + 3)
+            right_start = lot2 if lot2 > 0 else None
+            continue
+        if right_start is None:
+            continue
+        left_lines.append(line[:right_start])
+        right_lines.append(line[right_start:])
+    return left_lines, right_lines
+
+
+def _wb_legacy_parse_stream(lines):
+    """Parse one half-column's line stream into lot dicts.
+
+    A lot's own Anz./Jahrgang/Beschreibung sometimes wraps onto the next
+    line entirely (not just the description text) when the Produkt field
+    is long -- confirmed real, handled via ``pending_price_only``/
+    ``_WB_LEGACY_CONT_FIELDS_RE`` rather than assumed to always fit on
+    the lot's own line like the Steinfels legacy parser could.
+
+    A producer/category section header (e.g. "DOMAINE DE L'ARLOT",
+    "Burgund rot") always starts at column 0 (unindented); a wrapped
+    continuation of the previous lot is always indented. Distinguishing
+    them by case (all-caps) instead was tried first and is WRONG --
+    confirmed real: "DOMAINE D'AUVENAY (Leroy)" and "ARTHUR BAROLET et
+    Fils" are genuine producer headers with lower-case letters in them.
+    """
+    rows = []
+    cur = None
+    producer = None
+    pending_price_only = False
+    for line in lines:
+        if not line.strip():
+            continue
+        m = _WB_LEGACY_FULL_ROW_RE.match(line)
+        if m:
+            if cur:
+                rows.append(cur)
+            cur = m.groupdict()
+            cur["producer"] = producer
+            pending_price_only = False
+            continue
+        m = _WB_LEGACY_LOT_PRICE_ONLY_RE.match(line)
+        if m:
+            if cur:
+                rows.append(cur)
+            cur = {"lot": m["lot"], "chf": m["chf"], "anz": None,
+                   "unit": None, "jahr": None, "desc": "",
+                   "producer": producer}
+            pending_price_only = True
+            continue
+        m = _WB_LEGACY_AMBIGUOUS_CONCAT_RE.match(line)
+        if m:
+            if cur:
+                rows.append(cur)
+            cur = {"lot": m["lot"], "chf": None, "anz": None,
+                   "unit": m["unit"], "jahr": m["jahr"], "desc": m["desc"],
+                   "producer": producer}
+            pending_price_only = False
+            continue
+        m = _WB_LEGACY_AMBIGUOUS_CONCAT_FRAC_RE.match(line)
+        if m:
+            if cur:
+                rows.append(cur)
+            cur = {"lot": m["lot"], "chf": None, "anz": None,
+                   "unit": m["frac"], "jahr": m["jahr"], "desc": m["desc"],
+                   "producer": producer}
+            pending_price_only = False
+            continue
+        if pending_price_only:
+            m = _WB_LEGACY_CONT_FIELDS_RE.match(line)
+            if m:
+                cur["anz"] = m["anz"]
+                cur["unit"] = m["unit"]
+                cur["jahr"] = m["jahr"]
+                cur["desc"] = m["desc"]
+                pending_price_only = False
+                continue
+        head = line.strip()
+        if not head:
+            continue
+        if not line[:4].strip():
+            if cur is not None:
+                cur["desc"] = (cur["desc"] + " " + head).strip()
+        else:
+            producer = head
+    if cur:
+        rows.append(cur)
+    return rows
+
+
+def load_weinboerse_legacy(b, limit):
+    """Backfill of the Weinbörse pre-2020 raw PDF archive (2010-2019) --
+    see ``_WB_LEGACY_AUCTIONS`` for per-auction provenance/dates.
+
+    ``auction_id`` uses a ``legacy-`` prefix, not the bare house auction
+    number like the Steinfels legacy loader -- confirmed real and
+    different here: the existing ``load_weinboerse``'s own auction_id is
+    the weinauktion PLATFORM's internal numeric id, not this house's own
+    "WB NN" numbering, and they collide by coincidence (this house's own
+    "101" is "WB 101" from 2019-11-09; the platform's id "101" already in
+    the DB is "WB 111" from 2024-11-09 -- a bare, unprefixed "101" here
+    would have silently merged two completely unrelated real auctions
+    under ``add_auction``'s INSERT OR IGNORE collision fallback).
+    """
+    base = os.path.join(ARCHIVE, "Weinboerse")
+    n = 0
+    for aid, date, rel in _WB_LEGACY_AUCTIONS:
+        path = os.path.join(base, rel)
+        if not os.path.exists(path):
+            continue
+        left, right = _wb_legacy_split_halves(path)
+        rows = _wb_legacy_parse_stream(left) + _wb_legacy_parse_stream(right)
+        if not rows:
+            continue
+        a_id = b.add_auction("weinboerse", f"legacy-{aid}",
+                             f"Weinbörse WB {aid}", date, "CHF", "HAMMER")
+        source_file = os.path.relpath(path, ARCHIVE)
+        for row in rows:
+            unit_key = (row["unit"] or "").lower().rstrip(".")
+            # The Anz. regex itself allows a trailing bottle-size fraction
+            # (e.g. "24 3/8" = 24 bottles of 3/8-litre size), the same
+            # convention Steinfels' own Menge column uses -- confirmed
+            # real (senior-review finding): this version previously only
+            # looked at ``row["unit"]`` for a fraction, so a fraction
+            # that landed in ``anz`` instead (the far more common case,
+            # 707 of 17,493 lots) was silently dropped, understating
+            # those lots' bottle size by 2x once the forecast pipeline's
+            # own default-size fallback filled the gap.
+            anz_m = re.match(r"^(\d+)(?:\s*(\d+)/(\d+))?$", row["anz"] or "")
+            qty = int(anz_m.group(1)) if anz_m else None
+            anz_frac_dl = ((int(anz_m.group(2)) / int(anz_m.group(3))) * 10
+                           if anz_m and anz_m.group(2) else None)
+            bottle_size_dl = mixed_lot = size_assumed = None
+            if unit_key in ("div", "divers"):
+                mixed_lot = 1
+            elif unit_key == "jer":
+                # Confirmed real (senior-review finding): unlike
+                # christies'/steinfels' own Jeroboam lots, this house's
+                # own description almost always states the literal size
+                # right at the start (e.g. "4.5L, OHK" or "3x 4.5L, ...")
+                # -- read that first instead of guessing from the
+                # Bordeaux(5L)/Champagne(3L) convention, which was wrong
+                # for every one of the 10 "4.5L" cases checked (50.0dl
+                # guessed vs. the stated 45.0dl).
+                size_m = re.match(r"^\s*(?:\d+x\s*)?(\d+(?:[.,]\d+)?)\s*L\b",
+                                  row["desc"] or "")
+                if size_m:
+                    bottle_size_dl = float(size_m.group(1).replace(",", ".")) * 10
+                else:
+                    bottle_size_dl = (
+                        _CHRISTIES_JEROBOAM_DL_CHAMPAGNE
+                        if _CHAMPAGNE_RE.search(row["desc"] or "")
+                        else _CHRISTIES_JEROBOAM_DL_BORDEAUX)
+                    size_assumed = 1
+            elif unit_key in _WB_LEGACY_UNIT_DL:
+                bottle_size_dl = _WB_LEGACY_UNIT_DL[unit_key]
+            elif row["unit"] and "/" in row["unit"]:
+                fn, fd = row["unit"].split("/")
+                bottle_size_dl = (int(fn) / int(fd)) * 10
+            elif anz_frac_dl is not None:
+                bottle_size_dl = anz_frac_dl
+            # Confirmed real (same class of finding as the Steinfels
+            # legacy loader): a lot spanning several different
+            # wines/vintages is spelled out in the description itself,
+            # e.g. "1982 - 2002 (1993: 2 Etiketten)" -- rare here (a
+            # handful per auction, not flagged further; this house
+            # doesn't consistently spell out a "mixed" keyword the way
+            # Steinfels does, so detection would be unreliably noisy).
+            price_val = None
+            if row["chf"]:
+                price_val = to_float(
+                    row["chf"].replace("'", "").replace("’", "")
+                    .replace(" ", ""))
+            sold = 1 if price_val else 0
+            b.add_lot(a_id, {
+                "lot_no": row["lot"],
+                "producer": row["producer"],
+                "wine": row["desc"].strip() or None,
+                "vintage": to_int(row["jahr"]) if row["jahr"] else None,
+                "quantity": qty,
+                "bottle_size_dl": bottle_size_dl,
+                "mixed_lot": mixed_lot,
+                "size_assumed": size_assumed,
+                "hammer_price": price_val,
+                "sold": sold,
+                "price_basis": "HAMMER" if sold else None,
+                "currency": "CHF",
+                "source_file": source_file,
+            })
+            n += 1
+        if limit and n >= limit:
+            break
+
+
 def load_dobiaschofsky(b, limit):
     n = 0
     for f in _json_files("Dobiaschofsky", "**/auktion-*.json"):
@@ -5470,6 +5769,7 @@ HOUSES = [
     ("steinfels-staging", load_steinfels_staging),
     ("steinfels-legacy", load_steinfels_legacy),
     ("weinboerse", load_weinboerse),
+    ("weinboerse-legacy", load_weinboerse_legacy),
     ("sylvies-html", load_sylvies_html),
     ("sylvies-fetched", load_sylvies_fetched),
     ("sylvies-txt", load_sylvies_txt),
