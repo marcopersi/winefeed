@@ -4428,6 +4428,257 @@ def load_steinfels_staging(b, limit):
             break
 
 
+_STEINFELS_LEGACY_HEADER_RE = re.compile(r"Produkt.*Zuschlag")
+_STEINFELS_LEGACY_FOOTER_RE = re.compile(
+    r"^(STEINFELS WEINAUKTIONEN|Ergebnisliste (Steinfels|Auktion)|Steinfels Auktionen,)")
+
+# (auction_id, auction_date, path relative to the Steinfels archive folder)
+# -- the house's traditional in-person numbered auction series, archived
+# as one results PDF per auction and never read by any existing loader
+# (``load_steinfels`` only reads the 2002-2003 prepared xlsx and the 2016+
+# weinauktion-platform API dumps; this fills the 2004-2020 gap between
+# them). Dates confirmed from the PDF's own header text (2004-2015 era,
+# "Samstag/Sonntag, DD. Month YYYY") or, where the newer "Ergebnisliste
+# Auktion NNN" header dropped the date, from the paired Katalog PDF's own
+# "Samstag, DD.M.YYYY" line. Three auctions (372, 375, 376) had neither --
+# confirmed instead from the immediately preceding auction's own Katalog,
+# which always announces the next 1-2 planned dates ("Die nächsten
+# Auktionen sind wie folgt geplant: Samstag, 14. Juni" for 372's date,
+# found in 371's Katalog) -- primary-source-confirmed, not inferred from
+# file-system metadata alone (metadata agreed, but was corroborating
+# evidence, not the basis). 355's own header literally says "Sonntag,
+# 14. März 2010" (a Sunday) while its filename says 13.03.2010 (the
+# preceding Saturday, consistent with every other auction's exclusively-
+# Saturday convention) -- kept the filename/Saturday date, treating the
+# header text as the results-compilation date rather than the auction
+# date; a real, checked source quirk, not a parsing bug.
+#
+# Two auctions in this same numbering series are deliberately NOT
+# included here, both checked and found not worth the extra effort right
+# now (same class of decision as the Sothebys/Koppe catalog deferral):
+# - 371 (08.03.2014): its only "Resultate" file is a bare Lot-Nr/CHF price
+#   grid with no wine names at all -- would need a join against its own
+#   Lotliste_08032014.xlsx catalog, the same two-document-join problem as
+#   Sothebys/Koppe, just for one auction instead of ~10/40.
+# - 380 (11.06.2016): its "Resultate" folder (23 files) is not a results
+#   table at all -- it's a browser screenshot-to-PDF capture of the
+#   website's lot-search page, and the one checked in depth shows content
+#   for a DIFFERENT auction (381) under the 380 filename, i.e. the
+#   capture itself is unreliable, not just differently formatted.
+# Auction 378 (21.11.2015) has a Katalog but genuinely no results file
+# anywhere in the archive (checked) -- not recoverable, not a parser gap.
+_STEINFELS_LEGACY_AUCTIONS = [
+    ("325", "2004-03-06", "2004/325.pdf"),
+    ("326", "2004-05-08", "2004/326.pdf"),
+    ("327", "2004-06-26", "2004/327.pdf"),
+    ("328", "2004-09-18", "2004/328.pdf"),
+    ("329", "2004-11-20", "2004/329.pdf"),
+    ("330", "2005-02-26", "2005/330.pdf"),
+    ("331", "2005-04-23", "2005/331.pdf"),
+    ("332", "2005-06-25", "2005/332.pdf"),
+    ("333", "2005-09-17", "2005/333.pdf"),
+    ("334", "2005-11-26", "2005/334.pdf"),
+    ("335", "2006-02-18", "2006/335.pdf"),
+    ("336", "2006-04-29", "2006/336.pdf"),
+    ("337", "2006-06-24", "2006/337.pdf"),
+    ("338", "2006-09-16", "2006/338.pdf"),
+    ("339", "2006-11-25", "2006/339.pdf"),
+    ("340", "2007-02-17", "2007/340.pdf"),
+    ("341", "2007-04-23", "2007/341.pdf"),
+    ("342", "2007-06-24", "2007/342.pdf"),
+    ("343", "2007-09-08", "2007/343.pdf"),
+    ("344", "2007-11-17", "2007/344.pdf"),
+    ("345", "2008-02-16", "2008/345.pdf"),
+    ("346", "2008-04-19", "2008/346.pdf"),
+    ("347", "2008-06-29", "2008/347.pdf"),
+    ("348", "2008-09-13", "2008/348.pdf"),
+    ("349", "2008-11-22", "2008/349.pdf"),
+    ("350", "2009-02-28", "2009/350.pdf"),
+    ("351", "2009-04-25", "2009/351.pdf"),
+    ("352", "2009-06-20", "2009/352.pdf"),
+    ("353", "2009-09-19", "2009/353.pdf"),
+    ("354", "2009-11-21", "2009/354_Resultate_21112009.pdf"),
+    ("355", "2010-03-13", "2010/355_Resultate_13032010.pdf"),
+    ("356", "2010-06-14", "2010/356_Resultate_14062010.pdf"),
+    ("357", "2010-09-11", "2010/357_Resultate_11092010.pdf"),
+    ("358", "2010-11-27", "2010/358_Resutate.pdf"),
+    ("361", "2011-09-10", "2011/361_Resultate.pdf"),
+    ("362", "2011-11-26", "2011/362_Resultate.pdf"),
+    ("363", "2012-03-10", "2012/363_Resultate_2012310181914.pdf"),
+    ("364", "2012-06-23", "2012/364_Resultate_2012623173212.pdf"),
+    ("365", "2012-09-08", "2012/365_Resultate_20129817270.pdf"),
+    ("366", "2012-11-24", "2012/366_Resultate_2012112418293.pdf"),
+    ("367", "2013-03-09", "2013/367_Resultate_201339175049.pdf"),
+    ("368", "2013-06-22", "2013/368_Resultate.pdf"),
+    ("369", "2013-08-31", "2013/369_Resultate_2013831164220.pdf"),
+    ("372", "2014-06-14", "2012/372_Resultate.pdf"),
+    ("373", "2014-08-30", "2014/373_30082014_Resultate.pdf"),
+    ("374", "2014-11-22", "2014/374_22112014_Resultate.pdf"),
+    ("375", "2015-03-07", "2015/375_Resultate.pdf"),
+    ("376", "2015-06-13", "2015/376_Resultate.pdf"),
+    ("377", "2015-08-29", "2015/377_29082015_Resultate.pdf"),
+    ("379", "2016-03-05", "2016/März/379_05032016_Resultate.pdf"),
+    ("381", "2016-09-03", "2016/September/381_03092016_Resultate.pdf"),
+    ("382", "2016-11-26", "2016/November/Ergebnis_382_471.pdf"),
+    ("383", "2017-03-04", "2017/März/383_Ergebnisliste_481.pdf"),
+    ("384", "2017-06-10", "2017/Juni/Ergebnis_384_491.pdf"),
+    ("385", "2017-09-02", "2017/September/385_Ergebnis_501.pdf"),
+    ("387", "2018-03-03", "2018/märz/387_Ergebnis_521.pdf"),
+    ("388", "2018-06-09", "2018/Juni/Resultate_388_531.pdf.pdf"),
+    ("389", "2018-09-01", "2018/September/389_Ergebnis_541.pdf.pdf"),
+    ("391", "2019-03-02", "2019/März/391_Ergebnis_Liste_561.pdf"),
+    ("392", "2019-06-08", "2019/Juni/392_Ergebnissliste1_561.pdf"),
+    ("393", "2019-08-31", "2019/September/393_Ergebnis_571.pdf"),
+    ("394", "2019-11-23", "2019/November/394_Ergebnisliste_581.pdf"),
+    ("395", "2020-03-07", "2020/Maerz/395_Ergebnisliste_591.pdf"),
+]
+
+
+def _steinfels_legacy_pdf_rows(path):
+    """Parse one Steinfels historical results PDF into
+    ``(lot_no, name, menge_text, vintage_text, price_text)`` tuples.
+
+    Column positions are derived fresh from each page's own repeated
+    header line (``[Lot Nr.] Produkt [Gebiet] Menge Jahrgang Zuschlag``)
+    rather than assumed fixed -- confirmed real: the header's rendered
+    character offsets drift by a few columns between files AND between
+    pages of the very same file (``pdftotext -layout`` approximates
+    column widths from actual glyph widths, which varies with the
+    longest line present on that specific page).
+
+    Confirmed real, not fixable here: when a product name is as wide as
+    or wider than the Produkt column's own budget, the SOURCE PDF itself
+    (not this function's slicing, and not ``pdftotext``) has already
+    truncated it at the content/glyph level -- e.g. auction 379's lot 14
+    renders as "...Grand Cru Saint-Emili" with no "on" anywhere in the
+    PDF's own text layer (checked directly with ``pdfplumber``'s word
+    positions, not just this function's output). Affects the whole
+    2004-2020 range, not only the older bare-numbered (2004-2008) files
+    the first version of this comment called out -- there is no more
+    text to recover for a lot hit by this, in any era.
+    """
+    out = subprocess.run(["pdftotext", "-layout", path, "-"],
+                         capture_output=True, text=True, check=True).stdout
+    # pdftotext prepends a page-break form-feed directly onto the next
+    # page's first line, with no newline in between -- confirmed real bug
+    # found while building this parser: that extra leading character
+    # shifts the header's own apparent column offsets one character to
+    # the right relative to the (unshifted) data lines below it on the
+    # same page, silently misaligning every column slice for that whole
+    # page if left in.
+    out = out.replace("\x0c", "\n")
+    cols = None
+    rows = []
+    for line in out.split("\n"):
+        if not line.strip():
+            continue
+        if _STEINFELS_LEGACY_HEADER_RE.search(line):
+            gebiet = line.find("Gebiet")
+            cols = {
+                "produkt": line.find("Produkt"),
+                "gebiet": gebiet if gebiet >= 0 else None,
+                "menge": line.find("Menge"),
+                "jahr": line.find("Jahrgang"),
+                "preis": line.find("Zuschlag"),
+            }
+            continue
+        if cols is None or _STEINFELS_LEGACY_FOOTER_RE.match(line.strip()):
+            continue
+        lot_no = line[:cols["produkt"]].strip()
+        if not re.match(r"^\d{1,5}$", lot_no):
+            continue
+        name_end = cols["gebiet"] if cols["gebiet"] else cols["menge"]
+        name = line[cols["produkt"]:name_end].strip()
+        menge = line[cols["menge"]:cols["jahr"]].strip()
+        jahr = line[cols["jahr"]:cols["preis"]].strip()
+        preis = line[cols["preis"]:].strip()
+        rows.append((lot_no, name, menge, jahr, preis))
+    return rows
+
+
+def load_steinfels_legacy(b, limit):
+    """Backfill of the Steinfels traditional-auction raw PDF archive,
+    2004-2020 -- see ``_STEINFELS_LEGACY_AUCTIONS`` for per-auction
+    provenance/dates and the two deliberately-excluded auctions.
+
+    ``quantity``/``bottle_size_dl`` reuse ``_weinauktion_parse_qty_size``
+    on the Menge column's own text (e.g. "12 Flaschen OHK") -- the same
+    free-text format/convention the live weinauktion-platform loaders
+    already parse, not a new ad-hoc parser.
+
+    Price convention matches this session's Koppe/Pandolfini-legacy
+    precedent: a literal "0" or blank Zuschlag means unsold/withdrawn,
+    not a genuine CHF-0 hammer price.
+    """
+    base = os.path.join(ARCHIVE, "Steinfels")
+    # Auction 379 is ALSO (incompletely) covered by load_steinfels_staging
+    # under the very same auction_id "379" -- add_auction's INSERT OR
+    # IGNORE collision means both loaders' lots land in the same auction
+    # row, so the 464 lot_nos staging already inserted (of this auction's
+    # real ~2062) must be skipped here, or they'd be duplicated. Checked:
+    # no other auction in this list collides with an existing steinfels
+    # auction_id (379 is the only one) -- a plain date-based dedup (the
+    # pattern MunichWineCompany-legacy used) would have been WRONG here,
+    # since 393 (2019-08-31) coincidentally shares its calendar date with
+    # an unrelated small online "eAuktion 39" -- two genuinely different
+    # real auctions, not a duplicate.
+    existing_379 = {
+        str(row[0]).lstrip("0") or "0" for row in b.conn.execute(
+            "SELECT l.lot_no FROM lots l JOIN auctions a ON l.auction_id=a.id"
+            " JOIN providers p ON a.provider_id=p.id"
+            " WHERE p.name='steinfels' AND a.auction_id='379'")
+    }
+    n = 0
+    for aid, date, rel in _STEINFELS_LEGACY_AUCTIONS:
+        path = os.path.join(base, rel)
+        if not os.path.exists(path):
+            continue
+        rows = _steinfels_legacy_pdf_rows(path)
+        if not rows:
+            continue
+        a_id = b.add_auction("steinfels", aid, f"Steinfels Weinauktion {aid}",
+                             date, "CHF", "HAMMER")
+        skip = existing_379 if aid == "379" else frozenset()
+        source_file = os.path.relpath(path, ARCHIVE)
+        for lot_no, name, menge, jahr, preis in rows:
+            if (lot_no.lstrip("0") or "0") in skip:
+                continue
+            qty = bottle_size_dl = mixed_lot = None
+            # Confirmed real (senior-review finding): a lot spanning
+            # several different wines/vintages is spelled out in the
+            # Produkt text itself, e.g. "1975-1982 mixed" or "CHAMPAGNE
+            # mixed" -- not caught by ``_weinauktion_parse_qty_size``'s
+            # own (unrelated) decanter/carafe MIXED check, and without
+            # this the whole year-range string would otherwise be stored
+            # as if it were one single wine's name.
+            if re.search(r"\bmixed\b", name, re.I):
+                mixed_lot = 1
+            parsed = _weinauktion_parse_qty_size(menge, name)
+            if parsed == "MIXED":
+                mixed_lot = 1
+            elif parsed is not None:
+                qty, bottle_size_dl, _assumed = parsed
+            price_val = to_float(preis.replace("'", "").replace("’", "")) \
+                if preis else None
+            sold = 1 if price_val else 0
+            b.add_lot(a_id, {
+                "lot_no": lot_no,
+                "wine": name or None,
+                "vintage": to_int(jahr) if jahr else None,
+                "quantity": qty,
+                "bottle_size_dl": bottle_size_dl,
+                "mixed_lot": mixed_lot,
+                "hammer_price": price_val if price_val else None,
+                "sold": sold,
+                "price_basis": "HAMMER" if sold else None,
+                "currency": "CHF",
+                "source_file": source_file,
+            })
+            n += 1
+        if limit and n >= limit:
+            break
+
+
 def _wermuth_xlsx_dates(conn):
     """Dates already covered by ``load_wermuth`` (the 42-sheet xlsx).
 
@@ -5217,6 +5468,7 @@ HOUSES = [
     ("franzwermuth", load_franzwermuth),
     ("steinfels", load_steinfels),
     ("steinfels-staging", load_steinfels_staging),
+    ("steinfels-legacy", load_steinfels_legacy),
     ("weinboerse", load_weinboerse),
     ("sylvies-html", load_sylvies_html),
     ("sylvies-fetched", load_sylvies_fetched),

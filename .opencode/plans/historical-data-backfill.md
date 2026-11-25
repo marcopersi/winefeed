@@ -291,28 +291,94 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   jetzt für ~40 Auktionen statt einer Handvoll. Nicht jetzt in diese
   Session gequetscht.
 
-### 5. Steinfels — ⏸ Format uneinheitlich über die Jahre, noch nicht begonnen
-- [x] Lotliste/Ergebnis-Paare für ALLE Jahre gesichtet (2009-2022, nicht nur
-  "#325-378"): **sehr positiver Teilbefund** — ab 2014 liegt die Katalog-
-  Seite als **strukturierte Tabelle** vor (`Lotliste_*.xls(x)`: LotNr,
-  Produkt, Appellation, Jahrgang, Lot Menge, Schätzung — mit `xlrd` lesbar,
-  kein PDF-Spalten-Problem!) UND die Ergebnis-Seite ist eine **saubere,
-  nicht-interleaved Tabelle** (`Lot Nr. | Produkt | Menge | Jahrgang |
-  Zuschlag`, pdftotext -layout reicht, kein Sothebys-artiges Problem).
-  Für EINE Stichprobe (Auktion 384, Juni 2017) bestätigt: 2065 Lots,
-  klar lesbar, Preis direkt in der letzten Spalte.
-- [x] **Aber**: 2009-2013 haben NUR Ergebnis-PDFs, KEINE Lotliste — unklar
-  ob die Ergebnis-PDF dort überhaupt Weinnamen enthält oder nur Lot+Preis
-  (noch nicht geprüft). Dateinamen/Struktur uneinheitlich über die Jahre
-  (teils mehrere Resultate-PDFs pro Auktion = eine pro Seite, z.B. Juni
-  2016 mit 20 Einzeldateien; doppelte Dateien mit "(1)"-Suffix;
-  xls/xlsx-Mix).
-- [ ] **Entscheidung: zurückgestellt** — nicht wegen Format-Schwierigkeit
-  (das ist hier tatsächlich gut lösbar!), sondern wegen Session-Länge und
-  der Uneinheitlichkeit über ~13 Jahre, die sorgfältiges Jahr-für-Jahr-
-  Vorgehen braucht statt eines einzigen generischen Parsers. Nächster
-  logischer Startpunkt für eine Folge-Session: ab 2014 (xls+PDF-Tabelle,
-  am einfachsten), dann rückwärts zu 2009-2013 (nur-PDF, Umfang prüfen).
+### 5. Steinfels — ✅ erledigt (63 Auktionen, 2004-2020, 97.319 neue Lots)
+- [x] **Umfang deutlich grösser als beide ursprünglichen Schätzungen**
+  ("~54 Auktionen #325-378 2004-2015" bzw. der revidierte "ab 2014"-Plan):
+  die traditionelle Saal-Auktionsreihe (eigene Nummerierung, parallel zur
+  2016+ "eAuktion"-Online-Plattform, die bereits vom bestehenden
+  `_load_weinauktion_json`/`_load_steinfels_resultfile_json`-Loader erfasst
+  wird) läuft nicht nur bis 2015, sondern **durchgehend bis September
+  2021** (#325-401) — erst danach ausschliesslich Online-Plattform.
+  Vollständig gesichtet: 325-395 ergeben **63 wiederherstellbare
+  Auktionen** (29x "bar" nummeriert 2004-2009 ohne eigenen Resultate-
+  Dateinamen, 34x mit "Resultate"/"Ergebnis"-Namen 2009-2020), alle mit
+  dem GLEICHEN einfachen Tabellenformat (`[Lot Nr.] Produkt Menge Jahrgang
+  Zuschlag`, pdftotext -layout reicht, kein Sothebys-artiges Zwei-
+  Dokumente-Problem — Lotliste/Katalog werden für die Haupt-Extraktion
+  gar nicht gebraucht, nur als Datums-Beleg, siehe unten).
+- [x] **Generischer Parser gebaut** (`_steinfels_legacy_pdf_rows`): Spalten-
+  Positionen werden PRO SEITE frisch aus der jeweils wiederholten
+  Header-Zeile ermittelt (nicht als fixer Offset angenommen) — **echter,
+  gefundener Bug dabei**: `pdftotext` hängt das Seitenumbruch-Formfeed-
+  Zeichen direkt vor den Zeilenanfang der nächsten Seite, ohne Zeilen-
+  umbruch dazwischen — das verschiebt die aus der Header-Zeile gelesenen
+  Spalten-Offsets dieser Seite um 1 Zeichen nach rechts gegenüber den
+  (unverschobenen) Datenzeilen darunter und hätte sonst auf JEDER
+  Folgeseite (ab Seite 2) praktisch alle Zeilen als "nicht parsebar"
+  verworfen. Gefixt durch `out.replace("\x0c", "\n")` vor dem Parsen.
+  Batch-verifiziert gegen alle 63 Dateien: 0 "bad lines", 0 Lot-Nummer-
+  Duplikate pro Auktion.
+- [x] **Datierung ohne Tagesgenauigkeit im Dateinamen/Header gelöst über
+  Primärquelle, nicht Metadaten-Raten**: für die neuere "Ergebnisliste
+  Auktion NNN"-Kopfzeile (2016+) fehlt das Datum; gelöst über die
+  gepaarte Katalog-PDF ("Samstag, DD.M.YYYY"). Für 3 Auktionen (372, 375,
+  376) fehlte auch das — gelöst über die JEWEILS VORANGEHENDE Auktion's
+  eigenen Katalog, der die nächsten 1-4 geplanten Termine nennt ("Die
+  nächsten Auktionen sind wie folgt geplant: Samstag, 14. Juni" in 371's
+  Katalog → 372 = 2014-06-14 usw.) — eine PDF-Erstellungsdatum-Vermutung
+  stimmte hier zufällig exakt überein, wurde aber nur als Bestätigung
+  genutzt, nicht als alleinige Quelle (siehe Weinboerse unten, wo genau
+  diese Vermutung bei einer Auktion NACHWEISLICH falsch gelegen hätte).
+  355 ist ein echter, geprüfter Quellen-Widerspruch (Dateiname
+  "13032010" = Samstag, Header-Text selbst sagt "Sonntag, 14. März 2010")
+  — Dateiname/Samstag-Konvention übernommen, Diskrepanz dokumentiert statt
+  stillschweigend eine Variante gewählt.
+- [x] **2 Auktionen in dieser Serie bewusst NICHT aufgenommen** (gleiche
+  Güteklasse Entscheidung wie Sothebys/Koppe-Zurückstellung): 371
+  (08.03.2014) — einzige "Resultate"-Datei ist eine reine Lot/CHF-Tabelle
+  OHNE Weinnamen, bräuchte einen Join gegen die eigene Lotliste-xlsx
+  (gleiches Zwei-Dokumente-Problem wie Sothebys/Koppe, nur für 1 Auktion
+  statt ~10/40); 380 (11.06.2016) — der "Resultate"-Ordner (23 Dateien)
+  ist keine Ergebnistabelle, sondern ein Browser-Screenshot-zu-PDF der
+  Lot-Suchseite, UND zeigt bei genauer Prüfung Inhalt der FALSCHEN Auktion
+  (381 statt 380) — die Aufnahme selbst ist unzuverlässig, nicht nur
+  anders formatiert. 378 (21.11.2015) hat einen Katalog, aber nachweislich
+  keine Resultate-Datei im Archiv — kein Parser-Fund, echte Lücke.
+- [x] **Senior-Review (automatisch vor Commit) fand 2 echte Befunde:**
+  (1) Lots, bei denen das Produkt-Feld selbst z.B. "1975-1982 mixed" oder
+  "CHAMPAGNE mixed" lautet (mehrere verschiedene Weine/Jahrgänge als ein
+  Lot), wurden als normales Einzelwein-Lot gespeichert, `mixed_lot` blieb
+  leer — gefixt über eine zusätzliche `\bmixed\b`-Erkennung im Namen
+  (3.838 von 97.319 Lots betroffen, jetzt korrekt geflaggt). (2) Lange
+  Produktnamen werden bei manchen Lots an der Spaltenbreite abgeschnitten
+  (z.B. Auktion 379 Lot 14: "...Grand Cru Saint-Emili" ohne das
+  abschliessende "on") — **geprüft und bestätigt als echte
+  Quell-PDF-Begrenzung, nicht behebbar**: mit `pdfplumber`'s Wort-
+  Positionen direkt nachgewiesen, dass der Text "on" im PDF selbst gar
+  nicht existiert (nicht nur von `pdftotext -layout` verschluckt) — exakt
+  dieselbe Klasse von Befund wie bei den 2004-2008-Dateien schon bekannt,
+  jetzt bestätigt dass es die GANZE Serie betrifft, nicht nur die alten
+  Jahre. Dokumentiert, nicht fixbar (keine Daten zum Wiederherstellen).
+- [x] **Sanity-Check** (in-memory gegen das echte Archiv, inkl. der
+  bestehenden `load_steinfels`/`load_steinfels_staging`-Loader davor):
+  **97.319 neue Lots über 63 Auktionen**, `PRAGMA integrity_check` ok,
+  0 Lot-Nummer-Duplikate innerhalb einer Auktion (ausser einem bereits
+  VOR dieser Session bekannten, unveränderten Altfall im 2002er-
+  Staging-Sheet). Fill-Raten: Weinname 99.998%, Preis 85% (Rest
+  nachvollziehbar unverkauft/zurückgezogen wie bei Koppe/Pandolfini),
+  Jahrgang 87%, Menge 99%. Stichproben (384 Lot 1/70/77, 325 Lot 1/31)
+  Zeile für Zeile exakt gegen den Rohtext verifiziert.
+- [x] **Kollisions-Sonderfall 379 korrekt behandelt**: Auktion 379
+  (05.03.2016) ist bereits UNVOLLSTÄNDIG über `load_steinfels_staging`
+  geladen (464 von real 2062 Lots, gleiche `auction_id`) — statt eines
+  pauschalen Datums-Dedup (wie bei MunichWineCompany) wird hier gezielt
+  gegen die bereits vorhandenen `lot_no`s unter genau dieser `auction_id`
+  dedupliziert. **Ein pauschales Datums-Dedup wäre hier nachweislich
+  falsch gewesen**: Auktion 393 (2019-08-31) teilt sich ihr Kalenderdatum
+  zufällig mit einer GÄNZLICH ANDEREN, kleineren Online-Auktion
+  ("eAuktion 39", 217 Lots) — beide wurden korrekt als getrennte
+  Auktionen geladen, geprüft über die jeweilige `auction_id`, nicht das
+  Datum.
 
 ### 6. Weinboerse — ⏸ erster Blick positiv, noch nicht begonnen
 - [x] Erste Ergebnis-PDF geprüft (`89_Resultate.pdf`, 2014): **Name UND
