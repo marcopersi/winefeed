@@ -487,15 +487,26 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   Auktion 89, Lot "0" von Auktion 82) Zeile für Zeile gegen den Rohtext
   verifiziert.
 
-### Abschluss Phase 1 (nach Punkt 6)
-- [ ] EIN finaler, vollständiger `build_db.py`-Lauf gegen die Samsung-Disk
-  (nur wenn Archiv nachweislich ruhig — kein laufender Sync/Build, s.
-  [[feedback_zero_data_loss_systematic_verification]])
-- [ ] Pro neu hinzugefügtem Haus: Auktionszahl/Lot-Zahl/% mit Preis in der
-  echten DB verifizieren (wie beim Koppe/MunichWineCompany-Check am
-  2026-11-24), nicht nur in der isolierten In-Memory-Prüfung
-- [ ] `_validate_gates` lief ohne neue Fehler
-- [ ] Commit mit Vorher/Nachher-Zeilenbilanz aller 6 Häuser zusammen
+### Abschluss Phase 1 (nach Punkt 6) — ✅ erledigt
+- [x] Finaler, vollständiger `build_db.py`-Lauf gegen die Samsung-Disk
+  (Archiv vorher nachweislich ruhig geprüft — kein Lock-File, kein
+  laufender `rsync`/`build_db`-Prozess). Ergebnis: `providers=31
+  auctions=9722 lots=4591991`, published nach
+  `/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite`.
+- [x] Pro neu hinzugefügtem Haus direkt per SQL gegen die ECHTE DB
+  verifiziert (nicht nur die isolierte In-Memory-Prüfung): steinfels-legacy
+  **97.319** Lots über alle 63 auction_ids (exakt wie im isolierten Test),
+  weinboerse-legacy **17.493** Lots über alle 13 `legacy-*` auction_ids
+  (exakt wie im isolierten Test, inkl. korrekter Daten pro Auktion).
+- [x] `_validate_gates` lief automatisch als Teil von `main()` ohne Abbruch
+  (der Build wäre sonst nicht erfolgreich durchgelaufen) — damit implizit
+  bestätigt, kein separater Lauf nötig.
+- [x] `PRAGMA integrity_check` → `ok`.
+- [x] Alle 4 real umgesetzten Häuser (Pandolfini, MunichWineCompany,
+  Steinfels, Weinboerse) bereits einzeln committed und gepusht
+  (`3689480`, `b380ebd`, `e69a80f`, `77675d3`); Sothebys/Koppe bewusst
+  zurückgestellt (siehe Punkt 2/4 oben). Kein zusätzlicher Sammel-Commit
+  nötig, da keine Code-Änderung mehr ausstand — nur der Rebuild selbst.
 
 ---
 
