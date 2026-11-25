@@ -291,7 +291,7 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   jetzt für ~40 Auktionen statt einer Handvoll. Nicht jetzt in diese
   Session gequetscht.
 
-### 5. Steinfels — ✅ erledigt (63 Auktionen, 2004-2020, 97.319 neue Lots)
+### 5. Steinfels — ✅ erledigt (63 Auktionen, 2004-2020, 96.855 neue Lots)
 - [x] **Umfang deutlich grösser als beide ursprünglichen Schätzungen**
   ("~54 Auktionen #325-378 2004-2015" bzw. der revidierte "ab 2014"-Plan):
   die traditionelle Saal-Auktionsreihe (eigene Nummerierung, parallel zur
@@ -349,7 +349,7 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   "CHAMPAGNE mixed" lautet (mehrere verschiedene Weine/Jahrgänge als ein
   Lot), wurden als normales Einzelwein-Lot gespeichert, `mixed_lot` blieb
   leer — gefixt über eine zusätzliche `\bmixed\b`-Erkennung im Namen
-  (3.838 von 97.319 Lots betroffen, jetzt korrekt geflaggt). (2) Lange
+  (3.838 von 96.855 Lots betroffen, jetzt korrekt geflaggt). (2) Lange
   Produktnamen werden bei manchen Lots an der Spaltenbreite abgeschnitten
   (z.B. Auktion 379 Lot 14: "...Grand Cru Saint-Emili" ohne das
   abschliessende "on") — **geprüft und bestätigt als echte
@@ -361,7 +361,7 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   Jahre. Dokumentiert, nicht fixbar (keine Daten zum Wiederherstellen).
 - [x] **Sanity-Check** (in-memory gegen das echte Archiv, inkl. der
   bestehenden `load_steinfels`/`load_steinfels_staging`-Loader davor):
-  **97.319 neue Lots über 63 Auktionen**, `PRAGMA integrity_check` ok,
+  **96.855 neue Lots über 63 Auktionen**, `PRAGMA integrity_check` ok,
   0 Lot-Nummer-Duplikate innerhalb einer Auktion (ausser einem bereits
   VOR dieser Session bekannten, unveränderten Altfall im 2002er-
   Staging-Sheet). Fill-Raten: Weinname 99.998%, Preis 85% (Rest
@@ -379,6 +379,17 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   ("eAuktion 39", 217 Lots) — beide wurden korrekt als getrennte
   Auktionen geladen, geprüft über die jeweilige `auction_id`, nicht das
   Datum.
+- [x] **Korrektur (2026-11-25, beim Start von Phase 2 bemerkt):** der
+  Commit `e69a80f` und der erste Status-Report an den Nutzer nannten
+  **97.319** als neue Lot-Zahl — das war der GESAMT-Lotstand unter allen
+  63 `auction_id`s NACH dem Laden (inkl. der 464 bereits vorher über
+  `load_steinfels_staging` geladenen Lots für Auktion 379), nicht die
+  tatsächlich vom neuen Loader HINZUGEFÜGTE Zeilenzahl. Per direkter
+  SQL-Abfrage bestätigt: `97319 - 464 = 96855`, exakt der vom Build-Log
+  selbst gemeldete `steinfels-legacy +96855 lots`-Wert. Der Commit-Text
+  bleibt unverändert (kein Amend ohne expliziten Nutzer-Wunsch), aber
+  dieser Plan sowie alle künftigen Reports nutzen die korrekte Zahl
+  96.855.
 
 ### 6. Weinboerse — ✅ erledigt (13 Auktionen, 2010-2019, 17.493 neue Lots)
 - [x] **Format schwieriger als der erste Blick vermuten liess**: anders
@@ -495,12 +506,23 @@ bestehenden Loader, keine Ersetzung). Jeder Parser landet als eigene
   `/Volumes/samsung/winefeed-data/wine_auction_prices.sqlite`.
 - [x] Pro neu hinzugefügtem Haus direkt per SQL gegen die ECHTE DB
   verifiziert (nicht nur die isolierte In-Memory-Prüfung): steinfels-legacy
-  **97.319** Lots über alle 63 auction_ids (exakt wie im isolierten Test),
-  weinboerse-legacy **17.493** Lots über alle 13 `legacy-*` auction_ids
-  (exakt wie im isolierten Test, inkl. korrekter Daten pro Auktion).
+  **96.855** neue Lots (Build-Log `+96855`; die zuerst gemeldeten 97.319
+  waren der GESAMT-Stand unter den 63 auction_ids inkl. 464 bereits
+  vorher über `load_steinfels_staging` geladener Lots für Auktion 379 —
+  siehe Korrektur in Punkt 5 oben), weinboerse-legacy **17.493** Lots über
+  alle 13 `legacy-*` auction_ids (exakt wie im isolierten Test, inkl.
+  korrekter Daten pro Auktion, keine Überlappung mit einem anderen
+  Loader).
 - [x] `_validate_gates` lief automatisch als Teil von `main()` ohne Abbruch
-  (der Build wäre sonst nicht erfolgreich durchgelaufen) — damit implizit
-  bestätigt, kein separater Lauf nötig.
+  (der Build wäre sonst nicht erfolgreich durchgelaufen). Das Log zeigt
+  zwei WARN-Zeilen (12.753 "duplicate-lot-number LOAD bug"-Fälle,
+  218.182 "gleiche lot_no, verschiedene Zeilen"-Fälle) — beide laut
+  eigenem Log-Text **"not gated yet"/"needs a per-house review, not a
+  build failure"**, also bewusst nicht harte Gates, sondern Dauer-
+  Beobachtungsgrössen über ALLE Häuser (dominiert von ackerwines/
+  langtons/winefields, nicht spezifisch durch steinfels-/weinboerse-
+  legacy verursacht). Keine neue, durch diese Session eingeführte
+  Regression gefunden.
 - [x] `PRAGMA integrity_check` → `ok`.
 - [x] Alle 4 real umgesetzten Häuser (Pandolfini, MunichWineCompany,
   Steinfels, Weinboerse) bereits einzeln committed und gepusht
