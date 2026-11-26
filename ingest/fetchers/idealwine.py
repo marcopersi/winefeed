@@ -14,6 +14,18 @@ was reduced to ``{id, soldAt, historicPrice}`` -- no more per-sale hammer
 price, bottle count or wine identity. The per-variant bottle count/format is
 read from the same page's ``syliusApiShopProductVariantGet`` query.
 
+Confirmed real, unfixable-from-here limitation: ``lastAdjudications`` is
+capped at the 10 most recent sales per product/vintage (confirmed via a
+500-file sample of the archive: the adjudication-count distribution falls
+off smoothly from 1 to 9 but spikes back up at exactly 10 -- a clear cap
+signal, not coincidence; this predates this module's Nov 2026 rewrite, the
+same cap is visible in the old Algolia-era archive too). A product/vintage
+sold more than 10 times between two checkpoints silently loses whichever
+sales fall outside the 10 most recent -- a bigger risk after an unusually
+long gap between runs (this module's own catch-up after the dead-Algolia
+period hit this for ~0.8% of re-polled products) than under normal monthly
+cadence.
+
 Enumeration (discover) used to go through the Algolia ``prod_lots`` index via
 a branded proxy host (``algolia.idealwine.com``). That host is PERMANENTLY
 DEAD (confirmed NXDOMAIN from two independent networks, 2026-11-24/25) --

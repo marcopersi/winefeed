@@ -583,6 +583,27 @@ macht (nicht nur den aktuellen Stand reparieren).
   `##[error]` ab, wenn mehr als 20% der Snapshot-Einträge fehlschlagen
   (Indiz für eine erneute Seiten-Struktur-Änderung) — statt eine fast
   leere Delta-Archivierung stillschweigend als Erfolg zu verbuchen.
+- [x] **Korrektur (2026-11-26)**: die 2.218 neuen Zuschläge vs. die
+  +2.129 Lots, die tatsächlich in der echten DB ankamen, war zunächst
+  nur BEHAUPTET ("load_idealwines eigener Dedup"), nicht nachgewiesen
+  — jetzt nachgerechnet: exakt **89** der 2.218 neuen `code`s kommen
+  auch in den älteren, nicht-Delta-Archivdateien vor (2218-89=2129,
+  exakt der beobachtete DB-Zuwachs). Kein Bug, echter Dedup.
+- [x] **Echte, bestätigte Einschränkung gefunden**: `lastAdjudications`
+  ist auf die **10 jüngsten** Zuschläge pro Produkt/Jahrgang gekappt
+  (bestätigt über eine 500-Datei-Stichprobe des Archivs: die Häufigkeits-
+  verteilung der Zuschlags-Anzahl pro Datei fällt glatt von 1 auf 9 ab,
+  springt aber bei genau 10 wieder nach oben — ein klares Kappungs-
+  Signal, kein Zufall). Betrifft 9 von 1.154 Delta-Dateien dieses
+  Catchup-Laufs (0,8%) — für diese 9 besonders oft gehandelten Weine
+  können zwischen zwei Checkpoints mehr als 10 echte Verkäufe liegen,
+  wovon nur die 10 jüngsten sichtbar sind. **Nicht neu durch diesen
+  Fix verursacht** (dieselbe Kappung zeigt sich schon in den alten,
+  Algolia-Ära-Archivdateien) und von hier aus nicht behebbar (die
+  SSR-Seite liefert nachweislich nie mehr als 10) — dokumentiert statt
+  verschwiegen, betrifft bei normalem monatlichem Fetch-Rhythmus
+  (statt dem einmaligen ~4-Monats-Nachholen hier) deutlich weniger
+  Produkte.
 
 ### 2. weinauktionator — ✅ erledigt (IDs 23/27 unrecoverable, Guardrail gebaut)
 - [x] **Root Cause bestätigt**: die Ergebnis-Seite der Website zeigt nur
@@ -651,6 +672,20 @@ macht (nicht nur den aktuellen Stand reparieren).
   229 Auktionen, 62.552 Lots total, `PRAGMA integrity_check` ok.
 - [x] Der neue `sequence_gaps`-Guardrail (siehe Punkt 2) lief automatisch
   mit und zeigt die verbleibenden, bestätigt leeren alten IDs an.
+- [x] **Korrektur (2026-11-26, vor dem nächsten Status-Report gefunden)**:
+  die 182 lokal gefetchten IDs waren nach dem Catchup-Lauf im geteilten
+  `data/ingest_manifest.json` als "gefetcht" markiert — exakt dasselbe
+  Bug-Muster wie Commit `8320abc` (franzwermuth/munich-wine-company)
+  schon einmal diese Session gefixt hat: die lokal gefetchten Dateien
+  liegen nur auf der Samsung-Disk, NIE im geteilten CI-Archiv-Artifact
+  (bestätigt per `gh run download` — das Artifact kennt besch-cannes
+  nur mit den ursprünglichen 14 IDs). Der nächste CI-Lauf (Cron
+  1. Dezember) hätte diese 182 wegen des Manifest-Dedups für immer
+  übersprungen, ohne sie je ins geteilte Archiv zu bekommen. Gefixt:
+  die 182 Einträge wieder aus dem Manifest entfernt (Samsung-Disk-
+  Dateien UND die bereits gebaute lokale Produktions-DB bleiben
+  unverändert, nur die Dedup-Buchhaltung wird zurückgesetzt) — der
+  nächste CI-Lauf holt sie jetzt echt ins geteilte Archiv nach.
 
 ### 5. Zacky — ✅ erledigt (5 echte Auktionen, 4.883 neue Lots — deutlich grösser als die erste Einschätzung)
 - [x] **Erste Stichprobe (1 Datei) war irreführend** — genau die Art
