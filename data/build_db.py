@@ -1770,6 +1770,133 @@ def load_zacky(b, limit):
             break
 
 
+# Confirmed real (Phase-2 audit, 2026-11-25): 248 raw "Search Results*.html"
+# captures under Zacky/ were assumed to be dead search-form/navigation
+# pages (no lot data) based on a single sample. A full scan of all 248
+# found that assumption wrong for the majority -- 243 of them are
+# paginated (20 lots/page) result listings for just 5 real, named
+# auctions (one page each for the smallest, up to 98 pages for the
+# largest), none of which exist in the archive's normalized
+# ``auction-*.json`` files at all. Each page embeds the selected
+# <option value="..."> as the site's own internal auction id -- confirmed
+# a real collision risk against load_zacky's existing bare-integer ids
+# (e.g. this id "244" already exists there for a wholly different 2023
+# auction), so these use an "html-" prefix, same rationale as
+# weinboerse-legacy's "legacy-" prefix.
+_ZACKY_HTML_OPTION_RE = re.compile(
+    r'<option[^>]*selected="selected"[^>]*value="([^"]*)"[^>]*>([^<]+)<')
+_ZACKY_HTML_LOTNO_RE = re.compile(r'lblLotNo"[^>]*>(\d+)<')
+_ZACKY_HTML_MONTHS = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5,
+    "june": 6, "july": 7, "august": 8, "september": 9, "october": 10,
+    "november": 11, "december": 12,
+}
+
+
+def _zacky_html_year(path):
+    m = re.search(r"Zacky[/\\](\d{4})[/\\]", path)
+    return int(m.group(1)) if m else None
+
+
+def _zacky_html_month(name):
+    low = name.lower()
+    for word, num in _ZACKY_HTML_MONTHS.items():
+        if word in low:
+            return num
+    return None
+
+
+def _zacky_html_price(text):
+    """'$1,838' / 'HKD17,150' -> (amount, currency); 'Passed'/'Information
+    notyet available' (both confirmed real -- unsold/withdrawn) -> (None,
+    currency carried separately by the caller, not derivable from these)."""
+    text = (text or "").strip()
+    m = re.match(r"^\$([\d,]+)$", text)
+    if m:
+        return float(m.group(1).replace(",", "")), "USD"
+    m = re.match(r"^HKD([\d,]+)$", text)
+    if m:
+        return float(m.group(1).replace(",", "")), "HKD"
+    return None, None
+
+
+def _zacky_html_rows(html):
+    soup = BeautifulSoup(html, "html.parser")
+    rows = []
+    for tr in soup.find_all("tr"):
+        lot_span = tr.find("span", id=re.compile(r"lblLotNo$"))
+        if not lot_span:
+            continue
+        tds = tr.find_all("td", recursive=False)
+        if len(tds) < 5:
+            continue
+        desc_a = tds[2].find("a")
+        rows.append({
+            "lot_no": lot_span.get_text(strip=True),
+            "qty": tds[1].get_text(strip=True),
+            "wine": (desc_a or tds[2]).get_text(strip=True),
+            "size": tds[3].get_text(strip=True),
+            "price_text": tds[4].get_text(strip=True),
+        })
+    return rows
+
+
+def load_zacky_html(b, limit):
+    # Pass 1: group every page by its selected auction id, keeping first-
+    # seen provenance per lot_no -- confirmed real (0 conflicts checked
+    # across the whole archive): pages overlap at their page boundary, but
+    # a (auction id, lot_no) pair always carries identical content
+    # wherever it repeats, so any one occurrence is authoritative.
+    by_auction = {}
+    for f in sorted(glob.glob(
+            os.path.join(ARCHIVE, "Zacky", "**", "*.html"), recursive=True)):
+        with open(f, encoding="utf-8", errors="replace") as fh:
+            html = fh.read()
+        m = _ZACKY_HTML_OPTION_RE.search(html)
+        if not m or not m.group(1).strip():
+            continue
+        value, name = m.group(1), m.group(2).strip()
+        entry = by_auction.setdefault(value, {
+            "name": name, "year": _zacky_html_year(f), "lots": {},
+        })
+        for row in _zacky_html_rows(html):
+            entry["lots"].setdefault(row["lot_no"], (f, row))
+
+    n = 0
+    for value, entry in sorted(by_auction.items()):
+        # Currency is confirmed consistent per auction (checked across the
+        # whole archive) -- derive it from the first lot that actually has
+        # one (skips past any "Passed"/unknown-currency row).
+        currency = next((_zacky_html_price(row["price_text"])[1]
+                         for _, row in entry["lots"].values()
+                         if _zacky_html_price(row["price_text"])[1]), None)
+        date = ym_date(entry["year"], _zacky_html_month(entry["name"]))
+        b.set_source(next(iter(entry["lots"].values()))[0])
+        a_id = b.add_auction(
+            "zacky", f"html-{value}", entry["name"], date, currency,
+            "HAMMER_PLUS_BUYERS_PREMIUM")
+        for lot_no, (f, row) in sorted(
+                entry["lots"].items(), key=lambda kv: int(kv[0])):
+            b.set_source(f)
+            price, _ = _zacky_html_price(row["price_text"])
+            size = row["size"]
+            mixed = 1 if size.lower() == "mixed" else None
+            b.add_lot(a_id, {
+                "lot_no": lot_no,
+                "wine": row["wine"],
+                "quantity": parse_qty_text(row["qty"]),
+                "bottle_size_dl": None if mixed else parse_dl(size),
+                "mixed_lot": mixed,
+                "realised_price": price,
+                "price_basis": "HAMMER_PLUS_BUYERS_PREMIUM",
+                "currency": currency,
+                "sold": 1 if price else 0,
+            })
+        n += 1
+        if limit and n >= limit:
+            break
+
+
 def load_finarte(b, limit):
     n = 0
     for f in _dedupe_auction_files(
@@ -5770,6 +5897,7 @@ HOUSES = [
     ("sothebys", load_sothebys),
     ("christies", load_christies),
     ("zacky", load_zacky),
+    ("zacky-html", load_zacky_html),
     ("finarte", load_finarte),
     ("dorotheum", load_dorotheum),
     ("pandolfini", load_pandolfini),
