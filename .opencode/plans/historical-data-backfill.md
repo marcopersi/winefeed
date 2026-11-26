@@ -696,6 +696,24 @@ wirkende Kandidaten (besch-cannes Pagination-Index, idealwine-Snapshot-
 Dedup, `sequence_gaps`-Aufruf-Timing) wurden live/durch Code-Nachverfolgung
 widerlegt, nicht einfach verworfen.
 
+### Abschluss Phase 2 — ✅ erledigt
+- [x] Finaler, vollständiger `build_db.py`-Lauf gegen die Samsung-Disk
+  (Archiv vorher nachweislich ruhig geprüft). Ergebnis: `providers=31
+  auctions=9835 lots=4601935` (vorher 9722/4.591.991), `PRAGMA
+  integrity_check` → `ok`.
+- [x] Pro Punkt direkt per SQL gegen die ECHTE DB verifiziert (nicht nur
+  isoliert): `besch-cannes` **62.552**, `franzwermuth` **9.355**,
+  `weinauktionator` **7.797** (unverändert — kein Datenfund, nur
+  Guardrail), `zacky` **101.370** gesamt, davon die 5 neuen `html-*`-
+  Auktionen exakt **4.883** (904+1950+1106+14+909, Auktion für Auktion
+  gegen den isolierten Test gegengerechnet). `idealwine` **36.092**
+  (vorher 33.963, **+2.129** — nicht exakt die vom Delta-Lauf gemeldeten
+  2.218 "neuen Zuschläge", die Differenz ist `load_idealwine`s eigener,
+  bereits bestehender Code-basierter Dedup über alle Archiv-Dateien
+  hinweg, kein neuer Fehler).
+- [x] Alle 6 Commits (idealwine, sequence_gaps-Guardrail, besch-cannes,
+  franzwermuth, zacky-html, Manifest+Doku) einzeln gepusht.
+
 ---
 
 ## Nicht Teil dieses Plans (bereits erledigt oder separat)
