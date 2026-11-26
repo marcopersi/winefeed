@@ -53,6 +53,34 @@ class TestBeschCannes(unittest.TestCase):
         refs = f.discover(FakeSession({"past-auctions": BESCH_LIST}))
         self.assertEqual([r.auction_id for r in refs], ["408", "407"])
 
+    def test_discover_follows_pagination_across_pages(self):
+        """Confirmed real bug (Phase-2 audit, 2026-11-25): the listing is
+        paginated (``?page=N``) 26 pages deep on the real site, but this
+        used to only ever read page 1 -- 108+ older auctions were never
+        fetched despite being fully available via later pages."""
+        f = BeschCannesFetcher()
+
+        class PagedSession:
+            def __init__(self):
+                self.urls = []
+
+            def get(self, url):
+                self.urls.append(url)
+                if "page=1" in url:
+                    return FakeResponse(
+                        '<a href="/auctions/408-x">x</a>'
+                        '<a href="/auctions/407-x">y</a>')
+                if "page=2" in url:
+                    return FakeResponse('<a href="/auctions/6-x">z</a>')
+                return FakeResponse("")  # page 3+: no new links, stop
+
+        session = PagedSession()
+        refs = f.discover(session)
+        self.assertEqual([r.auction_id for r in refs],
+                         ["408", "407", "6"])
+        # Stopped at the first empty page, not after a fixed page count.
+        self.assertEqual(len(session.urls), 3)
+
     def test_fetch_extracts_lots(self):
         f = BeschCannesFetcher()
         from ingest.models import AuctionRef

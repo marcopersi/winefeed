@@ -1,7 +1,14 @@
 """Fetcher for Besch Cannes Auction (cannesauction.com) results.
 
-- discover: parse ``/past-auctions-results-lots-catalogues`` for auction links
-  (``/auctions/{id}-{slug}``).
+- discover: parse ``/past-auctions-results-lots-catalogues`` for auction
+  links (``/auctions/{id}-{slug}``), across EVERY page of its listing
+  (``?page=N``) -- confirmed real, substantial bug (Phase-2 audit,
+  2026-11-25): the listing is paginated 26 pages deep, back to auction id
+  6, but this only ever read page 1 (~12 most recent auctions) with no
+  pagination at all, so 108+ older auctions were never fetched despite
+  being fully available. Stops at the first page that returns no new
+  auction links, rather than a hardcoded page count, so it keeps working
+  as the site grows.
 - fetch: load the auction page, scrape the ``.shop-item`` cards for the lot
   number, estimate and hammer, then load each lot's detail page
   (``/en-lots/{id}``) for the wine name, vintage and description.
@@ -22,20 +29,29 @@ class BeschCannesFetcher:
         self.base_url = base_url.rstrip("/")
 
     def discover(self, session):
-        html = session.get(
-            f"{self.base_url}/past-auctions-results-lots-catalogues").text
         refs = []
         seen = set()
-        for match in re.finditer(r'href="(/auctions/(\d+)-[^"]+)"', html):
-            aid = match.group(2)
-            if aid in seen:
-                continue
-            seen.add(aid)
-            refs.append(AuctionRef(
-                provider=self.provider,
-                auction_id=aid,
-                url=self.base_url + match.group(1),
-            ))
+        page = 1
+        while True:
+            url = (f"{self.base_url}/past-auctions-results-lots-catalogues"
+                   f"?page={page}")
+            html = session.get(url).text
+            found_this_page = 0
+            for match in re.finditer(r'href="(/auctions/(\d+)-[^"]+)"',
+                                      html):
+                aid = match.group(2)
+                if aid in seen:
+                    continue
+                seen.add(aid)
+                found_this_page += 1
+                refs.append(AuctionRef(
+                    provider=self.provider,
+                    auction_id=aid,
+                    url=self.base_url + match.group(1),
+                ))
+            if found_this_page == 0:
+                break
+            page += 1
         return refs
 
     def fetch(self, session, ref):
