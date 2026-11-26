@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Run the incremental iDealwine cote delta into the archive (not the DB).
 
-Enumerates currently offered lots via Algolia, loads each cote through the
-Next.js SSR route, and selects only adjudications newer than the checkpoint
-recorded in the shared ingest manifest. New adjudications are archived as
-one JSON file per (product, vintage) under
+Re-polls the known-products snapshot (``data/idealwine_known_products.json``
+-- see ``ingest/fetchers/idealwine.py``'s module docstring for why: the old
+Algolia-based live enumeration host is permanently dead, and this snapshot
+is a deliberate, narrower replacement that can only refresh wines already
+known to the archive, not discover brand-new ones), loads each cote through
+the Next.js SSR route, and selects only adjudications newer than the
+checkpoint recorded in the shared ingest manifest. New adjudications are
+archived as one JSON file per (product, vintage) under
 ``IDealwine_normalized/_delta/`` -- the same file shape
 ``build_db.py``'s ``load_idealwine`` already reads (its glob is recursive,
 so these need no loader change) -- instead of being appended straight into
@@ -12,6 +16,17 @@ the live DB. This is what lets iDealwine run as an ordinary CI step: the
 live DB only exists on the local Samsung disk, unreachable from a GitHub
 Actions runner, but the archive + manifest are exactly what every other
 house's CI step already produces and consumes.
+
+Regenerating the snapshot (periodically, by hand, not part of this script):
+re-scan every ``IDealwine_normalized/<region>/<product>-<vintage>.json``
+file in the real archive (Samsung disk), keep each pair's most-recent
+adjudication that has a purely-numeric ``code`` (some older bulk-imported
+records only have a synthetic placeholder id and must be skipped -- about
+33% of the archive as of 2026-11-25), and write
+``{product_id, vintage, wine, estate, region, appellation, color,
+classification, code}`` per pair to ``data/idealwine_known_products.json``.
+This is the only way new wines ever enter the re-poll set until real
+enumeration is restored.
 
 The checkpoint is id-based dedup's opposite: iDealwine's "auctions" are
 price-history pages that keep gaining new adjudications over time, so the
@@ -51,6 +66,9 @@ ARCHIVE = os.environ.get(
 MANIFEST_PATH = os.environ.get("MANIFEST_PATH",
                                os.path.join(REPO, "data",
                                             "ingest_manifest.json"))
+KNOWN_PRODUCTS_PATH = os.environ.get(
+    "IDEALWINE_KNOWN_PRODUCTS_PATH",
+    os.path.join(REPO, "data", "idealwine_known_products.json"))
 
 # Fields load_idealwine actually reads off each archived adjudication --
 # everything else idealwine_diff.new_adjudications() attaches is wine
@@ -106,9 +124,13 @@ def main():
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
+    with open(KNOWN_PRODUCTS_PATH, encoding="utf-8") as fh:
+        known_products = json.load(fh)
+    print(f"known products (snapshot): {len(known_products)}", flush=True)
+
     fetcher = IdealwineFetcher()
     discover_session = requests.Session(impersonate="chrome")
-    refs = fetcher.discover(discover_session)
+    refs = fetcher.discover_known_products(discover_session, known_products)
     if args.limit:
         refs = refs[: args.limit]
     print(f"refs: {len(refs)}", flush=True)
@@ -164,6 +186,18 @@ def main():
 
     print(f"fetched {len(cotes)} cotes, {failed} failed "
           f"({time.time() - t0:.0f}s)", flush=True)
+
+    # Guardrail: a healthy run fails on a handful of snapshot entries at
+    # most (a wine pulled from sale, a redirect loop). A failure rate this
+    # high means the SSR page structure itself broke again (the same way
+    # the Nov 2026 redesign broke discover()) -- fail loudly instead of
+    # quietly archiving a near-empty delta, so this doesn't sit unnoticed
+    # for months the way the dead Algolia host did (see module docstring).
+    if refs and failed / len(refs) > 0.2:
+        print(f"##[error] {failed}/{len(refs)} cote fetches failed "
+              f"(> 20%) -- the SSR page structure likely changed again; "
+              f"investigate before trusting this run's data", flush=True)
+        return 1
 
     new = new_adjudications(cotes, cutoff)
     print(f"new adjudications: {len(new)}", flush=True)

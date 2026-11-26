@@ -3,15 +3,15 @@ import unittest
 from ingest.fetchers.idealwine import IdealwineFetcher
 from ingest.models import AuctionRef
 
-ALGOLIA_PAGE = {
-    "hits": [
-        {"id": 2802611, "name": "Morgon Côte du Py", "vintage": 2023,
-         "product": 112168, "appellation": "Morgon", "domainName":
-         "Jean Foillard", "region": "BEAUJOLAIS", "color": "RED",
-         "bottleSize": "BOUTEILLE"},
-        {"id": 2814578, "name": "La Tâche", "vintage": 2002, "product": 882},
-    ],
-}
+KNOWN_PRODUCTS = [
+    {"product_id": 112168, "vintage": 2023, "wine": "Morgon Côte du Py",
+     "estate": "Jean Foillard", "region": "BEAUJOLAIS",
+     "appellation": "Morgon", "color": "RED", "classification": None,
+     "format": "BOUTEILLE", "code": "2802611"},
+    {"product_id": 882, "vintage": 2002, "wine": "La Tâche",
+     "estate": None, "region": None, "appellation": None, "color": None,
+     "classification": None, "format": None, "code": "2814578"},
+]
 
 RATING_DATA = {
     "productVintageRatings": [{"year": 2025, "value": 428184},
@@ -41,7 +41,6 @@ class FakeResponse:
 class FakeSession:
     def __init__(self):
         self.gets = []
-        self.posts = []
 
     def get(self, url, **kwargs):  # pylint: disable=unused-argument
         self.gets.append(url)
@@ -58,25 +57,30 @@ class FakeSession:
              "state": {"data": VARIANT_DATA}},
         ]}}})
 
-    def post(self, url, **kwargs):  # pylint: disable=unused-argument
-        self.posts.append(url)
-        return FakeResponse(ALGOLIA_PAGE)
-
 
 class TestIdealwine(unittest.TestCase):
-    def test_discover_builds_refs_from_algolia(self):
+    def test_discover_known_products_builds_refs_from_snapshot(self):
         f = IdealwineFetcher(build_id="b1")
-        refs = f.discover(FakeSession())
+        refs = f.discover_known_products(FakeSession(), KNOWN_PRODUCTS)
         self.assertEqual(len(refs), 2)
         self.assertEqual(refs[0].auction_id, "112168-2023")
         self.assertEqual(refs[0].date, "2023")
-        self.assertTrue(refs[0].url.startswith(
+        self.assertEqual(
+            refs[0].url,
             "https://www.idealwine.com/_next/data/b1/de/"
-            "kaufen-ein-wein/2802611-morgon-cote-du-py.json"))
+            "kaufen-ein-wein/2802611-morgon-cote-du-py.json")
         self.assertEqual(refs[0].meta["estate"], "Jean Foillard")
         self.assertEqual(refs[0].meta["region"], "BEAUJOLAIS")
         self.assertEqual(refs[0].meta["appellation"], "Morgon")
-        self.assertEqual(refs[0].meta["product_variant_id"], 2802611)
+        self.assertEqual(refs[0].meta["product_variant_id"], "2802611")
+
+    def test_discover_known_products_skips_entries_without_a_code(self):
+        f = IdealwineFetcher(build_id="b1")
+        refs = f.discover_known_products(FakeSession(), [
+            {"product_id": 1, "vintage": 2020, "wine": "No Code",
+             "code": None},
+        ])
+        self.assertEqual(refs, [])
 
     def test_fetch_follows_redirect_and_reads_dehydrated_cote(self):
         f = IdealwineFetcher(build_id="b1")
@@ -99,6 +103,36 @@ class TestIdealwine(unittest.TestCase):
         self.assertEqual(result.data["meta"]["estate"], "Jean Foillard")
         self.assertEqual(result.data["meta"]["bottles"], 1)
         self.assertEqual(len(session.gets), 2)
+
+    def test_fetch_keeps_snapshot_format_when_no_variant_query_matches(self):
+        """Review finding (2026-11-25): discover_known_products() seeds
+        meta["format"] from the snapshot's own last-known adjudication
+        format as a fallback. If the live page no longer embeds a
+        matching syliusApiShopProductVariantGet query for this exact
+        variant id (e.g. a long-delisted lot), fetch() must keep that
+        fallback instead of silently losing it to None."""
+        f = IdealwineFetcher(build_id="b1")
+
+        class NoVariantSession(FakeSession):
+            def get(self, url, **kwargs):
+                return FakeResponse({"pageProps": {"dehydratedState": {
+                    "queries": [
+                        {"queryKey": ["pdp-displayed-vintage-rating",
+                                      "112168-2023"],
+                         "state": {"data": RATING_DATA}},
+                        # No syliusApiShopProductVariantGet query at all.
+                    ]}}})
+
+        ref = AuctionRef(
+            provider="idealwine", auction_id="112168-2023",
+            url="https://www.idealwine.com/_next/data/b1/de/"
+                "kaufen-ein-wein/other-slug.json",
+            title="Morgon Côte du Py", date="2023",
+            meta={"product_id": 112168, "vintage": 2023,
+                  "format": "BOUTEILLE", "product_variant_id": 2802611})
+        result = f.fetch(NoVariantSession(), ref)
+        self.assertEqual(result.data["meta"]["format"], "BOUTEILLE")
+        self.assertIsNone(result.data["meta"]["bottles"])
 
     def test_picks_the_matching_query_when_two_share_a_prefix(self):
         """Confirmed real gap: matching queryKey[0] alone would return
