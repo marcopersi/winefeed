@@ -16,6 +16,21 @@ import build_db  # noqa: E402
 
 
 class LoadFranzwermuthTest(unittest.TestCase):
+    def test_collection_2_filename_override_is_recognized(self):
+        """Confirmed real case (Phase-2 audit, 2026-11-25): this one 2016
+        results file carries no "Coll<n>" marker in its own filename at
+        all, unlike every other collection -- without the override, 629
+        real, fully parseable lots sat unloaded in the archive forever."""
+        self.assertEqual(
+            build_db._fw_collection_number(
+                "/x/FJWermuth_23.4.2016_Ergebnisliste.pdf"),
+            "2")
+        # Case-insensitive match (os.path.basename().lower() lookup).
+        self.assertEqual(
+            build_db._fw_collection_number(
+                "/x/FJWERMUTH_23.4.2016_ERGEBNISLISTE.PDF"),
+            "2")
+
     def test_catalog_only_pdf_does_not_create_a_phantom_auction(self):
         """Confirmed real case: the archive mixes pre-sale catalog
         PDFs in with results PDFs (e.g. Collections 12/19 only have a

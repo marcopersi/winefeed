@@ -5696,7 +5696,27 @@ def _fw_parse_rows(text):
     return rows
 
 
+# Confirmed real (Phase-2 audit, 2026-11-25): this one 2016 results file's
+# own name carries no "Coll<n>" marker at all (unlike every other
+# collection's results file), so _fw_collection_number below would
+# otherwise return None and load_franzwermuth would silently skip it --
+# 629 real, fully parseable lots with hammer prices were sitting unloaded
+# in the archive for this reason alone. The site's own Archiv.html page
+# explicitly labels this exact file "Collection 2 Ergebnisse (pdf)", and
+# the date (23.4.2016) falls precisely between Collection 1 (confirmed
+# "Collection1_Ergebnisliste.pdf") and Collection 3 (confirmed "Weinauktion
+# ... (Collection 3)" in its own header text, 29.10.2016) in the house's
+# normal semi-annual (spring/autumn) cadence -- not a coincidental guess.
+_FW_COLLECTION_NUMBER_OVERRIDES = {
+    "fjwermuth_23.4.2016_ergebnisliste.pdf": "2",
+}
+
+
 def _fw_collection_number(path):
+    override = _FW_COLLECTION_NUMBER_OVERRIDES.get(
+        os.path.basename(path).lower())
+    if override:
+        return override
     m = re.search(r"[Cc]oll(?:ection)?_?(\d+)", os.path.basename(path))
     return m.group(1) if m else None
 
