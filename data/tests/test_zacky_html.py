@@ -161,6 +161,17 @@ class LoadZackyHtmlTest(unittest.TestCase):
             "SELECT auction_date FROM auctions").fetchone()
         self.assertEqual(row[0], "2017-01-01")
 
+    def test_auction_name_unescapes_html_entities(self):
+        """Confirmed real bug: the <option> text is raw HTML, so an
+        auction named with an "&" (e.g. "The Holiday Auction (December
+        2 & 3)") was stored with a literal "&amp;" instead."""
+        page = _PAGE1.replace(
+            'The Bordeaux Flash Auction (January 17-18)',
+            'The Holiday Auction (December 2 &amp; 3)')
+        conn = self._run({"2017/17Januar/Search Results.html": page})
+        row = conn.execute("SELECT title FROM auctions").fetchone()
+        self.assertEqual(row[0], "The Holiday Auction (December 2 & 3)")
+
     def test_hong_kong_auction_uses_hkd_not_usd(self):
         conn = self._run({"2016/19November/Search Results.html": _HK_PAGE})
         row = conn.execute(

@@ -15,6 +15,7 @@ import bisect
 import csv
 import datetime
 import glob
+import html
 import json
 import math
 import os
@@ -1785,7 +1786,6 @@ def load_zacky(b, limit):
 # weinboerse-legacy's "legacy-" prefix.
 _ZACKY_HTML_OPTION_RE = re.compile(
     r'<option[^>]*selected="selected"[^>]*value="([^"]*)"[^>]*>([^<]+)<')
-_ZACKY_HTML_LOTNO_RE = re.compile(r'lblLotNo"[^>]*>(\d+)<')
 _ZACKY_HTML_MONTHS = {
     "january": 1, "february": 2, "march": 3, "april": 4, "may": 5,
     "june": 6, "july": 7, "august": 8, "september": 9, "october": 10,
@@ -1820,8 +1820,8 @@ def _zacky_html_price(text):
     return None, None
 
 
-def _zacky_html_rows(html):
-    soup = BeautifulSoup(html, "html.parser")
+def _zacky_html_rows(page_html):
+    soup = BeautifulSoup(page_html, "html.parser")
     rows = []
     for tr in soup.find_all("tr"):
         lot_span = tr.find("span", id=re.compile(r"lblLotNo$"))
@@ -1851,15 +1851,15 @@ def load_zacky_html(b, limit):
     for f in sorted(glob.glob(
             os.path.join(ARCHIVE, "Zacky", "**", "*.html"), recursive=True)):
         with open(f, encoding="utf-8", errors="replace") as fh:
-            html = fh.read()
-        m = _ZACKY_HTML_OPTION_RE.search(html)
+            page_html = fh.read()
+        m = _ZACKY_HTML_OPTION_RE.search(page_html)
         if not m or not m.group(1).strip():
             continue
-        value, name = m.group(1), m.group(2).strip()
+        value, name = m.group(1), html.unescape(m.group(2).strip())
         entry = by_auction.setdefault(value, {
             "name": name, "year": _zacky_html_year(f), "lots": {},
         })
-        for row in _zacky_html_rows(html):
+        for row in _zacky_html_rows(page_html):
             entry["lots"].setdefault(row["lot_no"], (f, row))
 
     n = 0
@@ -1871,18 +1871,25 @@ def load_zacky_html(b, limit):
                          for _, row in entry["lots"].values()
                          if _zacky_html_price(row["price_text"])[1]), None)
         date = ym_date(entry["year"], _zacky_html_month(entry["name"]))
-        b.set_source(next(iter(entry["lots"].values()))[0])
         a_id = b.add_auction(
             "zacky", f"html-{value}", entry["name"], date, currency,
             "HAMMER_PLUS_BUYERS_PREMIUM")
         for lot_no, (f, row) in sorted(
                 entry["lots"].items(), key=lambda kv: int(kv[0])):
-            b.set_source(f)
+            # Lots of one auction come from several different paginated
+            # HTML files -- passing source_file/source_record_locator
+            # explicitly instead of calling b.set_source(f) per lot
+            # (confirmed real bug: that reset source_idx to 0 before
+            # every single add_lot, so every lot ended up sharing the
+            # one locator "lots[0]" instead of each lot keeping a
+            # distinct, traceable one).
             price, _ = _zacky_html_price(row["price_text"])
             size = row["size"]
             mixed = 1 if size.lower() == "mixed" else None
             b.add_lot(a_id, {
                 "lot_no": lot_no,
+                "source_file": os.path.relpath(f, ARCHIVE),
+                "source_record_locator": f"lot_no={lot_no}",
                 "wine": row["wine"],
                 "quantity": parse_qty_text(row["qty"]),
                 "bottle_size_dl": None if mixed else parse_dl(size),
