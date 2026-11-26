@@ -37,6 +37,42 @@ def mark_fetched(manifest, ref, etag=None):
 
 
 LAST_RUN_KEY = "__last_run_at__"
+_MAX_SEQUENCE_SPAN = 100_000
+
+
+def sequence_gaps(manifest, provider):
+    """Return the sorted list of missing integer auction_ids between the
+    smallest and largest PURELY NUMERIC id this provider's manifest entry
+    has ever recorded.
+
+    Confirmed real finding (2026-11-25 Phase-2 audit): weinauktionator ids
+    23 and 27 were never fetched at all -- the house's results page only
+    ever lists a small rolling window of the most recent auctions, so an
+    id that didn't fall inside that window during any of our monthly runs
+    is silently gone (404 on the direct download URL, no Wayback Machine
+    snapshot either -- genuinely unrecoverable, not just undiscovered).
+    That sat unnoticed for an unknown number of months because nothing
+    ever compared the numeric id sequence against what was actually
+    fetched. This makes the next such gap visible immediately instead.
+
+    Only returns a meaningful result for providers whose auction_ids are
+    plain increasing integers (most of them); a provider using dates or
+    composite ids simply has zero numeric ids and gets an empty result,
+    not a false positive.
+
+    Review finding (2026-11-25): a single bad numeric key (a manual-edit
+    typo, a parsing glitch) would otherwise size the ``range``/``set``
+    below off that one outlier, with no bound -- a provider's real ids
+    never span more than a few thousand, so a span past
+    ``_MAX_SEQUENCE_SPAN`` is treated as corrupt manifest data rather
+    than a real gap to report.
+    """
+    entries = manifest.get(provider, {})
+    ids = sorted(int(k) for k in entries if k != LAST_RUN_KEY and k.isdigit())
+    if len(ids) < 2 or ids[-1] - ids[0] > _MAX_SEQUENCE_SPAN:
+        return []
+    full_range = set(range(ids[0], ids[-1] + 1))
+    return sorted(full_range - set(ids))
 
 
 def get_last_run(manifest, provider):

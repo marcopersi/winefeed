@@ -85,7 +85,7 @@ def run_provider(provider, session, manifest_path, archive_path, env=None):
     # Lazy import: ingest lives at the repo root, not under data/.
     from ingest.fetchers import get as get_fetcher
     from ingest.registry import (dedup, load_manifest, mark_fetched,
-                                 save_manifest, set_last_run)
+                                 save_manifest, sequence_gaps, set_last_run)
 
     manifest = load_manifest(manifest_path)
     fetcher = get_fetcher(provider)
@@ -113,6 +113,15 @@ def run_provider(provider, session, manifest_path, archive_path, env=None):
 
     set_last_run(manifest, provider)
     save_manifest(manifest_path, manifest)
+
+    gaps = sequence_gaps(manifest, provider)
+    if gaps:
+        print(f"##[warning] {provider}: {len(gaps)} numeric auction_id(s) "
+              f"never fetched despite being inside the known range "
+              f"({gaps[:20]}{'...' if len(gaps) > 20 else ''}) -- "
+              "investigate before the source rolls them out of reach",
+              flush=True)
+
     return fetched
 
 
