@@ -544,32 +544,157 @@ macht (nicht nur den aktuellen Stand reparieren).
 3. Guardrail/Regression-Schutz eingebaut (z.B. CI-Check, Assertion, Monitoring-Hinweis) und einmal bewusst gegen den alten Zustand getestet, dass er wirklich anschlägt.
 4. Committen.
 
-### 1. idealwine — CI-Fetch seit ~3 Monaten tot
-- [ ] Root Cause: `algolia.idealwine.com` DNS tot (bekannt seit Run 45364027030, 2026-11-24)
-- [ ] Fix: aktuellen API-Host von idealwine ermitteln (ggf. hat sich die Such-Infrastruktur geändert), `run_idealwine_delta.py` anpassen
-- [ ] Nachholen: fehlende ~3 Monate Cote-Zuschläge fetchen
-- [ ] Guardrail: CI-Step soll bei DNS-Fehlern lauter failen/alerten statt nur `continue-on-error` zu konsumieren (aktuell schluckt das den Fehler für immer, ohne dass es auffällt)
+### 1. idealwine — ✅ erledigt (Discovery ersetzt, 2.218 neue Zuschläge nachgeholt)
+- [x] **Root Cause bestätigt, nicht nur vermutet**: `algolia.idealwine.com`
+  DNS tot (NXDOMAIN, von zwei unabhängigen Netzwerken bestätigt). War
+  bereits in einem früheren Teil dieser Session mit `continue-on-error:
+  true` auf dem CI-Step entschärft (Commit `8320abc`), damit der eine
+  tote Schritt nicht mehr `process.yml` für alle 26 anderen Häuser
+  blockiert — das war schon erledigt, nicht neu diese Runde.
+- [x] **Neuer Fund dieser Runde**: nur `discover()` (Suche nach NEUEN
+  Weinen) ist kaputt. `fetch()` (Preisverlauf für BEKANNTE Weine) läuft
+  nachweislich unverändert weiter — live gegen mehrere aktuelle UND
+  längst abgeschlossene Lose getestet, inkl. echter neuer Zuschläge bis
+  2026-10-22. Der reale Such-Host/die Credentials, die der Browser
+  heute für Pagination nutzt, waren über Build-Manifest, jeden
+  erreichbaren JS-Chunk und mehrere URL/Slug-Varianten NICHT auffindbar
+  — bräuchte einen echten Browser-Netzwerk-Trace, hier nicht verfügbar.
+- [x] **Nutzer-Entscheidung**: Partial-Fix statt Vollpause oder weiterem
+  Reverse-Engineering. `discover_known_products()` ersetzt die
+  Algolia-Live-Suche durch eine statische Momentaufnahme
+  (`data/idealwine_known_products.json`, 8.012 Produkt/Jahrgang-Paare,
+  je mit einer eigenen historischen Zuschlags-`code` als Einstiegspunkt
+  — live bestätigt, dass auch ein Monate alter, längst verkaufter `code`
+  noch zur aktuellen Produktseite führt). Das deckt NUR bereits bekannte
+  Weine ab, keine brandneuen — dokumentiert als bewusste Einschränkung,
+  nicht verschwiegen.
+- [x] **Senior-Review fand 1 echten Befund**: der Snapshot trug kein
+  `format`-Fallback (die alte Algolia-Suche hatte `bottleSize` immer als
+  Baseline) — bei einem Lot, dessen aktuelle Seite keine passende
+  Varianten-Query mehr einbettet, wäre `format` stillschweigend auf
+  `None` gefallen statt auf die zuletzt bekannte Grösse. Gefixt (Snapshot
+  trägt jetzt `format` aus der jeweils gewählten Zuschlags-Zeile,
+  `fetch()` überschreibt es weiterhin mit der Live-Seite, wenn vorhanden).
+- [x] **Nachholen**: echter Lauf gegen das Samsung-Archiv, alle 8.012
+  Snapshot-Einträge, 0 Fehlschläge, **2.218 neue Zuschläge** gefunden,
+  als 1.154 Produkt/Jahrgang-Dateien unter `IDealwine_normalized/_delta/`
+  archiviert, Checkpoint von 2026-07-30 auf 2026-11-06 vorgerückt.
+- [x] **Guardrail**: `run_idealwine_delta.py` bricht jetzt mit lautem
+  `##[error]` ab, wenn mehr als 20% der Snapshot-Einträge fehlschlagen
+  (Indiz für eine erneute Seiten-Struktur-Änderung) — statt eine fast
+  leere Delta-Archivierung stillschweigend als Erfolg zu verbuchen.
 
-### 2. weinauktionator — IDs 23, 27 fehlen komplett
-- [ ] Root Cause prüfen (nie gefetcht? gelöscht? Nummerierungslücke beim Haus selbst?)
-- [ ] Nachholen falls abrufbar
-- [ ] Guardrail: Lücken-Check (erwartete fortlaufende IDs vs. tatsächlich vorhandene) als Teil des Ingest-Laufs
+### 2. weinauktionator — ✅ erledigt (IDs 23/27 unrecoverable, Guardrail gebaut)
+- [x] **Root Cause bestätigt**: die Ergebnis-Seite der Website zeigt nur
+  ein kleines rollierendes Fenster der letzten ~6 Auktionen (aktuell
+  34-39) — IDs, die zwischen zwei Monatsläufen aus diesem Fenster
+  herausgefallen sind, sind weg. Direkter Download-Link für 23 und 27
+  → `404`; Wayback-Machine-CDX-Abfrage → keine Snapshots. **Echt
+  unwiederbringlich**, kein Parser-/Fetcher-Fehler.
+- [x] **Guardrail gebaut** (generisch, nicht nur für dieses Haus):
+  `ingest/registry.py::sequence_gaps(manifest, provider)` — findet
+  Lücken in der Folge rein-numerischer `auction_id`s, die je im
+  Manifest eines Providers standen. In `data/orchestrate.py::
+  run_provider` verdrahtet: druckt ein lautes `##[warning]` nach jedem
+  Lauf, wenn Lücken gefunden werden. **Senior-Review fand 1 echten
+  Befund**: eine einzelne verirrte Riesen-ID (Tippfehler, Parsing-Bug)
+  hätte den `range()`/`set()`-Aufbau unbegrenzt aufblasen können —
+  gefixt mit einer Span-Obergrenze (100.000).
+- [x] Manifest-Nachpflege: `data/ingest_manifest.json`s
+  `weinauktionator`-Einträge hatten nur 6 IDs (34-39) obwohl das Archiv
+  30 echte Dateien hat (8-39 minus 23/27) — mit den Datei-Zeitstempeln
+  nachgetragen, damit der neue Guardrail sofort die reale Lücke zeigt
+  statt eine künstlich enge zu sehen.
 
-### 3. franzwermuth — Collections 2, 4 fehlen komplett (keine Datei, kein Katalog)
-- [ ] Root Cause prüfen (Fetcher-Historie, ggf. nie existiert vs. nie gefetcht)
-- [ ] Nachholen falls möglich
-- [ ] Guardrail: wie weinauktionator — Lücken-Check auf erwartete Collection-Nummern
+### 3. franzwermuth — ✅ erledigt (Collection 4 existiert nicht, Collection 2 war ein echter Bug — 629 neue Lots)
+- [x] **Collection 4**: nie existiert — Collection 3 (29.10.2016) und
+  Collection 5 (29.04.2017) liegen exakt im normalen halbjährlichen
+  Rhythmus des Hauses direkt hintereinander, keine Zeitlücke dazwischen.
+  Wayback-CDX-Suche über die ganze `Auktionen/`-Historie: keine einzige
+  Erwähnung von "Collection 4"/"Coll4" irgendwo. Bewusst vom Haus
+  übersprungene Nummer, kein Datenverlust.
+- [x] **Collection 2 — echter, gefundener Bug (nicht nur "nie gefetcht")**:
+  die Archiv.html-Seite verlinkt sie explizit als "Collection 2
+  Ergebnisse (pdf)", aber die verlinkte Datei selbst
+  (`FJWermuth_23.4.2016_Ergebnisliste.pdf`, bereits im Archiv unter
+  `2016/April/` vorhanden) trägt **keine** "Coll2"-Kennung im eigenen
+  Dateinamen — sowohl `_fw_collection_number` (Loader) als auch der
+  Fetcher übersprangen sie deshalb lautlos. **629 echte, vollständig
+  parsebare Lots mit Zuschlagpreisen** lagen deswegen unverarbeitet im
+  Archiv. Gefixt über eine explizite Dateinamen-Ausnahme-Tabelle
+  (`_FW_COLLECTION_NUMBER_OVERRIDES`) in `data/build_db.py`.
+- [x] **Sanity-Check**: isolierter Lauf gegen das echte Archiv — `coll-2`
+  jetzt mit 629 Lots, 0 Kollision mit anderen Collections,
+  `PRAGMA integrity_check` ok, Gesamt-Franzwermuth-Lots 8.726→9.355.
 
-### 4. besch-cannes — `auctions_directory.json` listet mehr IDs als je gefetcht
-- [ ] Root Cause: Differenz zwischen Index und tatsächlich geladenen `auction-*.json` quantifizieren (welche IDs genau fehlen)
-- [ ] Nachholen der fehlenden IDs
-- [ ] Guardrail: Ingest-Lauf vergleicht `auctions_directory.json` gegen vorhandene Dateien und meldet Differenz
+### 4. besch-cannes — ✅ erledigt (Pagination-Bug gefixt, 182 neue Auktionen nachgeholt)
+- [x] **Root Cause bestätigt**: `discover()` las nur Seite 1 der
+  `/past-auctions-results-lots-catalogues`-Liste — die Liste ist real
+  26 Seiten tief (`?page=1..26`, bis zurück zu Auktion-ID 6), aber ohne
+  jede Pagination-Logik. `auctions_directory.json` (Aug-Snapshot,
+  112 IDs) war selbst schon veraltet; die echte, live paginierte Liste
+  fand **310 Auktionen total** (IDs 1-425), weit mehr als der
+  Snapshot kannte.
+- [x] **Fix**: `discover()` paginiert jetzt `?page=N`, bis eine Seite
+  0 neue Links liefert (kein hartcodiertes Seitenlimit — wächst mit
+  der Seite selbst mit). Senior-Review live gegengecheckt (zwei
+  ursprünglich für möglich gehaltene Pagination-Bugs — 0-vs-1-basierter
+  Seitenindex, verfrühter Abbruch — beide direkt gegen die echte Seite
+  widerlegt).
+- [x] **Nachgeholt**: echter Lauf gegen das Archiv — **182 neue
+  Auktionen mit echten Lot-Daten** gefunden und archiviert (Rest der
+  ~296 vorher fehlenden IDs sind ältere Auktionen, die laut Prüfung nur
+  einen PDF-Katalog ohne Online-Listing haben — bestätigt leer, kein
+  stiller Datenverlust, `_is_valid` überspringt sie korrekt statt sie
+  fälschlich als "gefetcht" zu markieren).
+- [x] **Sanity-Check**: isolierter Lauf gegen das echte Archiv danach —
+  229 Auktionen, 62.552 Lots total, `PRAGMA integrity_check` ok.
+- [x] Der neue `sequence_gaps`-Guardrail (siehe Punkt 2) lief automatisch
+  mit und zeigt die verbleibenden, bestätigt leeren alten IDs an.
 
-### 5. Zacky — 248 HTML-Dateien ungeklärt
-- [ ] Erst klären, ob es überhaupt eine echte Lücke ist (Stichprobe sah nach Such-Listing-Seiten aus, nicht nach Losdetails) — vollständige Sichtung aller 248 Dateien, nicht nur 1
-- [ ] Falls echte Lot-Daten drin: nachholen wie die anderen Punkte
-- [ ] Falls keine Lot-Daten (nur Navigationsseiten): als "kein Fund" dokumentieren und abschliessen
-- [ ] Guardrail nur falls echter Fund
+### 5. Zacky — ✅ erledigt (5 echte Auktionen, 4.883 neue Lots — deutlich grösser als die erste Einschätzung)
+- [x] **Erste Stichprobe (1 Datei) war irreführend** — genau die Art
+  Fehler, vor der die Zero-Data-Loss-Direktive warnt: diese eine Datei
+  sah nach einer reinen Navigationsseite aus. Vollständige Prüfung aller
+  248 Dateien fand real strukturierte Lot/Preis-Tabellen in 243 davon.
+- [x] **Echte Struktur**: nur **5 verschiedene, über die `<option
+  selected>`-ID identifizierte Auktionen**, jede über bis zu 98 Seiten à
+  20 Lots paginiert (nicht 201 einzelne Auktionen, wie der erste
+  Scope-Check dem Nutzer berichtet hatte — dieser Fehler wurde beim
+  tieferen Nachbohren selbst gefunden und korrigiert, bevor der Parser
+  gebaut wurde). Keine der 5 existiert in den vorhandenen
+  `auction-*.json`-Dateien (Namensabgleich gegen alle 332 bestehenden
+  Zacky-Auktionen).
+- [x] **Generischer Parser gebaut** (`load_zacky_html` in
+  `data/build_db.py`): BeautifulSoup statt Regex für die Zeilen-
+  Extraktion (robuster gegen die verschachtelten ASP.NET-Kontroll-IDs);
+  Dedup über alle Seiten einer Auktion per `(auction_id, lot_no)` — 0
+  Inhalts-Konflikte bei Mehrfach-Vorkommen an Seitengrenzen über das
+  gesamte Archiv geprüft.
+- [x] **Kollisions-Vermeidung**: die Seiten-eigene interne Auktions-ID
+  (z.B. "244") kollidiert nachweislich mit einer bereits vorhandenen,
+  GÄNZLICH ANDEREN 2023er-Auktion unter derselben bloßen Zahl im
+  bestehenden `load_zacky` (JSON-Pfad) — `html-`-Präfix für alle 5
+  Auktionen, gleiche Begründung wie Weinboerse's `legacy-`-Präfix.
+  Währung ist pro Auktion konsistent (4x USD, 1x HKD für die Hongkong-
+  Auktion) — über das ganze Archiv geprüft, nicht angenommen.
+- [x] **Sanity-Check** (isoliert gegen das echte Archiv): **4.883 neue
+  Lots über 5 Auktionen**, `PRAGMA integrity_check` ok, 0 Lot-Nummer-
+  Duplikate. Verkauft 4.733 (97%), "Passed"/unbekannt 150 (3%,
+  korrekt ohne Preis gespeichert statt geraten). 500 Lots mit Grössen-
+  Angabe "Mixed" korrekt als `mixed_lot=1` ohne `bottle_size_dl`
+  markiert statt eine falsche Einzelgrösse zu raten. Stichprobe (Lot 1
+  "Chateau Haut Brion 1994", $1.838) exakt gegen den Rohtext verifiziert.
+
+### Phase 2 — Senior-Review (automatisch vor Commit)
+Review lief gegen den gesamten Phase-2-Diff (alle 5 Punkte zusammen,
+exkl. der reinen Daten-/Manifest-Dateien). 2 echte, mit `PLAUSIBLE`
+markierte Befunde (beide oben bei ihrem jeweiligen Punkt dokumentiert
+und gefixt): idealwine's fehlendes `format`-Fallback, registry.py's
+unbegrenzte `sequence_gaps`-Spanne. Mehrere weitere, zunächst plausibel
+wirkende Kandidaten (besch-cannes Pagination-Index, idealwine-Snapshot-
+Dedup, `sequence_gaps`-Aufruf-Timing) wurden live/durch Code-Nachverfolgung
+widerlegt, nicht einfach verworfen.
 
 ---
 
